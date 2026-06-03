@@ -1,0 +1,232 @@
+<% content_for :title, "Iniciar sesión — FEC" %>
+
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="bg-white p-8 rounded-2xl shadow-md w-full max-w-md border border-gray-200"
+       data-controller="login"
+       data-login-api-url-value="/api/token"
+       data-login-redirect-path-value="/home">
+
+    <%# Logo %>
+    <div class="text-center mb-8">
+      <%= image_tag "Logo-Clavisco-blue.svg",
+          class: "inline-block w-64",
+          alt:   "Clavisco — Facturación Electrónica",
+          "data-testid": "login-logo" %>
+    </div>
+
+    <%# ---- Formulario principal ---- %>
+    <div id="login-form" data-login-target="loginForm">
+      <div class="space-y-4">
+
+        <%# Email %>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <input type="email"
+                 id="loginUser"
+                 data-login-target="email"
+                 data-testid="email"
+                 placeholder="Correo electrónico"
+                 maxlength="450"
+                 required
+                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                 data-action="keydown.enter->login#login">
+          <p class="text-red-500 text-sm mt-1 hidden" data-login-target="emailError">
+            Ingrese un correo electrónico válido
+          </p>
+        </div>
+
+        <%# Password %>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <input data-login-target="password"
+                 id="loginPass"
+                 data-testid="password"
+                 placeholder="Contraseña"
+                 required
+                 minlength="8"
+                 maxlength="30"
+                 class="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                 data-action="keydown.enter->login#login"
+                 type="password">
+          <button type="button"
+                  class="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  data-action="click->login#togglePassword">
+            <svg data-login-target="eyeIcon" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+            </svg>
+          </button>
+          <p class="text-red-500 text-sm mt-1 hidden" data-login-target="passwordError">
+            La contraseña debe tener un mínimo de 8 caracteres
+          </p>
+        </div>
+
+        <%# Botón submit %>
+        <button type="button"
+                data-action="click->login#login"
+                data-login-target="submitButton"
+                data-testid="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
+          <span data-login-target="buttonText">Ingresar</span>
+          <span data-login-target="buttonLoading" class="hidden">
+            <svg class="animate-spin h-5 w-5 mx-auto" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </span>
+        </button>
+
+        <%# Links %>
+        <div class="flex items-center justify-evenly text-sm text-gray-600">
+          <a href="#" data-action="click->login#showRecoverPassword" class="hover:text-gray-900 cursor-pointer">
+            ¿Olvidó su contraseña?
+          </a>
+          <span class="text-gray-300">|</span>
+          <a href="#" data-action="click->login#showChangePassword" class="hover:text-gray-900 cursor-pointer">
+            Cambiar contraseña
+          </a>
+        </div>
+
+        <%# Copyright %>
+        <div class="text-center text-gray-500 text-sm mt-8">
+          <p>© <%= Date.current.year %> Clavis Consultores</p>
+        </div>
+
+      </div>
+    </div>
+
+    <%# ---- Formulario recuperar contraseña ---- %>
+    <div id="recover-password-form" class="hidden" data-login-target="recoverForm">
+      <div class="space-y-4">
+
+        <h2 class="text-lg font-semibold text-gray-800 text-center">Recuperar contraseña</h2>
+
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <input type="email"
+                 data-login-target="recoverEmail"
+                 placeholder="Correo electrónico"
+                 maxlength="450"
+                 required
+                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
+        </div>
+
+        <button type="button"
+                data-action="click->login#sendRecoverEmail"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
+          Enviar correo de recuperación
+        </button>
+
+        <div class="text-center text-sm">
+          <a href="#" data-action="click->login#showLogin" class="text-gray-600 hover:text-gray-900 cursor-pointer">
+            Iniciar sesión
+          </a>
+        </div>
+
+        <div class="text-center text-gray-500 text-sm mt-8">
+          <p>© <%= Date.current.year %> Clavis Consultores</p>
+        </div>
+
+      </div>
+    </div>
+
+    <%# ---- Formulario cambiar contraseña ---- %>
+    <div id="change-password-form" class="hidden" data-login-target="changePasswordForm">
+      <div class="space-y-4">
+
+        <h2 class="text-lg font-semibold text-gray-800 text-center">Cambiar contraseña</h2>
+
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <input type="email"
+                 data-login-target="changeEmail"
+                 placeholder="Correo electrónico"
+                 maxlength="450"
+                 required
+                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
+        </div>
+
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <input type="password"
+                 data-login-target="currentPassword"
+                 placeholder="Contraseña actual"
+                 minlength="8"
+                 maxlength="30"
+                 required
+                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
+        </div>
+
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <input type="password"
+                 data-login-target="newPassword"
+                 placeholder="Nueva contraseña"
+                 minlength="8"
+                 maxlength="30"
+                 required
+                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
+        </div>
+
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <input type="password"
+                 data-login-target="confirmPassword"
+                 placeholder="Confirmar contraseña"
+                 minlength="8"
+                 maxlength="30"
+                 required
+                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
+        </div>
+
+        <button type="button"
+                data-action="click->login#changePassword"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
+          Cambiar contraseña
+        </button>
+
+        <div class="text-center text-sm">
+          <a href="#" data-action="click->login#showLogin" class="text-gray-600 hover:text-gray-900 cursor-pointer">
+            Iniciar sesión
+          </a>
+        </div>
+
+        <div class="text-center text-gray-500 text-sm mt-8">
+          <p>© <%= Date.current.year %> Clavis Consultores</p>
+        </div>
+
+      </div>
+    </div>
+
+    <%# Toast container %>
+    <div id="toast-container" class="fixed top-4 right-4 z-50" data-login-target="toastContainer"></div>
+
+  </div>
+</div>

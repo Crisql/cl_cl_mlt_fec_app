@@ -82,6 +82,22 @@ Reutilizar helpers existentes en `tests/helpers/` para autenticación y acciones
 
 ---
 
+## Convenciones de validación de campos
+
+Límites aplicados globalmente en todos los módulos:
+
+| Campo | Mínimo | Máximo | Notas |
+|---|---|---|---|
+| Contraseña | 8 caracteres | 30 caracteres | Aplica a login, cambio y recuperación de contraseña |
+| Correo electrónico | — | 450 caracteres | Aplica a todos los formularios con campo email |
+
+**Dónde se aplican estos límites:**
+- HTML: atributos `minlength` / `maxlength` en cada `<input>`
+- JS: `static values` en `login_controller.js` → `minPasswordLength`, `maxPasswordLength`, `maxEmailLength`
+- Al migrar nuevos módulos que tengan campos de contraseña o email, usar estos mismos valores.
+
+---
+
 ## Convención de nombres Stimulus
 
 El nombre del archivo determina el `data-controller` en el HTML. Rails conecta automáticamente:
@@ -110,21 +126,42 @@ No crear migraciones de negocio si la fuente de verdad es el API externo.
 
 ---
 
+## APIs externas
+
+El proyecto consume dos APIs:
+
+| Variable | URL dev | Propósito |
+|---|---|---|
+| `API_FE_APP_URL` | `https://clfecrbyappapidev.clavisco.com` | Usuarios, empresas, permisos, catálogos, token OAuth |
+| `API_FE_SYNC_URL` | `https://clfecrbyapidev.clavisco.com` | Emisión FE, consulta Hacienda, documentos |
+
+El proxy Rails captura todo bajo `/api/*` y enruta según el path:
+- `/api/token`, `/api/Users/*`, `/api/Companies/*` → `API_FE_APP_URL`
+- `/api/fe/*`, `/api/documents/*` → `API_FE_SYNC_URL`
+
+Ver `config/initializers/proxy.rb` y `.env.example`.
+
+---
+
 ## Variables de entorno
 
-Ver `.env.example` en la raíz del proyecto para la lista completa.
+Copiar `.env.example` → `.env` y ajustar. Ver `.env.example` para la lista completa.
 
 ---
 
 ## Comandos de desarrollo
 
 ```bash
-bundle install              # instalar gems
-npm install                 # instalar dependencias JS
-bin/dev                     # arrancar Rails + watcher de Tailwind
-rails db:create db:migrate  # primera vez
-playwright test             # E2E tests
-npm run test:unit           # unit tests (Vitest)
+# Primera vez
+bundle install
+cp .env.example .env        # ajustar API URLs si es necesario
+rails db:create db:migrate
+
+# Levantar
+bin/dev                     # Rails (port 3000) + watcher Tailwind
+
+# Tests
+npx playwright test         # E2E (requiere setup previo — ver fec-migration-docs/)
 ```
 
 ---

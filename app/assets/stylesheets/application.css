@@ -1,0 +1,6 @@
+/*
+ * FEC App — Estilos globales
+ * Tailwind CSS se carga vía tailwindcss-rails gem (stylesheet_link_tag "application")
+ */
+
+@import "tailwindcss";

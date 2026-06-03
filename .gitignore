@@ -96,3 +96,6 @@ yarn-debug.log*
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Repo legacy Angular — no incluir en este repo
+legacy/
