@@ -13,6 +13,9 @@ Rails.application.routes.draw do
   get  '/login',   to: 'sessions#new', as: :login
   get  '/sign-in', to: redirect('/login')
 
+  # Dashboard principal — auth guard es client-side
+  get  '/home',    to: 'home#index',    as: :home
+
   # Ruta raíz — el auth-guard client-side redirige a /home si hay sesión
   root to: 'sessions#new'
 end
