@@ -47,12 +47,14 @@ class AuthService {
       const data = await response.json()
 
       // Respuesta FEC: { access_token, UserName, userId, companyId, expires, ... }
-      // expires es una fecha string (ej: "4/6/2026 08:05:11"), no expires_in en segundos
+      // NOTA: el campo `.expires` del API usa formato D/M/YYYY (europeo).
+      // No usar new Date() sobre ese string — parsea como M/D/YYYY y da fecha incorrecta.
+      // Se extrae la expiración directamente del payload JWT (exp en Unix timestamp UTC).
       Storage.set('Session', {
         access_token: data.access_token,
         token_type:   data.token_type || 'Bearer',
-        expires_at:   data.expires ? new Date(data.expires).getTime() : null,
-        '.expires':   data.expires || null,
+        expires_at:   this.#extractJwtExpiry(data.access_token),
+        '.expires':   data.expires || data['.expires'] || null,
         UserEmail:    data.UserName || '',
         UserId:       data.userId  || ''
       })
@@ -191,6 +193,24 @@ class AuthService {
     this.currentCompany = Storage.getCurrentCompany()
 
     return true
+  }
+
+  /**
+   * Extrae la fecha de expiración del payload JWT (campo `exp`, Unix timestamp en segundos).
+   * Evita parsear el campo `.expires` del API que viene en formato D/M/YYYY (europeo),
+   * el cual new Date() interpreta como M/D/YYYY dando una fecha incorrecta.
+   *
+   * @param {string} token - JWT access token
+   * @returns {number|null} Timestamp en milisegundos, o null si no se puede extraer
+   */
+  #extractJwtExpiry(token) {
+    try {
+      if (!token) return null
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      return payload.exp ? payload.exp * 1000 : null
+    } catch {
+      return null
+    }
   }
 
   /**

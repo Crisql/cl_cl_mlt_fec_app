@@ -30,10 +30,8 @@ export default class extends Controller {
       return
     }
 
-    // Verificar expiración — soporta tanto ".expires" (legacy .NET) como "expires_at" (vendor Rails)
-    const expiresAt = session['.expires']
-      ? new Date(session['.expires']).getTime()
-      : session.expires_at
+    // expires_at viene del JWT exp (Unix timestamp en ms), sin ambigüedad de formato de fecha
+    const expiresAt = session.expires_at ?? null
 
     if (expiresAt && Date.now() >= expiresAt) {
       this.#clearSession()
