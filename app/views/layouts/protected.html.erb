@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="turbo-cache-control" content="no-cache">
+    <title><%= content_for?(:title) ? yield(:title) : "Factura Electrónica CR" %></title>
+
+    <link rel="icon" type="image/x-icon" href="<%= asset_path('favicon.ico') %>">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="bg-gray-50 text-gray-900 antialiased">
+    <%# Toast container global %>
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <%# ---------------------------------------------------------------- %>
+    <%# Shell protegida — auth-guard + menu + company-selector %>
+    <%# ---------------------------------------------------------------- %>
+    <div data-controller="auth-guard menu company-selector"
+         data-menu-page-title-value="<%= content_for?(:page_title) ? yield(:page_title) : '' %>"
+         class="flex h-screen overflow-hidden">
+
+      <%# ============================================================= %>
+      <%# SIDEBAR %>
+      <%# ============================================================= %>
+      <aside data-menu-target="sidebar"
+             data-testid="sidebar"
+             class="flex flex-col bg-gray-900 text-white transition-all duration-300 w-64 flex-shrink-0">
+
+        <%# Logo + título %>
+        <div class="flex justify-center px-4 py-5 border-b border-gray-700">
+          <%= image_tag "Logo-Clavisco.svg",
+              class: "h-8 w-auto",
+              alt: "Clavisco",
+              "data-testid": "sidebar-logo" %>
+        </div>
+
+        <%# Username %>
+        <div class="px-4 py-3 border-b border-gray-700">
+          <p class="text-xs text-gray-400">Usuario</p>
+          <p data-menu-target="username"
+             data-testid="sidebar-user"
+             class="text-sm text-white truncate"></p>
+        </div>
+
+        <%# Nodos del menú %>
+        <nav data-menu-target="nav"
+             class="flex-1 overflow-y-auto py-2">
+          <%# Renderizado dinámico por menu_controller.js %>
+        </nav>
+
+      </aside>
+
+      <%# ============================================================= %>
+      <%# CONTENIDO PRINCIPAL %>
+      <%# ============================================================= %>
+      <div class="flex flex-col flex-1 overflow-hidden">
+
+        <%# TOOLBAR %>
+        <header data-testid="toolbar"
+                class="flex items-center justify-between bg-white border-b border-gray-200 px-4 h-14 flex-shrink-0 shadow-sm">
+
+          <div class="flex items-center gap-3">
+            <%# Toggle sidebar %>
+            <button data-action="click->menu#toggleSidebar"
+                    data-testid="menu-toggle"
+                    class="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                    aria-label="Menú">
+              <span class="material-icons text-xl">menu</span>
+            </button>
+
+            <%# Título de página %>
+            <span data-menu-target="pageTitle"
+                  class="text-sm font-medium text-gray-700"></span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">Compañía:</span>
+
+            <%# Botón selección de empresa %>
+            <button data-action="click->company-selector#open"
+                    data-testid="company-button"
+                    class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors max-w-xs truncate"
+                    title="">
+              <span class="material-icons text-base">business</span>
+              <span data-company-selector-target="toolbarLabel" class="truncate">No seleccionada</span>
+            </button>
+          </div>
+        </header>
+
+        <%# Área de contenido %>
+        <main class="flex-1 overflow-auto p-6">
+          <%= yield %>
+        </main>
+      </div>
+
+      <%# ============================================================= %>
+      <%# MODAL — Company Selector %>
+      <%# ============================================================= %>
+      <div data-company-selector-target="modal"
+         data-testid="company-selector-modal"
+         class="fixed inset-0 z-50 hidden">
+
+      <%# Overlay %>
+      <div data-action="click->company-selector#overlayClick"
+           class="absolute inset-0 bg-black/50"></div>
+
+      <%# Dialog %>
+      <div class="relative z-10 flex items-center justify-center h-full px-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+
+          <h2 class="text-lg font-semibold text-gray-800 mb-5">Seleccione una compañía</h2>
+
+          <%# Input de búsqueda %>
+          <div class="relative mb-4">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-gray-400 text-xl">search</span>
+            <input type="text"
+                   data-company-selector-target="searchInput"
+                   data-testid="company-search-input"
+                   data-action="input->company-selector#filter"
+                   placeholder="Digite el nombre de una compañía"
+                   class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          </div>
+
+          <%# Lista de opciones %>
+          <ul data-company-selector-target="list"
+              class="max-h-56 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100 mb-5">
+            <%# Renderizado dinámico por company_selector_controller.js %>
+          </ul>
+
+          <%# Loading state %>
+          <p data-company-selector-target="loading"
+             class="text-center text-sm text-gray-500 py-4 hidden">
+            Cargando compañías...
+          </p>
+
+          <%# Acciones %>
+          <div class="flex justify-end gap-3">
+            <button data-company-selector-target="cancelBtn"
+                    data-action="click->company-selector#close"
+                    data-testid="company-cancel-btn"
+                    class="hidden px-4 py-2 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors">
+              <span class="material-icons text-base align-middle mr-1">cancel</span>
+              Cancelar
+            </button>
+
+            <button data-company-selector-target="confirmBtn"
+                    data-action="click->company-selector#confirm"
+                    data-testid="company-confirm-btn"
+                    disabled
+                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              <span class="material-icons text-base align-middle mr-1">check</span>
+              Continuar
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div><%# /controller wrapper %>
+
+  </body>
+</html>

@@ -1,141 +1,86 @@
 <% content_for :title, "Inicio — FEC" %>
+<% content_for :page_title, "Estadística" %>
 
-<%# Auth-guard: redirige a /login si no hay sesión válida %>
-<div data-controller="auth-guard home"
+<%# ---------------------------------------------------------------- %>
+<%# Banner (oculto por defecto; home_controller.js lo muestra) %>
+<%# ---------------------------------------------------------------- %>
+<div data-controller="home"
      data-home-banner-url-value="/banner.json"
      data-testid="home-page">
 
-  <%# ---------------------------------------------------------------- %>
-  <%# Layout principal %>
-  <%# ---------------------------------------------------------------- %>
-  <div class="flex min-h-screen bg-gray-50">
+  <div data-home-target="banner"
+       data-testid="banner"
+       class="relative mb-6 hidden">
+    <button data-action="click->home#closeBanner"
+            data-testid="banner-close"
+            class="absolute top-2 right-2 z-10 bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-blue-700 transition-colors"
+            aria-label="Cerrar banner">
+      <span class="material-icons text-sm">clear</span>
+    </button>
+    <img data-home-target="bannerImage"
+         data-action="click->home#viewBanner"
+         data-testid="banner-image"
+         src=""
+         alt="Banner"
+         class="w-full rounded-md border border-gray-200 cursor-pointer">
+  </div>
 
-    <%# Menú lateral — vendor clavisco/menu %>
-    <div data-controller="cl-menu"
-         class="flex-none">
+  <%# ---------------------------------------------------------------- %>
+  <%# Grid de gráficos — 3 filas × 2 columnas %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-testid="charts-container"
+       class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <div data-testid="chart-card-1" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h4 class="text-sm font-semibold text-gray-700 mb-4">Facturación últimos 30 días (CRC)</h4>
+      <canvas id="canvas1" data-home-target="canvas1" class="w-full"></canvas>
+      <div data-home-target="chartPlaceholder1" class="flex items-center justify-center h-40 text-gray-400 text-sm">
+        <span class="material-icons mr-2 text-gray-300">bar_chart</span>Cargando datos...
+      </div>
     </div>
 
-    <%# Contenido principal %>
-    <main class="flex-1 p-6 overflow-auto">
-
-      <%# -------------------------------------------------------------- %>
-      <%# Banner (oculto por defecto; home_controller.js lo muestra) %>
-      <%# -------------------------------------------------------------- %>
-      <div data-home-target="banner"
-           data-testid="banner"
-           class="relative mb-6 hidden">
-        <%# Botón cerrar (X) %>
-        <button data-action="click->home#closeBanner"
-                data-testid="banner-close"
-                class="absolute top-2 right-2 z-10 bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-blue-700 transition-colors"
-                aria-label="Cerrar banner">
-          <span class="material-icons text-sm">clear</span>
-        </button>
-
-        <%# Imagen del banner %>
-        <img data-home-target="bannerImage"
-             data-action="click->home#viewBanner"
-             data-testid="banner-image"
-             src=""
-             alt="Banner"
-             class="w-full rounded-md border border-gray-200 cursor-pointer">
+    <div data-testid="chart-card-2" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h4 class="text-sm font-semibold text-gray-700 mb-4">Facturación últimas 12 semanas (CRC)</h4>
+      <canvas id="canvas2" data-home-target="canvas2" class="w-full"></canvas>
+      <div data-home-target="chartPlaceholder2" class="flex items-center justify-center h-40 text-gray-400 text-sm">
+        <span class="material-icons mr-2 text-gray-300">bar_chart</span>Cargando datos...
       </div>
+    </div>
 
-      <%# -------------------------------------------------------------- %>
-      <%# Grid de gráficos — 3 filas × 2 columnas %>
-      <%# -------------------------------------------------------------- %>
-      <div data-testid="charts-container"
-           class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-        <%# Chart 1 — Facturación últimos 30 días %>
-        <div data-testid="chart-card-1"
-             class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h4 class="text-sm font-semibold text-gray-700 mb-4">
-            Facturación últimos 30 días (CRC)
-          </h4>
-          <canvas id="canvas1" data-home-target="canvas1" class="w-full"></canvas>
-          <div data-home-target="chartPlaceholder1"
-               class="flex items-center justify-center h-40 text-gray-400 text-sm">
-            <span class="material-icons mr-2 text-gray-300">bar_chart</span>
-            Cargando datos...
-          </div>
-        </div>
-
-        <%# Chart 2 — Facturación últimas 12 semanas %>
-        <div data-testid="chart-card-2"
-             class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h4 class="text-sm font-semibold text-gray-700 mb-4">
-            Facturación últimas 12 semanas (CRC)
-          </h4>
-          <canvas id="canvas2" data-home-target="canvas2" class="w-full"></canvas>
-          <div data-home-target="chartPlaceholder2"
-               class="flex items-center justify-center h-40 text-gray-400 text-sm">
-            <span class="material-icons mr-2 text-gray-300">bar_chart</span>
-            Cargando datos...
-          </div>
-        </div>
-
-        <%# Chart 3 — Facturación últimos 12 meses %>
-        <div data-testid="chart-card-3"
-             class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h4 class="text-sm font-semibold text-gray-700 mb-4">
-            Facturación últimos 12 meses (CRC)
-          </h4>
-          <canvas id="canvas3" data-home-target="canvas3" class="w-full"></canvas>
-          <div data-home-target="chartPlaceholder3"
-               class="flex items-center justify-center h-40 text-gray-400 text-sm">
-            <span class="material-icons mr-2 text-gray-300">bar_chart</span>
-            Cargando datos...
-          </div>
-        </div>
-
-        <%# Chart 4 — Top 10 clientes %>
-        <div data-testid="chart-card-4"
-             class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h4 class="text-sm font-semibold text-gray-700 mb-4">
-            Top 10 clientes por venta últimos 3 meses (CRC)
-          </h4>
-          <canvas id="canvas4" data-home-target="canvas4" class="w-full"></canvas>
-          <div data-home-target="chartPlaceholder4"
-               class="flex items-center justify-center h-40 text-gray-400 text-sm">
-            <span class="material-icons mr-2 text-gray-300">bar_chart</span>
-            Cargando datos...
-          </div>
-        </div>
-
-        <%# Chart 5 — Estado de correos (pie) %>
-        <div data-testid="chart-card-5"
-             class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h4 class="text-sm font-semibold text-gray-700 mb-4">
-            Estado de envío de correos (últimos 30 días)
-          </h4>
-          <canvas id="canvas5" data-home-target="canvas5" class="w-full"></canvas>
-          <p id="numCount" data-home-target="emailCount" class="mt-3 text-base font-normal text-gray-600"></p>
-          <div data-home-target="chartPlaceholder5"
-               class="flex items-center justify-center h-40 text-gray-400 text-sm">
-            <span class="material-icons mr-2 text-gray-300">pie_chart</span>
-            Cargando datos...
-          </div>
-        </div>
-
-        <%# Chart 6 — Estado de documentos (pie) %>
-        <div data-testid="chart-card-6"
-             class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h4 class="text-sm font-semibold text-gray-700 mb-4">
-            Cantidad de documentos por estado (últimos 30 días)
-          </h4>
-          <canvas id="canvas6" data-home-target="canvas6" class="w-full"></canvas>
-          <p id="docCount" data-home-target="docCount" class="mt-3 text-base font-normal text-gray-600"></p>
-          <div data-home-target="chartPlaceholder6"
-               class="flex items-center justify-center h-40 text-gray-400 text-sm">
-            <span class="material-icons mr-2 text-gray-300">pie_chart</span>
-            Cargando datos...
-          </div>
-        </div>
-
+    <div data-testid="chart-card-3" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h4 class="text-sm font-semibold text-gray-700 mb-4">Facturación últimos 12 meses (CRC)</h4>
+      <canvas id="canvas3" data-home-target="canvas3" class="w-full"></canvas>
+      <div data-home-target="chartPlaceholder3" class="flex items-center justify-center h-40 text-gray-400 text-sm">
+        <span class="material-icons mr-2 text-gray-300">bar_chart</span>Cargando datos...
       </div>
-      <%# /grid de gráficos %>
+    </div>
 
-    </main>
+    <div data-testid="chart-card-4" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h4 class="text-sm font-semibold text-gray-700 mb-4">Top 10 clientes por venta últimos 3 meses (CRC)</h4>
+      <canvas id="canvas4" data-home-target="canvas4" class="w-full"></canvas>
+      <div data-home-target="chartPlaceholder4" class="flex items-center justify-center h-40 text-gray-400 text-sm">
+        <span class="material-icons mr-2 text-gray-300">bar_chart</span>Cargando datos...
+      </div>
+    </div>
+
+    <div data-testid="chart-card-5" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h4 class="text-sm font-semibold text-gray-700 mb-4">Estado de envío de correos (últimos 30 días)</h4>
+      <canvas id="canvas5" data-home-target="canvas5" class="w-full"></canvas>
+      <p id="numCount" data-home-target="emailCount" class="mt-3 text-base font-normal text-gray-600"></p>
+      <div data-home-target="chartPlaceholder5" class="flex items-center justify-center h-40 text-gray-400 text-sm">
+        <span class="material-icons mr-2 text-gray-300">pie_chart</span>Cargando datos...
+      </div>
+    </div>
+
+    <div data-testid="chart-card-6" class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h4 class="text-sm font-semibold text-gray-700 mb-4">Cantidad de documentos por estado (últimos 30 días)</h4>
+      <canvas id="canvas6" data-home-target="canvas6" class="w-full"></canvas>
+      <p id="docCount" data-home-target="docCount" class="mt-3 text-base font-normal text-gray-600"></p>
+      <div data-home-target="chartPlaceholder6" class="flex items-center justify-center h-40 text-gray-400 text-sm">
+        <span class="material-icons mr-2 text-gray-300">pie_chart</span>Cargando datos...
+      </div>
+    </div>
+
   </div>
+
 </div>
