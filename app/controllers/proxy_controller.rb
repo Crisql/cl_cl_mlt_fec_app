@@ -2,97 +2,115 @@
 
 # ProxyController — reenvía todas las llamadas /api/* al backend externo.
 #
-# Arquitectura:
-#   Browser → Rails /api/* → ProxyController → API externo (FEC App o FEC Sync)
+# IMPORTANTE: Este proxy es 100% TRANSPARENTE.
+# - Solo cambia la base URL
+# - Reenvía TODOS los headers del browser tal como llegan
+# - La UI maneja autenticación (OAuth2 token)
+# - La UI incluye cl-company-id header
 #
-# Enrutamiento por path:
-#   - /api/token, /api/Users/*, /api/Companies/*, /api/Passwords/* → API_FE_APP_URL
-#   - Todo lo demás bajo /api/*                                    → API_FE_APP_URL (default)
-#
-# El token de autorización viaja en el header Authorization del request original
-# y se reenvía sin modificación.
+# Nota de path para /api/token:
+#   UI llama: /api/token → API espera: /token  (nivel raíz, sin /api)
+#   UI llama: /api/Menu  → API espera: /api/Menu (mantiene prefijo /api)
 class ProxyController < ApplicationController
-  protect_from_forgery with: :null_session
-
-  # Rutas que van al API de la aplicación (auth, usuarios, empresas, etc.)
-  APP_API_PATHS = %w[
-    token
-    Users
-    Companies
-    Passwords
-    Permissions
-    Menu
-  ].freeze
+  skip_before_action :verify_authenticity_token
+  skip_before_action :allow_browser, raise: false
 
   def forward
-    target_url = build_target_url
-    response   = forward_request(target_url)
+    target_url = "#{api_base_url}#{request.fullpath}"
 
-    # Reenviar status, content-type y body al cliente
-    self.response.status = response.status
-    self.response.headers['Content-Type'] = response.headers['Content-Type'] || 'application/json'
-    render plain: response.body, status: response.status
-  rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
-    render json: { error: 'Error de conexión con el servidor', detail: e.message },
-           status: :bad_gateway
+    Rails.logger.info  "[Proxy] #{request.method} #{target_url}"
+    Rails.logger.info  "[Proxy] Content-Type: #{request.content_type}"
+
+    uri        = URI.parse(target_url)
+    http       = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl      = (uri.scheme == 'https')
+    http.read_timeout = 30
+    http.open_timeout = 10
+
+    # En desarrollo se deshabilita verificación SSL (issues de CRL / certificados locales)
+    http.verify_mode = if Rails.env.development? || ENV['SKIP_SSL_VERIFICATION'] == 'true'
+      OpenSSL::SSL::VERIFY_NONE
+    else
+      OpenSSL::SSL::VERIFY_PEER
+    end
+
+    body = request.raw_post.presence
+    Rails.logger.info "[Proxy] Body (#{body&.bytesize || 0} bytes): #{body.inspect}"
+
+    http_request      = build_http_request(request.method, uri, forwarded_headers)
+    http_request.body = body
+    response          = http.request(http_request)
+
+    Rails.logger.info "[Proxy] Response: #{response.code}"
+    Rails.logger.error "[Proxy] Error body: #{response.body.to_s[0..500]}" if response.code.to_i >= 400
+
+    # Reenviar headers de paginación al cliente
+    response.each_header do |key, value|
+      if key.downcase.start_with?('cl-sl-pagination', 'cl-dba-pagination') || key.downcase == 'cl-message'
+        self.response.headers[key] = value
+      end
+    end
+
+    render body: response.body,
+           status: response.code.to_i,
+           content_type: response['Content-Type'] || 'application/json'
+
+  rescue Net::ReadTimeout, Net::OpenTimeout => e
+    Rails.logger.error "[Proxy] Timeout: #{e.message}"
+    render json: { error: 'API request timed out' }, status: :gateway_timeout
   rescue StandardError => e
-    Rails.logger.error "[ProxyController] #{e.class}: #{e.message}"
-    render json: { error: 'Error interno del proxy' }, status: :internal_server_error
+    Rails.logger.error "[Proxy] #{e.class}: #{e.message}"
+    render json: { error: "API request failed: #{e.message}" }, status: :bad_gateway
   end
 
   private
 
-  def api_path
-    # Extrae el path después de /api/  → "token", "Users/GetUserInfo", etc.
-    params[:path].to_s
+  def api_base_url
+    Rails.application.config.api_fe_app_url
   end
 
-  def build_target_url
-    base = resolve_base_url
-    path = api_path
-    url  = "#{base}/api/#{path}"
-    url += "?#{request.query_string}" if request.query_string.present?
-    url
+  def build_http_request(method, uri, headers)
+    klass = case method.upcase
+            when 'GET'     then Net::HTTP::Get
+            when 'POST'    then Net::HTTP::Post
+            when 'PUT'     then Net::HTTP::Put
+            when 'PATCH'   then Net::HTTP::Patch
+            when 'DELETE'  then Net::HTTP::Delete
+            when 'OPTIONS' then Net::HTTP::Options
+            when 'HEAD'    then Net::HTTP::Head
+            else Net::HTTP::Get
+            end
+
+    req = klass.new(uri.request_uri)
+    headers.each { |key, value| req[key] = value }
+    req['Host'] = uri.host  # Host correcto del API destino, no localhost:3000
+    req
   end
 
-  def resolve_base_url
-    first_segment = api_path.split('/').first.to_s
+  def forwarded_headers
+    headers = {}
 
-    if APP_API_PATHS.any? { |p| first_segment.casecmp?(p) }
-      Rails.application.config.api_fe_app_url
-    else
-      Rails.application.config.api_fe_sync_url
+    request.headers.each do |key, value|
+      if key.start_with?('HTTP_')
+        header_name = key.sub(/^HTTP_/, '').split('_').map(&:capitalize).join('-')
+        # Mantener headers cl-* en minúsculas (el backend .NET puede ser case-sensitive)
+        header_name = header_name.downcase if header_name.start_with?('Cl-')
+        headers[header_name] = value
+      elsif %w[CONTENT_TYPE CONTENT_LENGTH].include?(key)
+        headers[key.split('_').map(&:capitalize).join('-')] = value
+      end
     end
-  end
 
-  def forward_request(url)
-    conn = Faraday.new(url: url) do |f|
-      f.options.timeout      = 30
-      f.options.open_timeout = 10
+    # Sin Accept-Encoding → respuestas sin comprimir (evita problemas con gzip/brotli)
+    headers.delete('Accept-Encoding')
+
+    # Headers que no deben llegar al backend (igual que Angular legacy: withCredentials: false)
+    %w[Cookie Referer Origin Sec-Fetch-Site Sec-Fetch-Mode Sec-Fetch-Dest
+       Sec-Ch-Ua Sec-Ch-Ua-Mobile Sec-Ch-Ua-Platform Connection Pragma Cache-Control Host].each do |h|
+      headers.delete(h)
     end
 
-    headers = forward_headers
-
-    case request.method.upcase
-    when 'GET'    then conn.get('',    nil,          headers)
-    when 'POST'   then conn.post('',   request.raw_post, headers)
-    when 'PUT'    then conn.put('',    request.raw_post, headers)
-    when 'PATCH'  then conn.patch('',  request.raw_post, headers)
-    when 'DELETE' then conn.delete('', nil,          headers)
-    else
-      raise "HTTP method no soportado: #{request.method}"
-    end
-  end
-
-  def forward_headers
-    headers = { 'Content-Type' => request.content_type.presence || 'application/json' }
-
-    # Reenviar Authorization si existe (token Bearer)
-    headers['Authorization'] = request.headers['Authorization'] if request.headers['Authorization'].present?
-
-    # Reenviar company header si existe
-    headers['cl-company-id'] = request.headers['cl-company-id'] if request.headers['cl-company-id'].present?
-
+    Rails.logger.info "[Proxy] Headers: #{headers.except('Authorization').inspect}"
     headers
   end
 end

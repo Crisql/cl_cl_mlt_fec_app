@@ -26,33 +26,35 @@ class AuthService {
    */
   async login(username, password) {
     try {
+      // FEC API usa JSON con campos userName/password (no OAuth2 form-encoded)
       const response = await fetch('/api/token', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/json',
+          'Accept': '*/*'
         },
-        body: new URLSearchParams({
-          grant_type: 'password',
-          username,
-          password
+        body: JSON.stringify({
+          userName: username,
+          password: password
         })
       })
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}))
-        throw new Error(error.error_description || 'Error de autenticación')
+        throw new Error(error.error_description || error.Message || 'Error de autenticación')
       }
 
       const data = await response.json()
 
-      // Store session (include UserEmail from OAuth token response properties)
+      // Respuesta FEC: { access_token, UserName, userId, companyId, expires, ... }
+      // expires es una fecha string (ej: "4/6/2026 08:05:11"), no expires_in en segundos
       Storage.set('Session', {
         access_token: data.access_token,
-        expires_in: data.expires_in,
-        token_type: data.token_type,
-        expires_at: Date.now() + (data.expires_in * 1000),
-        UserEmail: data.UserEmail || '',
-        UserId: data.UserId || ''
+        token_type:   data.token_type || 'Bearer',
+        expires_at:   data.expires ? new Date(data.expires).getTime() : null,
+        '.expires':   data.expires || null,
+        UserEmail:    data.UserName || '',
+        UserId:       data.userId  || ''
       })
 
       this.isAuthenticated = true

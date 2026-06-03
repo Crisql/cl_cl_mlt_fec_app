@@ -59,7 +59,8 @@ export default class extends Controller {
     this.#setLoading(true)
 
     try {
-      const result = await login(email, password)
+      // Pasar el tokenUrl directo al API externo (evita el proxy Rails / Cloudflare)
+      const result = await login(email, password, this.apiUrlValue)
 
       if (result.success) {
         window.location.href = this.redirectPathValue
