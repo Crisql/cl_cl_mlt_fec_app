@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus'
-import { Storage, getApiHeaders } from 'vendor/clavisco/core'
+import { Storage, SStore, getApiHeaders } from 'vendor/clavisco/core'
 
 /**
  * CompanySelectorController — Modal de selección de empresa.
@@ -35,7 +35,7 @@ export default class extends Controller {
     this.#updateToolbarLabel()
 
     // Abrir automáticamente si no hay empresa seleccionada
-    const company = Storage.get('CurrentCompany')
+    const company = SStore.get('CurrentCompany')
     if (!company?.companyId) {
       this.open()
     }
@@ -55,7 +55,7 @@ export default class extends Controller {
   }
 
   close() {
-    const company = Storage.get('CurrentCompany')
+    const company = SStore.get('CurrentCompany')
     // Solo permitir cerrar si ya hay una empresa seleccionada
     if (!company?.companyId) return
     this.#hideModal()
@@ -77,7 +77,7 @@ export default class extends Controller {
   confirm() {
     if (!this.#pendingSelection) return
 
-    const current = Storage.get('CurrentCompany')
+    const current = SStore.get('CurrentCompany')
 
     // Misma empresa → solo cerrar
     if (current?.companyId === this.#pendingSelection.Id) {
@@ -94,7 +94,7 @@ export default class extends Controller {
 
   #updateToolbarLabel() {
     if (!this.hasToolbarLabelTarget) return
-    const company = Storage.get('CurrentCompany')
+    const company = SStore.get('CurrentCompany')
     this.toolbarLabelTarget.textContent = company?.companyName ?? 'No seleccionada'
 
     // Tooltip con ID
@@ -106,7 +106,7 @@ export default class extends Controller {
 
   #showCancelIfApplicable() {
     if (!this.hasCancelBtnTarget) return
-    const company = Storage.get('CurrentCompany')
+    const company = SStore.get('CurrentCompany')
     if (company?.companyId) {
       this.cancelBtnTarget.classList.remove('hidden')
     } else {
@@ -196,7 +196,7 @@ export default class extends Controller {
     this.#setConfirmDisabled(true)
 
     // 1. Guardar empresa en localStorage
-    Storage.set('CurrentCompany', {
+    SStore.set('CurrentCompany', {
       companyName:        company.EmsrNombreComercial,
       companyId:          company.Id,
       codigoActividad:    company.CodigoActividad,
@@ -206,7 +206,7 @@ export default class extends Controller {
     })
 
     // 2. Limpiar permisos anteriores
-    localStorage.removeItem('Permissions')
+    sessionStorage.removeItem('Permissions')
 
     // 3. Cargar nuevos permisos
     await this.#reloadPermissions(company.Id)
@@ -224,7 +224,7 @@ export default class extends Controller {
       if (!response.ok) return
       const data = await response.json()
       const perms = (data?.Data ?? []).map(p => p.Name)
-      Storage.set('Permissions', perms)
+      SStore.set('Permissions', perms)
     } catch {
       // Permisos se cargarán en el siguiente connect() del menu_controller
     }

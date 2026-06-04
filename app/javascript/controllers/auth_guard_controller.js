@@ -49,22 +49,17 @@ export default class extends Controller {
   }
 
   #clearSession() {
-    // Limpia todas las claves de sesión (equivalente a SharedService.Logout del legacy)
-    const keys = [
+    // localStorage — datos persistentes
+    const lsKeys = [
       this.sessionNameValue,
-      'CurrentCompany',
-      'UserAssign',
-      'DocumentInMemories',
-      'CurrentSession',
-      'Ports',
-      'Permissions',
-      'Menu',
-      'LocalPrinter',
-      'ReportManager',
-      'UserInfo',
-      'Companies'
+      'UserAssign', 'DocumentInMemories', 'CurrentSession', 'Ports',
+      'Menu', 'LocalPrinter', 'ReportManager', 'UserInfo', 'Companies'
     ]
-    keys.forEach(key => localStorage.removeItem(key))
+    lsKeys.forEach(key => localStorage.removeItem(key))
+
+    // sessionStorage — datos por pestaña
+    sessionStorage.removeItem('CurrentCompany')
+    sessionStorage.removeItem('Permissions')
   }
 
   #redirectToLogin() {

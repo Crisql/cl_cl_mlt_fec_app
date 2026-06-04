@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus'
-import { Storage, getApiHeaders } from 'vendor/clavisco/core'
+import { Storage, SStore, getApiHeaders } from 'vendor/clavisco/core'
 
 /**
  * MenuController — Sidebar + Toolbar del layout protegido.
@@ -161,8 +161,8 @@ export default class extends Controller {
   }
 
   async #loadPermissionsAndRender() {
-    const company  = Storage.get('CurrentCompany')
-    let permissions = Storage.get('Permissions') // array de strings
+    const company  = SStore.get('CurrentCompany')
+    let permissions = SStore.get('Permissions') // array de strings — sessionStorage (per-tab)
 
     // Si no hay permisos en caché, cargarlos del API
     if (!permissions && company?.companyId) {
@@ -182,7 +182,7 @@ export default class extends Controller {
       if (!response.ok) return []
       const data = await response.json()
       const perms = (data?.Data ?? []).map(p => p.Name)
-      Storage.set('Permissions', perms)
+      SStore.set('Permissions', perms)
       return perms
     } catch {
       return []
@@ -325,13 +325,18 @@ export default class extends Controller {
   }
 
   #logout() {
-    const keys = [
-      'Session', 'CurrentCompany', 'Permissions', 'UserAssign',
-      'DocumentInMemories', 'CurrentSession', 'Ports', 'Menu',
-      'LocalPrinter', 'ReportManager', 'UserInfo', 'Companies',
-      'menuState', 'BannerUser'
+    // localStorage — datos persistentes entre pestañas
+    const lsKeys = [
+      'Session', 'UserAssign', 'DocumentInMemories', 'CurrentSession',
+      'Ports', 'Menu', 'LocalPrinter', 'ReportManager', 'UserInfo',
+      'Companies', 'menuState', 'BannerUser'
     ]
-    keys.forEach(k => localStorage.removeItem(k))
+    lsKeys.forEach(k => localStorage.removeItem(k))
+
+    // sessionStorage — datos por pestaña (empresa + permisos)
+    sessionStorage.removeItem('CurrentCompany')
+    sessionStorage.removeItem('Permissions')
+
     window.location.href = '/login'
   }
 }

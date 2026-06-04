@@ -343,11 +343,11 @@ export const Storage = {
   },
 
   /**
-   * Get current company
+   * Get current company desde sessionStorage (per-tab).
    * @returns {Object|null} Company object
    */
   getCurrentCompany() {
-    return this.get('CurrentCompany')
+    return SStore.get('CurrentCompany')
   },
 
   /**
@@ -360,12 +360,47 @@ export const Storage = {
   },
 
   /**
-   * Get company ID
+   * Get company ID desde sessionStorage (per-tab).
    * @returns {number} Company ID
    */
   getCompanyId() {
     const company = this.getCurrentCompany()
-    return company?.Id || 1
+    return company?.companyId || 1
+  }
+}
+
+// ============================================================
+// SESSION STORAGE HELPER (per-tab: empresa seleccionada, permisos)
+// ============================================================
+
+/**
+ * SStore — equivalente a Storage pero sobre sessionStorage.
+ * Usar para datos por pestaña: CurrentCompany, Permissions.
+ */
+export const SStore = {
+  get(key) {
+    try {
+      const item = sessionStorage.getItem(key)
+      return item ? JSON.parse(item) : null
+    } catch {
+      return sessionStorage.getItem(key)
+    }
+  },
+
+  set(key, value) {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(value))
+    } catch {
+      sessionStorage.setItem(key, value)
+    }
+  },
+
+  remove(key) {
+    sessionStorage.removeItem(key)
+  },
+
+  clear() {
+    sessionStorage.clear()
   }
 }
 

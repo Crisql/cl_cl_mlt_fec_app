@@ -3,7 +3,7 @@
  * Migrated from Angular to vanilla JavaScript for Rails/Stimulus
  */
 
-import { Storage, clPrint, CL_DISPLAY, getError } from 'vendor/clavisco/core'
+import { Storage, SStore, clPrint, CL_DISPLAY, getError } from 'vendor/clavisco/core'
 import { publish } from 'vendor/clavisco/linker'
 
 // ============================================================
@@ -134,7 +134,7 @@ class AuthService {
    */
   selectCompany(company) {
     this.currentCompany = company
-    Storage.set('CurrentCompany', company)
+    SStore.set('CurrentCompany', company)
 
     publish({
       View: 'login',
@@ -153,7 +153,7 @@ class AuthService {
 
     Storage.remove('Session')
     Storage.remove('UserInfo')
-    Storage.remove('CurrentCompany')
+    SStore.remove('CurrentCompany')
     Storage.remove('Companies')
 
     publish({

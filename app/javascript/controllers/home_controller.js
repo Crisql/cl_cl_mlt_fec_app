@@ -1,11 +1,11 @@
 import { Controller } from '@hotwired/stimulus'
-import { Storage } from 'vendor/clavisco/core'
+import { Storage, SStore } from 'vendor/clavisco/core'
 
 /**
  * HomeController — Dashboard principal.
  *
  * Responsabilidades:
- *  - Leer datos de sesión desde localStorage (Session, CurrentCompany)
+ *  - Leer Session desde localStorage, CurrentCompany desde sessionStorage
  *  - Cargar Banner.json y aplicar lógica de visibilidad
  *  - Manejar acciones de banner: cerrar y ver URL
  *
@@ -82,7 +82,7 @@ export default class extends Controller {
   }
 
   #loadSelectedCompany() {
-    this.#selectedCompany = Storage.get('CurrentCompany')
+    this.#selectedCompany = SStore.get('CurrentCompany')
   }
 
   async #loadBanner() {
