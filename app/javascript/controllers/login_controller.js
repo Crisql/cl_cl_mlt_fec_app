@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { login, checkAuth } from 'vendor/clavisco/login'
+import { Storage } from 'vendor/clavisco/core'
 
 // Stimulus controller para /login
 // Vendor: vendor/clavisco/login maneja OAuth2 y storage
@@ -63,6 +64,17 @@ export default class extends Controller {
       const result = await login(email, password, this.apiUrlValue)
 
       if (result.success) {
+        if(result.response.companyId)
+        {
+          Storage.set("FavoriteCompany", {
+            companyName: result.response.CompanyName,
+            companyId: result.response.companyId,
+            codigoActividad: result.response.CodigoActividad,
+            groupId: result.response.GroupId,
+            UseFactProv: result.response.UseFactProv,
+            SendReceptAndApInv: result.response.SendReceptAndApInv
+          });
+        }
         window.location.href = this.redirectPathValue
       } else {
         this.#showToast(result.error || 'Error de autenticación', 'error')

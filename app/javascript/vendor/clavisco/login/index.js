@@ -71,7 +71,7 @@ class AuthService {
         Data: { user: this.user }
       })
 
-      return { success: true, user: this.user }
+      return { success: true, user: this.user, response: data }
 
     } catch (error) {
       clPrint(error, CL_DISPLAY.ERROR)

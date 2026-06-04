@@ -37,7 +37,22 @@ export default class extends Controller {
     // Abrir automáticamente si no hay empresa seleccionada
     const company = SStore.get('CurrentCompany')
     if (!company?.companyId) {
-      this.open()
+      const favoriteCompany = Storage.get("FavoriteCompany");
+      if(favoriteCompany)
+      {
+        this.#applyCompanyChange({
+          EmsrNombreComercial: favoriteCompany.companyName, 
+          Id: favoriteCompany.companyId, 
+          CodigoActividad: favoriteCompany.codigoActividad, 
+          GroupId: favoriteCompany.groupId, 
+          UseFactProv: favoriteCompany.UseFactProv,
+          SendReceptAndApInv: favoriteCompany.SendReceptAndApInv
+        });
+      }
+      else
+      {
+        this.open()
+      }
     }
   }
 
