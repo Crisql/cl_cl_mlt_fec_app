@@ -1,21 +1,17 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  # ----------------------------------------------------------------
-  # Proxy — reenvía todo /api/* al backend externo
-  # DEBE ir primero para que no colisione con rutas Rails
-  # ----------------------------------------------------------------
   match '/api/*path', to: 'proxy#forward', via: :all
 
-  # ----------------------------------------------------------------
-  # Vistas Rails
-  # ----------------------------------------------------------------
-  get  '/login',   to: 'sessions#new', as: :login
+  get  '/login',   to: 'sessions#new',  as: :login
   get  '/sign-in', to: redirect('/login')
-
-  # Dashboard principal — auth guard es client-side
   get  '/home',    to: 'home#index',    as: :home
 
-  # Ruta raíz — el auth-guard client-side redirige a /home si hay sesión
+  namespace :configurations do
+    get 'permissions',         to: 'permissions#index', as: :permissions
+    get 'permissions/by-role', to: 'permissions#index', as: :permissions_by_role
+    get 'permissions/global',  to: 'permissions#index', as: :permissions_global
+  end
+
   root to: 'sessions#new'
 end
