@@ -22,50 +22,41 @@
 
     <div class="flex flex-col md:flex-row gap-4 items-start md:items-end">
 
-      <%# Campo readonly + botones inline %>
+      <%# Campo readonly + botones sufijo (patrón matSuffix — CLAUDE.md §4) %>
       <div class="flex-1">
         <label class="block text-sm font-medium text-gray-700 mb-1">
           Formato de Impresión por Defecto
         </label>
-        <div class="relative flex items-center gap-1">
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden
+                    focus-within:ring-2 focus-within:ring-blue-500 bg-gray-50">
           <input type="text"
                  data-general-configs-target="printFormatInput"
                  data-testid="input-print-format"
                  readonly
                  placeholder="Seleccione un archivo .rpt"
-                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700 focus:outline-none cursor-default">
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none cursor-default">
 
           <%# Botón Upload — visible según permiso %>
-          <div data-general-configs-target="uploadWrapper"
-               class="hidden relative group inline-block shrink-0">
-            <button type="button"
-                    data-action="click->general-configs#triggerFileInput"
-                    data-testid="btn-upload"
-                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-              <span class="material-icons text-base">cloud_upload</span>
-            </button>
-            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1
-                         whitespace-nowrap rounded bg-gray-800 px-2 py-0.5 text-xs text-white
-                         opacity-0 group-hover:opacity-100 transition-opacity z-10">
-              Subir archivo .rpt
-            </span>
-          </div>
+          <button type="button"
+                  data-general-configs-target="uploadWrapper"
+                  data-action="click->general-configs#triggerFileInput"
+                  data-testid="btn-upload"
+                  title="Subir archivo .rpt"
+                  class="hidden self-stretch flex items-center px-2 border-l border-gray-200
+                         text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0">
+            <span class="material-icons text-base leading-none">cloud_upload</span>
+          </button>
 
           <%# Botón Download — visible según permiso %>
-          <div data-general-configs-target="downloadWrapper"
-               class="hidden relative group inline-block shrink-0">
-            <button type="button"
-                    data-action="click->general-configs#downloadPrintFormat"
-                    data-testid="btn-download"
-                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-              <span class="material-icons text-base">download</span>
-            </button>
-            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1
-                         whitespace-nowrap rounded bg-gray-800 px-2 py-0.5 text-xs text-white
-                         opacity-0 group-hover:opacity-100 transition-opacity z-10">
-              Descargar formato
-            </span>
-          </div>
+          <button type="button"
+                  data-general-configs-target="downloadWrapper"
+                  data-action="click->general-configs#downloadPrintFormat"
+                  data-testid="btn-download"
+                  title="Descargar formato"
+                  class="hidden self-stretch flex items-center px-2 border-l border-gray-200
+                         text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0">
+            <span class="material-icons text-base leading-none">download</span>
+          </button>
         </div>
 
         <%# Input file oculto %>

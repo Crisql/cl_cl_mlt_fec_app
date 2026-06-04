@@ -76,7 +76,7 @@ export default class extends Controller {
         { key: 'groups',             label: 'Grupos',                           route: '/configurations/group',            requiredPermission: 'S_Groups' },
         { key: 'numbering',          label: 'Numeración',                       route: '/numbering',                       requiredPermission: 'S_Numbering' },
         { key: 'permissions',        label: 'Permisos',                         route: '/configurations/permissions',      requiredPermission: 'Configurations_Permissions_Access' },
-        { key: 'Rol',                label: 'Roles',                            route: '/Rol',                             requiredPermission: 'S_Rols' },
+        { key: 'Rol',                label: 'Roles',                            route: '/configurations/roles',            requiredPermission: 'S_Rols' },
         { key: 'rolUserCompany',     label: 'Roles por usuario',                route: '/rolUserCompany',                  requiredPermission: 'S_RolByUser' },
         { key: 'sucursal',           label: 'Sucursal',                         route: '/sucursal',                        requiredPermission: 'S_Sucursal' },
         { key: 'wizardSetup',        label: 'Asistente de Configuración',       route: '/wizard-setup',                    requiredPermission: 'Configurations_WizardSetup_Access' },

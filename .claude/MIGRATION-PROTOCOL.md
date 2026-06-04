@@ -205,3 +205,83 @@ migrate http://localhost:3000/master-data/business-partners
 - "Agrega pruebas"
 - "Valida que funcione"
 - "No asumas, verifica"
+
+---
+
+## PATRONES OBLIGATORIOS — STORAGE Y AUTH
+
+### ⚠️ LEER ANTES DE ESCRIBIR CUALQUIER STIMULUS CONTROLLER
+
+Referencia completa: `fec-migration-docs/STORAGE-KEY-MAPPING.md`
+
+#### Storage keys correctas
+
+| Dato | Helper | Key | Tipo |
+|---|---|---|---|
+| Token de sesión | `Storage.get('Session')` | `localStorage.Session` | `{ access_token, expires_at, UserEmail, UserId }` |
+| Empresa activa | `SStore.get('CurrentCompany')` | `sessionStorage.CurrentCompany` | `{ companyId, companyName, groupId, ... }` |
+| Permisos | `SStore.get('Permissions')` | `sessionStorage.Permissions` | `string[]` — e.g. `["F_CreateCompany", "S_Company"]` |
+
+#### ❌ Keys que NO existen en Rails
+
+- `SStore.get('UserPermissions')` — NO existe, es `Permissions`
+- `SStore.get('CurrentSession')` — NO existe, es `Storage.get('Session')`
+- `SStore.get('CurrentFESession')` — NO existe en Rails (Angular legacy). Pasar `feToken=''`.
+
+#### Patrón `#hasPerm` correcto
+
+```js
+// ✅ CORRECTO — Permissions es string[]
+#hasPerm(name) { return this.#permissions.includes(name); }
+
+// ❌ INCORRECTO — era el formato Angular (objetos con .Name)
+#hasPerm(name) { return this.#permissions.some(p => p.Name === name); }
+```
+
+#### Patrón `#apiFetch` correcto (copiar de roles_controller.js)
+
+```js
+async #apiFetch(url, options = {}) {
+  const session = Storage.get('Session') || {};
+  const token   = session.access_token;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type':             'application/json',
+      'API':                      'ApiAppUrl',
+      'X-Skip-Error-Interceptor': 'true',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+  return response.json();
+}
+```
+
+#### Patrón en tests E2E (injectAuth)
+
+```js
+// Permissions es array de STRINGS (no objetos)
+const MOCK_PERMISSIONS = ['F_CreateCompany', 'F_ModifyCompany']
+
+async function injectAuth(page, perms = MOCK_PERMISSIONS) {
+  await page.goto(LOGIN_URL)
+  await page.evaluate(({ session, company, permissions }) => {
+    localStorage.setItem('Session',          JSON.stringify(session))
+    sessionStorage.setItem('CurrentCompany', JSON.stringify(company))
+    sessionStorage.setItem('Permissions',    JSON.stringify(permissions))
+  }, { session: MOCK_SESSION, company: MOCK_COMPANY, permissions: perms })
+}
+```
+
+---
+
+## REGLA ADICIONAL
+
+10. **SIEMPRE leer `fec-migration-docs/STORAGE-KEY-MAPPING.md` antes de implementar cualquier controller** — las keys de storage difieren del legacy Angular.

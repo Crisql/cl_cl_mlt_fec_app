@@ -1,0 +1,146 @@
+<% content_for :title, "Roles — FEC" %>
+<% content_for :page_title, "Roles Existentes" %>
+
+<div data-controller="roles"
+     data-testid="roles-page"
+     class="p-6 flex flex-col h-full">
+
+  <%# ---------------------------------------------------------------- %>
+  <%# HEADER: botón Nuevo %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="mb-4">
+    <button type="button"
+            data-testid="btn-new-role"
+            data-action="click->roles#openCreateModal"
+            class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+      <span class="material-icons text-base">add</span>
+      Nuevo
+    </button>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# TABLA DE ROLES %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-0">
+    <div class="flex-1 overflow-auto">
+      <table data-testid="roles-table"
+             data-roles-target="table"
+             class="w-full text-sm text-left text-gray-700">
+        <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="px-4 py-3 font-medium">Nombre del Rol</th>
+            <th class="px-4 py-3 font-medium">Estado</th>
+            <th class="px-4 py-3 font-medium w-20">Acciones</th>
+          </tr>
+        </thead>
+        <tbody data-roles-target="tbody">
+          <%# Las filas se inyectan dinámicamente por Stimulus %>
+        </tbody>
+      </table>
+    </div>
+
+    <%# Estado vacío %>
+    <div data-roles-target="emptyState"
+         class="hidden py-12 text-center text-gray-400 text-sm">
+      <span class="material-icons text-3xl mb-2 block">manage_accounts</span>
+      No hay roles registrados
+    </div>
+
+    <%# Skeleton de carga %>
+    <div data-roles-target="loadingState"
+         class="hidden py-8 text-center text-gray-400 text-sm">
+      <span class="material-icons animate-spin text-2xl mb-2 block">refresh</span>
+      Cargando roles...
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL: Crear / Editar Rol %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-roles-target="modal"
+       data-testid="role-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
+
+      <%# Header del modal %>
+      <div class="px-6 pt-5 pb-3 border-b border-gray-100">
+        <h4 data-testid="role-modal-title"
+            class="text-base font-semibold text-gray-800">Rol</h4>
+      </div>
+
+      <%# Cuerpo del modal %>
+      <div class="px-6 py-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Nombre del Rol <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-roles-target="nameInput"
+               data-testid="role-name-input"
+               data-action="input->roles#onNameInput"
+               placeholder="Nombre del rol"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <p data-roles-target="nameError"
+           data-testid="role-name-error"
+           class="hidden mt-1 text-xs text-red-500">
+          El nombre del rol es requerido
+        </p>
+      </div>
+
+      <%# Footer del modal %>
+      <div class="px-6 pb-5 flex gap-3">
+        <button type="button"
+                data-testid="btn-cancel-role"
+                data-action="click->roles#closeModal"
+                class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          <span class="material-icons text-base">cancel</span>
+          Cancelar
+        </button>
+        <button type="button"
+                data-roles-target="submitBtn"
+                data-testid="btn-submit-role"
+                data-action="click->roles#onSubmit"
+                disabled
+                class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <span data-roles-target="submitIcon" class="material-icons text-base">check</span>
+          <span data-roles-target="submitLabel">Crear</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# TOAST (notificaciones) %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-roles-target="toast"
+       data-testid="toast"
+       class="hidden fixed top-5 right-5 z-50 flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-sm transition-all duration-300">
+    <span data-roles-target="toastIcon" class="material-icons text-base mt-0.5">info</span>
+    <span data-roles-target="toastMessage"></span>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL DE ERROR %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-roles-target="errorModal"
+       data-testid="error-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="material-icons text-red-500 text-2xl">error</span>
+        <h3 data-roles-target="errorTitle"
+            class="text-base font-semibold text-gray-800"></h3>
+      </div>
+      <p data-roles-target="errorSubtitle"
+         class="text-sm text-gray-600 mb-5"></p>
+      <div class="flex justify-end">
+        <button type="button"
+                data-action="click->roles#closeErrorModal"
+                class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

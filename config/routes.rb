@@ -14,6 +14,11 @@ Rails.application.routes.draw do
     get 'user-profile',        to: 'user_profile#index', as: :user_profile
     get 'roles',               to: 'roles#index',        as: :roles
     get 'general',             to: 'general#index',      as: :general
+
+    # Companies
+    get 'companies',          to: 'companies#index', as: :companies
+    get 'companies/new',      to: 'companies#new',   as: :new_company
+    get 'companies/:id/edit', to: 'companies#edit',  as: :edit_company
   end
 
   root to: 'sessions#new'

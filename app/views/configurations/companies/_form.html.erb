@@ -1,0 +1,738 @@
+<%# ============================================================ %>
+<%# FORMULARIO COMPARTIDO: Crear / Editar Compañía %>
+<%# ============================================================ %>
+
+<%# ---- SECCIÓN 1: Datos Generales ---- %>
+<details data-testid="section-general"
+         data-company-form-target="sectionGeneral"
+         class="bg-white rounded-xl shadow-sm border border-gray-100 mb-3 group"
+         open>
+  <summary class="flex items-center justify-between px-5 py-4 cursor-pointer select-none list-none">
+    <span class="text-sm font-semibold text-gray-700">Datos Generales de la Compañía</span>
+    <span class="material-icons text-gray-400 group-open:rotate-180 transition-transform text-base">expand_more</span>
+  </summary>
+
+  <div class="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+    <%# Nombre Comercial %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Nombre Comercial <span class="text-red-500">*</span></label>
+      <input type="text"
+             data-company-form-target="comercialName"
+             data-testid="field-comercial-name"
+             data-action="input->company-form#onFormChange"
+             required
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <span data-company-form-target="comercialNameError" class="hidden text-xs text-red-500">El nombre comercial es requerido.</span>
+    </div>
+
+    <%# Nombre Legal %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Nombre Legal <span class="text-red-500">*</span></label>
+      <input type="text"
+             data-company-form-target="legalName"
+             data-testid="field-legal-name"
+             data-action="input->company-form#onFormChange"
+             required
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <span data-company-form-target="legalNameError" class="hidden text-xs text-red-500">El nombre legal es requerido.</span>
+    </div>
+
+    <%# Tipo de Identificación %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Tipo de Identificación <span class="text-red-500">*</span></label>
+      <select data-company-form-target="identificationType"
+              data-testid="field-type"
+              data-action="change->company-form#onIdentificationTypeChange change->company-form#onFormChange"
+              required
+              class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="01">Cédula Fisica</option>
+        <option value="02">Cedula Juridica</option>
+        <option value="03">DIMEX</option>
+        <option value="04">NITE</option>
+      </select>
+    </div>
+
+    <%# Identificación %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Identificación <span class="text-red-500">*</span></label>
+      <input type="text"
+             inputmode="numeric"
+             pattern="[0-9]*"
+             data-company-form-target="identification"
+             data-testid="field-identification"
+             data-action="input->company-form#onFormChange"
+             minlength="9"
+             maxlength="9"
+             required
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <span data-company-form-target="identificationError" class="hidden text-xs text-red-500"></span>
+    </div>
+
+    <%# Código de Actividad %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Código de Actividad <span class="text-red-500">*</span></label>
+      <input type="text"
+             data-company-form-target="codigoActividad"
+             data-testid="field-codigo-actividad"
+             data-action="input->company-form#onFormChange"
+             minlength="6"
+             maxlength="6"
+             required
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <span data-company-form-target="codigoActividadError" class="hidden text-xs text-red-500"></span>
+    </div>
+
+    <%# Nombre para Envío de Correos %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Nombre para el Envío de Correos <span class="text-red-500">*</span></label>
+      <select data-company-form-target="nameToEmail"
+              data-testid="field-name-to-email"
+              data-action="change->company-form#onFormChange"
+              required
+              class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="1">Nombre Legal</option>
+        <option value="2">Nombre Comercial</option>
+      </select>
+    </div>
+
+    <%# Grupo %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Grupo al que Pertenece <span class="text-red-500">*</span></label>
+      <select data-company-form-target="groupId"
+              data-testid="field-group-id"
+              data-action="change->company-form#onFormChange"
+              required
+              class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Cargando...</option>
+      </select>
+    </div>
+
+    <%# Nombre Corto %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Nombre Corto <span class="text-red-500">*</span></label>
+      <input type="text"
+             data-company-form-target="shortName"
+             data-testid="field-short-name"
+             data-action="input->company-form#onFormChange"
+             required
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <%# Manejo de otros cargos %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Manejo de otros cargos <span class="text-red-500">*</span></label>
+      <select data-company-form-target="freightCharges"
+              data-testid="field-freight-charges"
+              data-action="change->company-form#onFormChange"
+              required
+              class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="1">Articulos</option>
+        <option value="2">Otros Cargos</option>
+      </select>
+    </div>
+
+    <%# Registro Fiscal 8707 %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Registro Fiscal 8707</label>
+      <input type="text"
+             data-company-form-target="registrofiscal8707"
+             data-testid="field-registrofiscal"
+             data-action="input->company-form#onFormChange"
+             maxlength="12"
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <%# Conexión de SAP %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Conexión de SAP <span class="text-red-500">*</span></label>
+      <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+        <select data-company-form-target="sapConnectionId"
+                data-testid="field-sap-connection"
+                data-action="change->company-form#onFormChange"
+                required
+                class="flex-1 px-3 py-2 text-sm outline-none bg-transparent">
+          <option value="">Cargando...</option>
+        </select>
+        <button type="button"
+                data-company-form-target="btnAddConnection"
+                data-testid="btn-add-connection"
+                data-action="click->company-form#openCreateConnectionDialog"
+                class="hidden self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                title="Agregar conexión">
+          <span class="material-icons text-base leading-none">add</span>
+        </button>
+      </div>
+    </div>
+
+    <%# DB SAP %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">DB SAP <span class="text-red-500">*</span></label>
+      <input type="text"
+             data-company-form-target="dbSap"
+             data-testid="field-db-sap"
+             data-action="input->company-form#onFormChange"
+             required
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <%# Checkboxes %>
+    <div class="flex flex-col gap-3 sm:col-span-2">
+      <label class="flex items-center gap-2 cursor-pointer"
+             title="Indica si la compañía utiliza un Service Layer para la conexión con SAP">
+        <input type="checkbox"
+               data-company-form-target="isExternal"
+               data-testid="field-is-external"
+               class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+        <span class="text-sm text-gray-700">Utiliza Service Layer</span>
+      </label>
+
+      <label class="flex items-center gap-2 cursor-pointer"
+             title="Indica si la compañía se encuentra activa o inactiva">
+        <input type="checkbox"
+               data-company-form-target="active"
+               data-testid="field-active"
+               checked
+               class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+        <span class="text-sm text-gray-700">Compañía activa</span>
+      </label>
+    </div>
+
+    <%# Botón guardar sección (solo edición) %>
+    <div data-company-form-target="btnSaveGeneralContainer"
+         class="hidden sm:col-span-2 flex justify-end pt-2">
+      <button type="button"
+              data-action="click->company-form#saveGeneralData"
+              data-company-form-target="btnSaveGeneral"
+              data-testid="btn-save-general"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base">save</span>
+        Actualizar datos generales
+      </button>
+    </div>
+  </div>
+</details>
+
+<%# ---- SECCIÓN 2: Adicional ---- %>
+<details data-testid="section-additional"
+         data-company-form-target="sectionAdditional"
+         class="bg-white rounded-xl shadow-sm border border-gray-100 mb-3">
+  <summary class="flex items-center justify-between px-5 py-4 cursor-pointer select-none list-none">
+    <span class="text-sm font-semibold text-gray-700">Adicional</span>
+    <span class="material-icons text-gray-400 text-base">expand_more</span>
+  </summary>
+
+  <div class="px-5 pb-5 flex flex-col gap-4">
+
+    <%# Información Adicional %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Información Adicional</label>
+      <textarea data-company-form-target="additionalInformation"
+                data-testid="field-additional-info"
+                rows="3"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+    </div>
+
+    <%# EmailCC dinámico %>
+    <div class="flex flex-col gap-2">
+      <label class="text-xs font-medium text-gray-600">Envío de Documentos CC</label>
+      <div data-company-form-target="emailCcList"
+           data-testid="email-cc-list"
+           class="flex flex-col gap-2">
+        <%# Ítem inicial, renderizado por Stimulus %>
+      </div>
+      <div>
+        <button type="button"
+                data-action="click->company-form#addEmail"
+                data-company-form-target="btnAddEmail"
+                data-testid="btn-add-email"
+                class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-sm">add</span>
+        </button>
+      </div>
+    </div>
+
+    <%# Botón guardar sección (solo edición) %>
+    <div data-company-form-target="btnSaveAdditionalContainer"
+         class="hidden flex justify-end pt-2">
+      <button type="button"
+              data-action="click->company-form#saveAdditionalData"
+              data-testid="btn-save-additional"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <span class="material-icons text-base">save</span>
+        Actualizar datos adicionales
+      </button>
+    </div>
+  </div>
+</details>
+
+<%# ---- SECCIÓN 3: Hacienda (ATV) ---- %>
+<details data-testid="section-atv"
+         data-company-form-target="sectionAtv"
+         class="bg-white rounded-xl shadow-sm border border-gray-100 mb-3">
+  <summary class="flex items-center justify-between px-5 py-4 cursor-pointer select-none list-none">
+    <span class="text-sm font-semibold text-gray-700">Datos de Conexión de Hacienda (ATV)</span>
+    <span class="material-icons text-gray-400 text-base">expand_more</span>
+  </summary>
+
+  <div class="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+    <%# CertPin %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Pin del Certificado</label>
+      <div class="relative flex items-center">
+        <input type="password"
+               data-company-form-target="certPin"
+               data-testid="field-cert-pin"
+               data-action="click->company-form#onCertPinClick blur->company-form#onCertPinBlur keyup.enter->company-form#onCertPinEnter"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button type="button"
+                data-action="click->company-form#toggleCertPin"
+                data-testid="btn-toggle-cert-pin"
+                class="absolute right-2 p-1 text-gray-500 hover:text-gray-700">
+          <span data-company-form-target="certPinEyeIcon" class="material-icons text-base">visibility_off</span>
+        </button>
+      </div>
+    </div>
+
+    <%# CertPath %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Nombre del Certificado</label>
+      <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-gray-50">
+        <input type="text"
+               data-company-form-target="certPath"
+               data-testid="field-cert-path"
+               readonly
+               class="flex-1 px-3 py-2 text-sm bg-transparent outline-none cursor-default">
+        <%# Hidden inputs %>
+        <input type="text"
+               data-company-form-target="certPathText"
+               data-testid="field-cert-path-text"
+               class="sr-only">
+        <input type="file"
+               data-company-form-target="certFileInput"
+               data-action="change->company-form#onCertFileSelected"
+               accept=".p12,.pfx"
+               class="hidden">
+        <button type="button"
+                data-action="click->company-form#triggerCertUpload"
+                class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                title="Seleccionar certificado">
+          <span class="material-icons text-base leading-none">attach_file</span>
+        </button>
+        <button type="button"
+                data-action="click->company-form#downloadCertificate"
+                class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                title="Descargar certificado">
+          <span class="material-icons text-base leading-none">download</span>
+        </button>
+      </div>
+    </div>
+
+    <%# CertExpireDate %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Fecha de Expiración del Certificado</label>
+      <input type="text"
+             data-company-form-target="certExpireDate"
+             data-testid="field-cert-expire-date"
+             readonly
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 cursor-default">
+    </div>
+
+    <%# TokenUsr %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Token de Usuario</label>
+      <input type="text"
+             data-company-form-target="tokenUsr"
+             data-testid="field-token-usr"
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <%# TokenPass %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Token Password</label>
+      <div class="relative flex items-center">
+        <input type="password"
+               data-company-form-target="tokenPass"
+               data-testid="field-token-pass"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button type="button"
+                data-action="click->company-form#toggleTokenPass"
+                data-testid="btn-toggle-token-pass"
+                class="absolute right-2 p-1 text-gray-500 hover:text-gray-700">
+          <span data-company-form-target="tokenPassEyeIcon" class="material-icons text-base">visibility_off</span>
+        </button>
+      </div>
+    </div>
+
+    <%# Botón guardar sección (solo edición) %>
+    <div data-company-form-target="btnSaveAtvContainer"
+         class="hidden sm:col-span-2 flex justify-end pt-2">
+      <button type="button"
+              data-action="click->company-form#saveAtvData"
+              data-testid="btn-save-atv"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <span class="material-icons text-base">save</span>
+        Actualizar datos de Hacienda
+      </button>
+    </div>
+  </div>
+</details>
+
+<%# ---- SECCIÓN 4: Adjuntos ---- %>
+<details data-testid="section-attachments"
+         data-company-form-target="sectionAttachments"
+         class="bg-white rounded-xl shadow-sm border border-gray-100 mb-3">
+  <summary class="flex items-center justify-between px-5 py-4 cursor-pointer select-none list-none">
+    <span class="text-sm font-semibold text-gray-700">Adjuntos de la compañía</span>
+    <span class="material-icons text-gray-400 text-base">expand_more</span>
+  </summary>
+
+  <div class="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+    <%# Logo %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Logo de la Compañía</label>
+      <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-gray-50">
+        <input type="text"
+               data-company-form-target="logoName"
+               data-testid="field-logo"
+               readonly
+               class="flex-1 px-3 py-2 text-sm bg-transparent outline-none cursor-default">
+        <input type="file"
+               data-company-form-target="logoFileInput"
+               data-action="change->company-form#onLogoSelected"
+               accept=".jpg,.jpeg,.png"
+               class="hidden">
+        <button type="button"
+                data-action="click->company-form#triggerLogoUpload"
+                class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                title="Seleccionar logo">
+          <span class="material-icons text-base leading-none">attach_file</span>
+        </button>
+        <button type="button"
+                data-action="click->company-form#downloadLogo"
+                class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                title="Descargar logo">
+          <span class="material-icons text-base leading-none">download</span>
+        </button>
+      </div>
+    </div>
+
+    <%# Formato de Impresión %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Formato de Impresión</label>
+      <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-gray-50">
+        <input type="text"
+               data-company-form-target="printFormatName"
+               data-testid="field-print-format"
+               readonly
+               class="flex-1 px-3 py-2 text-sm bg-transparent outline-none cursor-default">
+        <input type="file"
+               data-company-form-target="printFormatFileInput"
+               data-action="change->company-form#onPrintFormatSelected"
+               accept=".rpt"
+               class="hidden">
+        <button type="button"
+                data-action="click->company-form#triggerPrintFormatUpload"
+                class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                title="Seleccionar formato">
+          <span class="material-icons text-base leading-none">attach_file</span>
+        </button>
+        <button type="button"
+                data-action="click->company-form#downloadPrintFormat"
+                class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                title="Descargar formato">
+          <span class="material-icons text-base leading-none">download</span>
+        </button>
+        <button type="button"
+                data-company-form-target="btnResetFormat"
+                data-action="click->company-form#resetPrintFormat"
+                class="hidden self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                title="Restablecer formato de impresión">
+          <span class="material-icons text-base leading-none">refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <%# Botón guardar sección (solo edición) %>
+    <div data-company-form-target="btnSaveAttachmentsContainer"
+         class="hidden sm:col-span-2 flex justify-end pt-2">
+      <button type="button"
+              data-action="click->company-form#saveAttData"
+              data-testid="btn-save-attachments"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <span class="material-icons text-base">save</span>
+        Actualizar adjuntos
+      </button>
+    </div>
+  </div>
+</details>
+
+<%# ---- SECCIÓN 5: Códigos de actividad (solo edición) ---- %>
+<details data-testid="section-activity-codes"
+         data-company-form-target="sectionActivityCodes"
+         class="hidden bg-white rounded-xl shadow-sm border border-gray-100 mb-3">
+  <summary class="flex items-center justify-between px-5 py-4 cursor-pointer select-none list-none">
+    <span class="text-sm font-semibold text-gray-700">Códigos de actividad</span>
+    <span class="material-icons text-gray-400 text-base">expand_more</span>
+  </summary>
+
+  <div class="px-5 pb-5 flex flex-col gap-3">
+
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-medium text-gray-500">Códigos de actividad</span>
+      <button type="button"
+              data-action="click->company-form#addActivityCode"
+              data-testid="btn-add-activity-code"
+              class="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              title="Agregar código de actividad">
+        <span class="material-icons text-base">add_circle_outline</span>
+      </button>
+    </div>
+
+    <div data-company-form-target="activityCodesList"
+         class="flex flex-col gap-2">
+      <%# Ítems inyectados por Stimulus %>
+    </div>
+
+    <div data-company-form-target="activityCodesEmpty"
+         class="hidden text-xs text-gray-400 text-center py-4">
+      Sin códigos de actividad configurados
+    </div>
+
+    <div data-company-form-target="activityCodesDupError"
+         class="hidden text-xs text-red-500">
+      No puede haber dos códigos de actividad iguales.
+    </div>
+
+    <%# Botón guardar sección (solo edición) %>
+    <div class="flex justify-end pt-2">
+      <button type="button"
+              data-action="click->company-form#saveActivityCodes"
+              data-testid="btn-save-activity-codes"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base">save</span>
+        Actualizar códigos de actividad
+      </button>
+    </div>
+  </div>
+</details>
+
+<%# ---- SECCIÓN 6: Factura a Proveedor ---- %>
+<details data-testid="section-sap"
+         data-company-form-target="sectionSap"
+         class="bg-white rounded-xl shadow-sm border border-gray-100 mb-3">
+  <summary class="flex items-center justify-between px-5 py-4 cursor-pointer select-none list-none">
+    <span class="text-sm font-semibold text-gray-700">Datos para Factura a Proveedor</span>
+    <span class="material-icons text-gray-400 text-base">expand_more</span>
+  </summary>
+
+  <div class="px-5 pb-5 flex flex-col gap-4">
+
+    <%# UseFactProv + SendReceptAndApInv %>
+    <div class="flex flex-wrap gap-6 items-center">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox"
+               data-company-form-target="useFactProv"
+               data-testid="field-use-fact-prov"
+               data-action="change->company-form#onUseFactProvChange"
+               class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+        <span class="text-sm text-gray-700">Usa factura a proveedor</span>
+      </label>
+
+      <label data-company-form-target="sendReceptContainer"
+             class="hidden items-center gap-2 cursor-pointer">
+        <input type="checkbox"
+               data-company-form-target="sendReceptAndApInv"
+               data-testid="field-send-recept"
+               class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+        <span class="text-sm text-gray-700">Unifica recepción y factura proveedor</span>
+      </label>
+    </div>
+
+    <%# Campos SAP (deshabilitados hasta UseFactProv) %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" data-company-form-target="sapFieldsGroup">
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-600">Número de Serie Proveedor</label>
+        <input type="number"
+               data-company-form-target="numSerieProv"
+               data-testid="field-num-serie-prov"
+               disabled
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-600">Número de Serie Factura Proveedor</label>
+        <input type="number"
+               data-company-form-target="numSerieFactProv"
+               data-testid="field-num-serie-fact-prov"
+               disabled
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-600">Impuesto por Defecto XML</label>
+        <select data-company-form-target="defaultTaxForXml"
+                data-testid="field-default-tax"
+                disabled
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+          <option value="">-- seleccionar --</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-600">Almacén por defecto</label>
+        <select data-company-form-target="whDefault"
+                data-testid="field-wh-default"
+                disabled
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+          <option value="">-- seleccionar --</option>
+        </select>
+      </div>
+
+      <%# Tolerancias XML %>
+      <div class="sm:col-span-2 border border-gray-200 rounded-lg p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium text-gray-500">Tolerancias Monto XML</span>
+          <button type="button"
+                  data-action="click->company-form#addXmlTolerance"
+                  data-testid="btn-add-tolerance"
+                  data-company-form-target="btnAddTolerance"
+                  disabled
+                  class="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Agregar tolerancia">
+            <span class="material-icons text-base">add_circle_outline</span>
+          </button>
+        </div>
+        <div data-company-form-target="tolerancesDupError"
+             class="hidden text-xs text-red-500 mb-1">
+          No puede haber dos tolerancias con la misma moneda.
+        </div>
+        <div data-company-form-target="xmlToleranceList" class="flex flex-col gap-2">
+          <%# Ítems inyectados por Stimulus %>
+        </div>
+        <div data-company-form-target="xmlToleranceEmpty"
+             class="hidden text-xs text-gray-400 text-center py-2">Sin tolerancias configuradas</div>
+      </div>
+
+      <%# Mapeo de monedas XML %>
+      <div class="sm:col-span-2 border border-gray-200 rounded-lg p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium text-gray-500">Mapeo de monedas XML</span>
+          <button type="button"
+                  data-action="click->company-form#addCurrencyMapping"
+                  data-testid="btn-add-currency-mapping"
+                  data-company-form-target="btnAddCurrencyMapping"
+                  disabled
+                  class="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Agregar mapeo">
+            <span class="material-icons text-base">add_circle_outline</span>
+          </button>
+        </div>
+        <div data-company-form-target="currencyMappingsDupError"
+             class="hidden text-xs text-red-500 mb-1">
+          No puede haber dos mapeos con el mismo código de moneda XML.
+        </div>
+        <div data-company-form-target="currencyMappingList" class="flex flex-col gap-2">
+          <%# Ítems inyectados por Stimulus %>
+        </div>
+        <div data-company-form-target="currencyMappingEmpty"
+             class="hidden text-xs text-gray-400 text-center py-2">Sin mapeos configurados</div>
+      </div>
+    </div>
+
+    <%# Botones sección SAP %>
+    <div class="flex justify-end gap-2 pt-2">
+      <button type="button"
+              data-action="click->company-form#reloadSapDependentLists"
+              data-company-form-target="btnReloadSap"
+              data-testid="btn-reload-sap"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base">refresh</span>
+        Recargar información
+      </button>
+
+      <button type="button"
+              data-action="click->company-form#saveSapData"
+              data-company-form-target="btnSaveSap"
+              data-testid="btn-save-sap"
+              class="hidden inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base">save</span>
+        Actualizar datos SAP
+      </button>
+    </div>
+  </div>
+</details>
+
+<%# ---- BOTÓN REGISTRAR (solo crear) ---- %>
+<div data-company-form-target="btnRegisterContainer"
+     class="hidden flex justify-end mt-4">
+  <button type="button"
+          data-action="click->company-form#submitCreate"
+          data-company-form-target="btnRegister"
+          data-testid="btn-register"
+          disabled
+          class="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+    <span class="material-icons text-base">check</span>
+    Registrar Datos de la Compañía
+  </button>
+</div>
+
+<%# ============================================================ %>
+<%# MODALES Y TOAST COMPARTIDOS %>
+<%# ============================================================ %>
+
+<%# Modal error/info genérico %>
+<div data-company-form-target="errorModal"
+     data-testid="error-modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <div class="flex items-center gap-3 mb-4">
+      <span data-company-form-target="errorIcon" class="material-icons text-2xl text-red-500">error_outline</span>
+      <h3 data-company-form-target="errorTitle"
+          class="text-base font-semibold text-gray-800"></h3>
+    </div>
+    <p data-company-form-target="errorSubtitle"
+       class="text-sm text-gray-600 mb-6"></p>
+    <div class="flex justify-end">
+      <button type="button"
+              data-action="click->company-form#closeErrorModal"
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+        Aceptar
+      </button>
+    </div>
+  </div>
+</div>
+
+<%# Modal confirmación (restablecer formato, etc.) %>
+<div data-company-form-target="confirmModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <h3 data-company-form-target="confirmTitle"
+        class="text-base font-semibold text-gray-800 mb-2"></h3>
+    <p data-company-form-target="confirmSubtitle"
+       class="text-sm text-gray-600 mb-6"></p>
+    <div class="flex justify-end gap-3">
+      <button type="button"
+              data-action="click->company-form#cancelConfirm"
+              class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+        Cancelar
+      </button>
+      <button type="button"
+              data-action="click->company-form#doConfirm"
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+        Continuar
+      </button>
+    </div>
+  </div>
+</div>
+
+<%# Toast %>
+<div data-company-form-target="toast"
+     data-testid="toast"
+     class="hidden fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium min-w-64 max-w-sm">
+  <span data-company-form-target="toastIcon" class="material-icons text-base"></span>
+  <span data-company-form-target="toastMessage"></span>
+</div>

@@ -1,0 +1,9 @@
+<% content_for :title, "Editar Compañía — FEC" %>
+<% content_for :page_title, "Editar Compañía" %>
+
+<div data-controller="company-form"
+     data-company-form-company-id-value="<%= params[:id] %>"
+     data-testid="company-form-page"
+     class="p-6">
+  <%= render 'form' %>
+</div>
