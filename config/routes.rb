@@ -19,6 +19,11 @@ Rails.application.routes.draw do
     get 'companies',          to: 'companies#index', as: :companies
     get 'companies/new',      to: 'companies#new',   as: :new_company
     get 'companies/:id/edit', to: 'companies#edit',  as: :edit_company
+
+    # Connections
+    get 'connections',          to: 'connections#index', as: :connections
+    get 'connections/new',      to: 'connections#new',   as: :new_connection
+    get 'connections/:id/edit', to: 'connections#edit',  as: :edit_connection
   end
 
   root to: 'sessions#new'

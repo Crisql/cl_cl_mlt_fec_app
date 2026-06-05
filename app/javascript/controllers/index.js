@@ -12,17 +12,21 @@ import PermissionsController     from 'controllers/permissions_controller'
 import UserProfileController     from 'controllers/user_profile_controller'
 import RolesController          from 'controllers/roles_controller'
 import GeneralConfigsController  from 'controllers/general_configs_controller'
-import CompaniesController       from 'controllers/companies_controller'
-import CompanyFormController     from 'controllers/company_form_controller'
+import CompaniesController        from 'controllers/companies_controller'
+import CompanyFormController      from 'controllers/company_form_controller'
+import ConnectionsController      from 'controllers/connections_controller'
+import ConnectionFormController   from 'controllers/connection_form_controller'
 
-application.register('login',            LoginController)
-application.register('auth-guard',       AuthGuardController)
-application.register('home',             HomeController)
-application.register('menu',             MenuController)
-application.register('company-selector', CompanySelectorController)
-application.register('permissions',      PermissionsController)
-application.register('user-profile',     UserProfileController)
-application.register('roles',            RolesController)
-application.register('general-configs',  GeneralConfigsController)
-application.register('companies',        CompaniesController)
-application.register('company-form',     CompanyFormController)
+application.register('login',             LoginController)
+application.register('auth-guard',        AuthGuardController)
+application.register('home',              HomeController)
+application.register('menu',              MenuController)
+application.register('company-selector',  CompanySelectorController)
+application.register('permissions',       PermissionsController)
+application.register('user-profile',      UserProfileController)
+application.register('roles',             RolesController)
+application.register('general-configs',   GeneralConfigsController)
+application.register('companies',         CompaniesController)
+application.register('company-form',      CompanyFormController)
+application.register('connections',       ConnectionsController)
+application.register('connection-form',   ConnectionFormController)

@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { Storage, SStore } from 'vendor/clavisco/core';
+import { showToast } from 'vendor/clavisco/alerts';
 
 // Compañías con campo OCTypeControl habilitado (CompanyWhitOC enum del legacy Angular)
 const COMPANIES_WITH_OC = [186, 1206];
@@ -30,9 +31,6 @@ export default class extends Controller {
     'testCredentialsIcon',
     'testCredentialsLabel',
     'btnUpdate',
-    'toast',
-    'toastIcon',
-    'toastMessage',
     'errorModal',
     'modalTitle',
     'modalSubtitle',
@@ -207,12 +205,12 @@ export default class extends Controller {
     const sapPass = this.sapPassInputTarget.value;
 
     if (!selectedCompanyId) {
-      this.#showToast('Seleccione una compañía para probar las credenciales.', 'warning');
+      showToast('Seleccione una compañía para probar las credenciales.', 'warning');
       return;
     }
 
     if (!sapUser || !sapPass) {
-      this.#showToast('Complete el Usuario y Contraseña de SAP antes de probar.', 'warning');
+      showToast('Complete el Usuario y Contraseña de SAP antes de probar.', 'warning');
       return;
     }
 
@@ -267,13 +265,10 @@ export default class extends Controller {
 
     try {
       await this.#patch('api/User/profile-info', payload);
-      this.#showToast('Información actualizada con éxito!!!', 'success');
+      showToast('Información actualizada con éxito!!!', 'success');
       this.#onLoad();
     } catch (err) {
-      this.#showToast(this.#extractError(err), 'error');
-      // Mostrar alias para data-testid="toast-error"
-      const toastErrorEl = this.element.querySelector('[data-testid="toast-error"]');
-      if (toastErrorEl) toastErrorEl.classList.remove('hidden');
+      this.#showModal('Error al actualizar perfil', this.#extractError(err));
     } finally {
       this.btnUpdateTarget.disabled = false;
     }
@@ -343,35 +338,6 @@ export default class extends Controller {
   }
 
   // ── UI helpers ────────────────────────────────────────────────────────────
-
-  #showToast(message, type = 'info') {
-    const toast   = this.toastTarget;
-    const iconEl  = this.toastIconTarget;
-    const msgEl   = this.toastMessageTarget;
-
-    const config = {
-      success: { bg: 'bg-green-600', icon: 'check_circle' },
-      error:   { bg: 'bg-red-600',   icon: 'error' },
-      warning: { bg: 'bg-yellow-500', icon: 'warning' },
-      info:    { bg: 'bg-blue-600',  icon: 'info' },
-    };
-
-    const { bg, icon } = config[type] ?? config.info;
-
-    // Limpiar clases de color previas
-    toast.className = toast.className
-      .split(' ')
-      .filter(c => !c.startsWith('bg-'))
-      .join(' ');
-
-    toast.classList.add(bg);
-    iconEl.textContent = icon;
-    msgEl.textContent = message;
-
-    toast.classList.remove('hidden');
-    clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => toast.classList.add('hidden'), 4000);
-  }
 
   #showModal(title, subtitle) {
     this.modalTitleTarget.textContent   = title;

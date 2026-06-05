@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus'
 import { login, checkAuth } from 'vendor/clavisco/login'
 import { Storage } from 'vendor/clavisco/core'
+import { showToast } from 'vendor/clavisco/alerts'
 
 // Stimulus controller para /login
 // Vendor: vendor/clavisco/login maneja OAuth2 y storage
@@ -12,7 +13,6 @@ export default class extends Controller {
     'loginForm', 'recoverForm', 'changePasswordForm',
     'recoverEmail',
     'changeEmail', 'currentPassword', 'newPassword', 'confirmPassword',
-    'toastContainer'
   ]
 
   static values = {
@@ -77,11 +77,11 @@ export default class extends Controller {
         }
         window.location.href = this.redirectPathValue
       } else {
-        this.#showToast(result.error || 'Error de autenticación', 'error')
+        showToast(result.error || 'Error de autenticación', 'error')
       }
     } catch (error) {
       console.error('Login error:', error)
-      this.#showToast('Error de conexión. Intente nuevamente.', 'error')
+      showToast('Error de conexión. Intente nuevamente.', 'error')
     } finally {
       this.#setLoading(false)
     }
@@ -137,7 +137,7 @@ export default class extends Controller {
     const email = this.recoverEmailTarget.value.trim()
 
     if (!email || !this.#isValidEmail(email)) {
-      this.#showToast('Ingrese un correo electrónico válido', 'error')
+      showToast('Ingrese un correo electrónico válido', 'error')
       return
     }
 
@@ -146,14 +146,14 @@ export default class extends Controller {
       const data = await response.json()
 
       if (response.ok) {
-        this.#showToast(data.Message || 'Correo de recuperación enviado', 'success')
+        showToast(data.Message || 'Correo de recuperación enviado', 'success')
         this.showLogin({ preventDefault: () => {} })
       } else {
-        this.#showToast(data.Message || 'Error al enviar correo', 'error')
+        showToast(data.Message || 'Error al enviar correo', 'error')
       }
     } catch (error) {
       console.error('Recovery error:', error)
-      this.#showToast('Error de conexión', 'error')
+      showToast('Error de conexión', 'error')
     }
   }
 
@@ -168,22 +168,22 @@ export default class extends Controller {
     const confirmPassword = this.confirmPasswordTarget.value
 
     if (!email || !this.#isValidEmail(email)) {
-      this.#showToast('Ingrese un correo electrónico válido', 'error')
+      showToast('Ingrese un correo electrónico válido', 'error')
       return
     }
 
     if (newPassword.length > this.maxPasswordLengthValue) {
-      this.#showToast(`La contraseña no puede superar ${this.maxPasswordLengthValue} caracteres`, 'error')
+      showToast(`La contraseña no puede superar ${this.maxPasswordLengthValue} caracteres`, 'error')
       return
     }
 
     if (newPassword !== confirmPassword) {
-      this.#showToast('Las contraseñas no coinciden', 'error')
+      showToast('Las contraseñas no coinciden', 'error')
       return
     }
 
     if (newPassword.length < this.minPasswordLengthValue) {
-      this.#showToast(`La contraseña debe tener un mínimo de ${this.minPasswordLengthValue} caracteres`, 'error')
+      showToast(`La contraseña debe tener un mínimo de ${this.minPasswordLengthValue} caracteres`, 'error')
       return
     }
 
@@ -201,14 +201,14 @@ export default class extends Controller {
       const data = await response.json()
 
       if (response.ok) {
-        this.#showToast(data.Message || 'Contraseña cambiada exitosamente', 'success')
+        showToast(data.Message || 'Contraseña cambiada exitosamente', 'success')
         this.showLogin({ preventDefault: () => {} })
       } else {
-        this.#showToast(data.Message || 'Error al cambiar contraseña', 'error')
+        showToast(data.Message || 'Error al cambiar contraseña', 'error')
       }
     } catch (error) {
       console.error('Change password error:', error)
-      this.#showToast('Error de conexión', 'error')
+      showToast('Error de conexión', 'error')
     }
   }
 
@@ -235,23 +235,4 @@ export default class extends Controller {
     this.buttonLoadingTarget.classList.toggle('hidden', !loading)
   }
 
-  #showToast(message, type = 'info') {
-    const colors = {
-      success: 'bg-green-500',
-      error:   'bg-red-500',
-      warning: 'bg-yellow-500',
-      info:    'bg-blue-500'
-    }
-
-    const toast = document.createElement('div')
-    toast.className = `${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg mb-2 transform transition-all duration-300 translate-x-0`
-    toast.textContent = message
-
-    this.toastContainerTarget.appendChild(toast)
-
-    setTimeout(() => {
-      toast.classList.add('translate-x-full', 'opacity-0')
-      setTimeout(() => toast.remove(), 300)
-    }, 5000)
-  }
 }

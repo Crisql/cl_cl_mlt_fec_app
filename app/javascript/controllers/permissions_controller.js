@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
+import { showToast } from 'vendor/clavisco/alerts'
 
 /**
  * PermissionsController — Gestión de permisos (By-Role y Global).
@@ -38,7 +39,10 @@ export default class extends Controller {
     'changesSummaryGlobal',
     'assignSummaryRowGlobal', 'unassignSummaryRowGlobal',
     'assignCountGlobal', 'unassignCountGlobal',
-    'btnCancelGlobal', 'btnApply'
+    'btnCancelGlobal', 'btnApply',
+
+    // Modal de error
+    'errorModal', 'errorTitle', 'errorSubtitle',
   ]
 
   static values = {
@@ -218,7 +222,7 @@ export default class extends Controller {
       if (permsRes.Data && permsRes.Data.length) {
         this.#allPermsList = permsRes.Data
       } else {
-        this.#showToast(permsRes.Message || 'No se pudieron cargar los permisos', 'warning')
+        showToast(permsRes.Message || 'No se pudieron cargar los permisos', 'warning')
       }
 
       // Roles (filtrar OWNER)
@@ -234,11 +238,11 @@ export default class extends Controller {
           await this.#loadPermsByRol()
         }
       } else {
-        this.#showToast('No posee roles para asignarle permisos!!!', 'warning')
+        showToast('No posee roles para asignarle permisos!!!', 'warning')
         this.#showEmptyRoleState()
       }
     } catch (err) {
-      this.#showToast(err.message || 'Error al cargar datos', 'error')
+      showToast(err.message || 'Error al cargar datos', 'error')
     } finally {
       this.#hideOverlay()
     }
@@ -282,7 +286,7 @@ export default class extends Controller {
       this.#renderPermLists()
       this.#showDragDropPanel()
     } catch (err) {
-      this.#showToast(err.message || 'Error al cargar permisos del rol', 'error')
+      showToast(err.message || 'Error al cargar permisos del rol', 'error')
     }
   }
 
@@ -326,7 +330,7 @@ export default class extends Controller {
 
   async saveChanges() {
     if (!this.#hasByRoleChanges) {
-      this.#showToast('No hay cambios para guardar', 'info')
+      showToast('No hay cambios para guardar', 'info')
       return
     }
 
@@ -345,7 +349,7 @@ export default class extends Controller {
         body: JSON.stringify({ permByRolList, idRol: this.#idRol })
       })
 
-      this.#showToast('Permisos asignados con éxito!!!', 'success')
+      showToast('Permisos asignados con éxito!!!', 'success')
 
       // Sincronizar estado inicial
       this.#initialAssignedIds.clear()
@@ -360,7 +364,7 @@ export default class extends Controller {
       await this.#apiFetch(`/api/Permission/GetPermsByUser?companyId=${company.companyId}`)
       window.location.reload()
     } catch (err) {
-      this.#showToast(err.message || 'Error al guardar permisos', 'error')
+      this.#showErrorModal('Error al guardar permisos', err.message || 'Error desconocido')
     } finally {
       this.#hideOverlay()
     }
@@ -601,16 +605,16 @@ export default class extends Controller {
       if (usersRes.Data) {
         this.#usersList = usersRes.Data.filter(u => u.Active)
       } else {
-        this.#showToast(usersRes.Message || 'No se pudieron cargar los usuarios', 'warning')
+        showToast(usersRes.Message || 'No se pudieron cargar los usuarios', 'warning')
       }
 
       if (globalPermsRes.Data && globalPermsRes.Data.length) {
         this.#allGlobalPermsList = globalPermsRes.Data
       } else {
-        this.#showToast(globalPermsRes.Message || 'No se pudieron cargar los permisos', 'warning')
+        showToast(globalPermsRes.Message || 'No se pudieron cargar los permisos', 'warning')
       }
     } catch (err) {
-      this.#showToast(err.message || 'Error al cargar datos', 'error')
+      showToast(err.message || 'Error al cargar datos', 'error')
     } finally {
       this.#hideOverlay()
     }
@@ -626,7 +630,7 @@ export default class extends Controller {
     this.#clearGlobalPermLists()
 
     if (this.#allGlobalPermsList.length === 0) {
-      this.#showToast('No hay permisos globales disponibles.', 'warning')
+      showToast('No hay permisos globales disponibles.', 'warning')
       return
     }
 
@@ -652,7 +656,7 @@ export default class extends Controller {
       this.#renderGlobalPermLists()
       this.#showGlobalDragDropPanel()
     } catch (err) {
-      this.#showToast(err.message || 'Error al cargar permisos del usuario', 'error')
+      showToast(err.message || 'Error al cargar permisos del usuario', 'error')
     } finally {
       this.#hideOverlay()
     }
@@ -754,11 +758,11 @@ export default class extends Controller {
 
   async applyChangesGlobal() {
     if (!this.#selectedUserId) {
-      this.#showToast('Debe seleccionar un usuario', 'warning')
+      showToast('Debe seleccionar un usuario', 'warning')
       return
     }
     if (!this.#hasGlobalChanges) {
-      this.#showToast('No hay cambios para aplicar', 'info')
+      showToast('No hay cambios para aplicar', 'info')
       return
     }
 
@@ -793,7 +797,7 @@ export default class extends Controller {
 
       await Promise.all(requests)
 
-      this.#showToast('Permisos globales actualizados exitosamente', 'success')
+      showToast('Permisos globales actualizados exitosamente', 'success')
 
       // Sincronizar estado inicial (sin reload)
       this.#initialAssignedGlobalIds.clear()
@@ -803,7 +807,7 @@ export default class extends Controller {
       this.#hasGlobalChanges = false
       this.#updateGlobalChangesUI()
     } catch (err) {
-      this.#showToast(err.message || 'Error al aplicar cambios', 'error')
+      this.#showErrorModal('Error al aplicar cambios', err.message || 'Error desconocido')
     } finally {
       this.#hideOverlay()
     }
@@ -1069,29 +1073,19 @@ export default class extends Controller {
     if (overlay) overlay.classList.add('hidden')
   }
 
-  #showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container')
-    if (!container) return
-
-    const colors = {
-      success: 'bg-green-600',
-      error: 'bg-red-600',
-      warning: 'bg-yellow-500',
-      info: 'bg-blue-600'
-    }
-
-    const toast = document.createElement('div')
-    toast.className = `${colors[type] || colors.info} text-white text-sm px-4 py-3 rounded-lg shadow-lg
-      pointer-events-auto flex items-center gap-2 max-w-sm`
-    toast.innerHTML = `<span>${this.#escapeHtml(message)}</span>`
-
-    container.appendChild(toast)
-    setTimeout(() => toast.remove(), 4000)
-  }
-
   #escapeHtml(str) {
     const div = document.createElement('div')
     div.appendChild(document.createTextNode(str || ''))
     return div.innerHTML
+  }
+
+  #showErrorModal(title, subtitle) {
+    this.errorTitleTarget.textContent    = title
+    this.errorSubtitleTarget.textContent = subtitle
+    this.errorModalTarget.classList.remove('hidden')
+  }
+
+  closeErrorModal() {
+    this.errorModalTarget.classList.add('hidden')
   }
 }

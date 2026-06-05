@@ -44,49 +44,52 @@ class AlertsService {
   }
 
   /**
-   * Show toast notification
-   * @param {string} message - Message to display
-   * @param {string} type - Alert type
-   * @param {number} duration - Duration in ms
+   * Show toast notification.
+   * Appends a new toast element to #toast-container (present in both layouts).
+   * Supports multiple simultaneous toasts; each auto-dismisses independently.
+   *
+   * @param {string} message  - Message to display (plain text, escaped internally)
+   * @param {string} type     - 'success' | 'error' | 'warning' | 'info'
+   * @param {number} duration - Auto-dismiss delay in ms (default 4000)
    */
-  showToast(message, type = ALERT_TYPES.INFO, duration = 5000) {
-    const container = this.getContainer()
+  showToast(message, type = 'success', duration = 4000) {
+    const config = {
+      success: { bg: 'bg-green-600', icon: 'check_circle' },
+      error:   { bg: 'bg-red-600',   icon: 'error'         },
+      warning: { bg: 'bg-yellow-500', icon: 'warning'      },
+      info:    { bg: 'bg-blue-600',  icon: 'info'          },
+    }[type] ?? { bg: 'bg-gray-700', icon: 'notifications' };
 
-    const colors = {
-      [ALERT_TYPES.SUCCESS]: 'bg-green-500',
-      [ALERT_TYPES.ERROR]: 'bg-red-500',
-      [ALERT_TYPES.WARNING]: 'bg-yellow-500',
-      [ALERT_TYPES.INFO]: 'bg-blue-500'
-    }
+    const container = document.getElementById('toast-container');
+    if (!container) return;
 
-    const icons = {
-      [ALERT_TYPES.SUCCESS]: 'check_circle',
-      [ALERT_TYPES.ERROR]: 'error',
-      [ALERT_TYPES.WARNING]: 'warning',
-      [ALERT_TYPES.INFO]: 'info'
-    }
+    // Escape plain text to prevent XSS
+    const safe = document.createElement('div');
+    safe.appendChild(document.createTextNode(message || ''));
+    const escapedMsg = safe.innerHTML;
 
-    const toast = document.createElement('div')
-    toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 transform transition-all duration-300 translate-x-0`
+    const toast = document.createElement('div');
+    toast.className = [
+      'pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg',
+      'text-sm text-white max-w-sm transition-all duration-300',
+      config.bg,
+    ].join(' ');
+    toast.setAttribute('role', 'alert');
     toast.innerHTML = `
-      <span class="material-icons">${icons[type]}</span>
-      <span class="flex-1">${message}</span>
-      <button type="button" class="hover:opacity-75 ml-2" onclick="this.parentElement.remove()">
+      <span class="material-icons text-base mt-0.5 flex-shrink-0">${config.icon}</span>
+      <span class="flex-1">${escapedMsg}</span>
+      <button type="button" class="flex-shrink-0 hover:opacity-75 ml-1" onclick="this.closest('[role=alert]').remove()">
         <span class="material-icons text-sm">close</span>
       </button>
-    `
+    `;
 
-    container.appendChild(toast)
+    container.appendChild(toast);
 
-    // Auto remove
-    if (duration > 0) {
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-x-full')
-        setTimeout(() => toast.remove(), 300)
-      }, duration)
-    }
-
-    return toast
+    const dismiss = () => {
+      toast.classList.add('opacity-0', 'translate-x-full');
+      setTimeout(() => toast.remove(), 300);
+    };
+    setTimeout(dismiss, duration);
   }
 
   /**

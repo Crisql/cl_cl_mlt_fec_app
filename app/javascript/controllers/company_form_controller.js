@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { Storage, SStore } from 'vendor/clavisco/core';
+import { showToast } from 'vendor/clavisco/alerts';
 
 /**
  * CompanyFormController — Crear / Editar compañía.
@@ -15,8 +16,8 @@ import { Storage, SStore } from 'vendor/clavisco/core';
  *   - sessionStorage.CurrentCompany → { companyId, companyName, groupId, ... }
  *   - sessionStorage.Permissions    → string[]  (e.g. ["F_CreateCompany"])
  *
- * NOTA: CurrentFESession NO existe en Rails. El feToken se pasa vacío.
- * El backend lo obtiene del contexto de la empresa seleccionada.
+ * NOTA: CurrentFESession de Angular no existe en Rails.
+ * El feToken se obtiene del mismo localStorage.Session (access_token).
  */
 export default class extends Controller {
   static values = { companyId: Number };
@@ -88,7 +89,22 @@ export default class extends Controller {
     // Modales y toast
     'errorModal', 'errorIcon', 'errorTitle', 'errorSubtitle',
     'confirmModal', 'confirmTitle', 'confirmSubtitle',
-    'toast', 'toastIcon', 'toastMessage',
+
+    // Panel lateral — crear conexión SAP
+    'connPanel', 'connPanelBackdrop',
+    'connServer', 'connServerError',
+    'connLicenseServer',
+    'connApiUrl', 'connApiUrlError',
+    'connCrystalApiUrl',
+    'connOdbcType',
+    'connDbEngine', 'connDbEngineError',
+    'connServerType',
+    'connDbUser', 'connDbUserError',
+    'connDbPass', 'connDbPassError', 'connDbPassEyeIcon',
+    'connBoSuppLangs',
+    'connDst',
+    'connUseTrusted',
+    'connSaveBtn',
   ];
 
   // ── Estado interno ─────────────────────────────────────────────────────────
@@ -142,6 +158,7 @@ export default class extends Controller {
 
   #setupMode() {
     if (this.#isEditing) {
+      // Edit: mostrar botones "Actualizar" por sección
       this.btnSaveGeneralContainerTarget.classList.remove('hidden');
       this.btnSaveAdditionalContainerTarget.classList.remove('hidden');
       this.btnSaveAtvContainerTarget.classList.remove('hidden');
@@ -156,7 +173,16 @@ export default class extends Controller {
       if (this.#hasPerm('Configurations_Connections_Create')) {
         this.btnAddConnectionTarget.classList.remove('hidden');
       }
+
+      // Edit: UseFactProv habilitado (SAP data disponible)
+      this.useFactProvTarget.disabled = false;
+      this.useFactProvTarget.removeAttribute('title');
     } else {
+      // Create: UseFactProv deshabilitado hasta guardar la compañía
+      this.useFactProvTarget.disabled = true;
+      this.useFactProvTarget.closest('label').title =
+        'Esta opción estará disponible una vez que la compañía haya sido registrada.';
+
       this.btnRegisterContainerTarget.classList.remove('hidden');
       this.btnRegisterContainerTarget.classList.add('flex');
     }
@@ -272,7 +298,7 @@ export default class extends Controller {
     this.certPathTarget.value       = data.CertPath ? data.CertPath.split('\\').pop() : '';
     this.certPathTextTarget.value   = this.certPathTarget.value;
     this.certExpireDateTarget.value = data.CertExpireDate
-      ? new Date(data.CertExpireDate).toLocaleDateString('es-CR') : '';
+      ? this.#formatDateTime(data.CertExpireDate) : '';
     this.tokenUsrTarget.value  = data.TokenUsr  || '';
 
     this.logoNameTarget.value        = data.Logo          ? data.Logo.split('\\').pop()          : '';
@@ -361,6 +387,15 @@ export default class extends Controller {
     this.#validateForm();
   }
 
+  /** Formatea fecha como yyyy-MM-dd HH:mm:ss (igual que DATE_TIME_FORMAT del legacy Angular) */
+  #formatDateTime(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
   #applyIdentificationRules(type) {
     const rules = this.#ideRules[type] ?? { min: 9, max: 9 };
     // setAttribute evita el error de orden min/max al cambiar tipo de identificación:
@@ -386,6 +421,15 @@ export default class extends Controller {
     this.sapFieldsGroupTarget
       .querySelectorAll('input, select, button')
       .forEach(el => { el.disabled = false; });
+
+    // En edición, DefaultTaxForXML y whDefault son required (datos SAP disponibles).
+    // En creación no aplica porque la empresa aún no tiene conexión SAP activa.
+    if (this.#isEditing) {
+      this.defaultTaxForXmlTarget.required = true;
+      this.whDefaultTarget.required        = true;
+    }
+    // NumSerieProv siempre required cuando UseFactProv=true
+    this.numSerieProvTarget.required = true;
   }
 
   #disableSapFields() {
@@ -394,6 +438,11 @@ export default class extends Controller {
       .forEach(el => { el.disabled = true; });
     this.btnAddToleranceTarget.disabled       = true;
     this.btnAddCurrencyMappingTarget.disabled = true;
+
+    // Quitar required al deshabilitar
+    this.numSerieProvTarget.required    = false;
+    this.defaultTaxForXmlTarget.required = false;
+    this.whDefaultTarget.required        = false;
   }
 
   // ── Toggle passwords ───────────────────────────────────────────────────────
@@ -434,7 +483,7 @@ export default class extends Controller {
 
     if (!file.name.endsWith('.p12') && !file.name.endsWith('.pfx')) {
       this.certFileInputTarget.value = '';
-      this.#showToast('error', 'Seleccione un certificado con extensión válida (.p12 o .pfx).');
+      showToast('Seleccione un certificado con extensión válida (.p12 o .pfx).', 'error');
       return;
     }
 
@@ -467,7 +516,7 @@ export default class extends Controller {
       const json = await resp.json();
 
       this.certExpireDateTarget.value = json.Data?.CertExpireDate
-        ? new Date(json.Data.CertExpireDate).toLocaleDateString('es-CR')
+        ? this.#formatDateTime(json.Data.CertExpireDate)
         : '';
 
       if (!json.Data?.CertExpireDate) {
@@ -496,7 +545,7 @@ export default class extends Controller {
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['jpg', 'jpeg', 'png'].includes(ext)) {
       this.logoFileInputTarget.value = '';
-      this.#showToast('error', 'Seleccione un logo con formato válido (JPG, JPEG o PNG).');
+      showToast('Seleccione un logo con formato válido (JPG, JPEG o PNG).', 'error');
       return;
     }
     this.#selectedLogoFile    = file;
@@ -519,7 +568,7 @@ export default class extends Controller {
     if (!file) { this.printFormatNameTarget.value = ''; return; }
     if (!file.name.endsWith('.rpt')) {
       this.printFormatFileInputTarget.value = '';
-      this.#showToast('error', 'Seleccione un formato de impresión válido (.rpt).');
+      showToast('Seleccione un formato de impresión válido (.rpt).', 'error');
       return;
     }
     this.#selectedPrintFormatFile   = file;
@@ -543,9 +592,9 @@ export default class extends Controller {
             `/api/Companies/ResetCompanyPrintFormat?companyId=${this.companyIdValue}`,
             { method: 'PATCH' }
           );
-          this.#showToast('success', 'Formato de impresión restablecido con éxito');
+          showToast('Formato de impresión restablecido con éxito', 'success');
         } catch (err) {
-          this.#showToast('error', `Error: ${err.message}`);
+          this.#showErrorModal('Error al restablecer formato', err.message);
         }
       }
     );
@@ -650,7 +699,7 @@ export default class extends Controller {
 
   async saveActivityCodes() {
     if (!this.#validateActivityCodes()) {
-      this.#showToast('error', 'Revise los códigos de actividad (duplicados).');
+      showToast('Revise los códigos de actividad (duplicados).', 'error');
       return;
     }
     try {
@@ -658,9 +707,9 @@ export default class extends Controller {
         method: 'PUT',
         body:   JSON.stringify(this.#activityCodes.map(({ Code, Name }) => ({ Code, Name }))),
       });
-      this.#showToast('success', 'Códigos de actividad actualizados con éxito.');
+      showToast('Códigos de actividad actualizados con éxito.', 'success');
     } catch (err) {
-      this.#showToast('error', `Error: ${err.message}`);
+      this.#showErrorModal('Error al actualizar códigos de actividad', err.message);
     }
   }
 
@@ -796,9 +845,9 @@ export default class extends Controller {
         this.#renderXmlTolerances();
         this.#renderCurrencyMappings();
       }
-      this.#showToast('success', 'Información recargada correctamente');
+      showToast('Información recargada correctamente', 'success');
     } catch (err) {
-      this.#showToast('error', `Error al recargar: ${err.message}`);
+      showToast(`Error al recargar: ${err.message}`, 'error');
     }
   }
 
@@ -806,20 +855,20 @@ export default class extends Controller {
 
   async saveGeneralData() {
     if (!this.#validateGeneralForm()) {
-      this.#showToast('error', 'Posee información errónea, verifique los datos generales.');
+      showToast('Posee información errónea, verifique los datos generales.', 'error');
       return;
     }
     try {
       await this.#sendEditRequest(1);
-      this.#showToast('success', 'Datos generales actualizados con éxito.');
-    } catch (err) { this.#showToast('error', err.message); }
+      showToast('Datos generales actualizados con éxito.', 'success');
+    } catch (err) { this.#showErrorModal('Error al guardar datos generales', err.message); }
   }
 
   async saveAdditionalData() {
     try {
       await this.#sendEditRequest(5);
-      this.#showToast('success', 'Información adicional actualizada con éxito.');
-    } catch (err) { this.#showToast('error', err.message); }
+      showToast('Información adicional actualizada con éxito.', 'success');
+    } catch (err) { this.#showErrorModal('Error al guardar información adicional', err.message); }
   }
 
   async saveAtvData() {
@@ -828,29 +877,29 @@ export default class extends Controller {
     const tokenUsr       = this.tokenUsrTarget.value.replace(/[^0-9]/g, '');
 
     if (certPath && !certPath.includes(identification)) {
-      this.#showToast('error', 'El nombre del certificado no coincide con la identificación de la compañía.');
+      showToast('El nombre del certificado no coincide con la identificación de la compañía.', 'error');
       return;
     }
     if (tokenUsr && !tokenUsr.includes(identification)) {
-      this.#showToast('error', 'El token del usuario no coincide con la identificación de la compañía.');
+      showToast('El token del usuario no coincide con la identificación de la compañía.', 'error');
       return;
     }
     try {
       await this.#sendEditRequest(2);
-      this.#showToast('success', 'Datos de Hacienda actualizados con éxito.');
-    } catch (err) { this.#showToast('error', err.message); }
+      showToast('Datos de Hacienda actualizados con éxito.', 'success');
+    } catch (err) { this.#showErrorModal('Error al guardar datos de Hacienda', err.message); }
   }
 
   async saveAttData() {
     try {
       await this.#sendEditRequest(3);
-      this.#showToast('success', 'Adjuntos actualizados con éxito.');
-    } catch (err) { this.#showToast('error', err.message); }
+      showToast('Adjuntos actualizados con éxito.', 'success');
+    } catch (err) { this.#showErrorModal('Error al guardar adjuntos', err.message); }
   }
 
   async saveSapData() {
     if (!this.useFactProvTarget.checked || !this.#xmlTolerances.length || !this.#validateTolerances()) {
-      this.#showToast('error', 'Verifique los datos de factura proveedor (tolerancias requeridas, sin duplicados).');
+      showToast('Verifique los datos de factura proveedor (tolerancias requeridas, sin duplicados).', 'error');
       return;
     }
     try {
@@ -859,8 +908,8 @@ export default class extends Controller {
         method: 'PUT',
         body:   JSON.stringify(this.#currencyMappings),
       });
-      this.#showToast('success', 'Datos de factura proveedor actualizados con éxito.');
-    } catch (err) { this.#showToast('error', err.message); }
+      showToast('Datos de factura proveedor actualizados con éxito.', 'success');
+    } catch (err) { this.#showErrorModal('Error al guardar datos de factura proveedor', err.message); }
   }
 
   // ── Crear compañía ─────────────────────────────────────────────────────────
@@ -871,19 +920,19 @@ export default class extends Controller {
     const tokenUsr       = this.tokenUsrTarget.value.replace(/[^0-9]/g, '');
 
     if (certPath && !certPath.includes(identification)) {
-      this.#showToast('error', 'El nombre del certificado no coincide con la identificación de la compañía.');
+      showToast('El nombre del certificado no coincide con la identificación de la compañía.', 'error');
       return;
     }
     if (tokenUsr && !tokenUsr.includes(identification)) {
-      this.#showToast('error', 'El token del usuario no coincide con la identificación de la compañía.');
+      showToast('El token del usuario no coincide con la identificación de la compañía.', 'error');
       return;
     }
     if (!this.#validateGeneralForm()) {
-      this.#showToast('error', 'La información ingresada contiene errores. Verifíquela antes de continuar.');
+      showToast('La información ingresada contiene errores. Verifíquela antes de continuar.', 'error');
       return;
     }
     if (this.useFactProvTarget.checked && !this.#xmlTolerances.length) {
-      this.#showToast('error', 'Verifique que los datos de factura a proveedor estén correctos.');
+      showToast('Verifique que los datos de factura a proveedor estén correctos.', 'error');
       return;
     }
 
@@ -892,21 +941,24 @@ export default class extends Controller {
 
     try {
       const response = await fetch(
-        `/api/Companies?companyId=${companyId}&groupId=${groupId}&feToken=`,
+        `/api/Companies?companyId=${companyId}&groupId=${groupId}&feToken=${encodeURIComponent(Storage.get('Session')?.access_token || '')}`,
         {
           method:  'POST',
           headers: this.#authHeaders({ 'Request-With-Files': 'true', 'API': 'ApiAppUrl' }),
           body:    this.#buildCompanyFormData(),
         }
       );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
       const json = await response.json();
+
+      if (!response.ok) throw new Error(json.Message);
+      
       if (json.Error) throw new Error(json.Message);
 
-      this.#showToast('success', 'Compañía registrada exitosamente.');
+      showToast('Compañía registrada exitosamente.', 'success');
       setTimeout(() => { window.location.href = '/configurations/companies'; }, 1200);
     } catch (err) {
-      this.#showToast('error', `Error: ${err.message}`);
+      this.#showErrorModal('Error al registrar compañía', err.message);
     }
   }
 
@@ -985,7 +1037,7 @@ export default class extends Controller {
       link.click();
       URL.revokeObjectURL(link.href);
     } catch (err) {
-      this.#showToast('error', `Error al descargar: ${err.message}`);
+      showToast(`Error al descargar: ${err.message}`, 'error');
     }
   }
 
@@ -1038,26 +1090,6 @@ export default class extends Controller {
     if (this.#confirmCallback) { this.#confirmCallback(); this.#confirmCallback = null; }
   }
 
-  // ── Toast ──────────────────────────────────────────────────────────────────
-
-  #showToast(type, message) {
-    const config = {
-      success: { bg: 'bg-green-600', icon: 'check_circle'  },
-      error:   { bg: 'bg-red-600',   icon: 'error_outline' },
-      info:    { bg: 'bg-blue-600',  icon: 'info'          },
-      warning: { bg: 'bg-yellow-500', icon: 'warning'      },
-    };
-    const { bg, icon } = config[type] ?? config.info;
-
-    const toast = this.toastTarget;
-    toast.className = `fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium min-w-64 max-w-sm ${bg}`;
-    this.toastIconTarget.textContent    = icon;
-    this.toastMessageTarget.textContent = message;
-    toast.classList.remove('hidden');
-
-    setTimeout(() => toast.classList.add('hidden'), 3500);
-  }
-
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   #esc(str) {
@@ -1094,15 +1126,146 @@ export default class extends Controller {
       },
     });
 
+    // Leer cl-message header (mismo mapeo que HttpAlertInterceptor de Angular).
+    // El proxy Rails reenvía este header; contiene el mensaje real de la API encoded en URI.
+    const clMessage = response.headers.get('cl-message');
+    const decodedMessage = clMessage ? (() => {
+      try { return decodeURIComponent(clMessage); } catch { return clMessage; }
+    })() : null;
+
     if (!response.ok) {
       const text = await response.text().catch(() => response.statusText);
-      throw new Error(text || `HTTP ${response.status}`);
+      throw new Error(decodedMessage || text || `HTTP ${response.status}`);
     }
-    return response.json();
+
+    const json = await response.json();
+
+    // Mover cl-message a json.Message si la respuesta no trae mensaje propio
+    if (decodedMessage && !json.Message) {
+      json.Message = decodedMessage;
+    }
+
+    return json;
   }
 
-  // ── Dialog crear conexión ──────────────────────────────────────────────────
-  openCreateConnectionDialog() {
-    this.#showToast('info', 'Funcionalidad de crear conexión disponible desde el módulo de Conexiones.');
+  // ── Panel lateral — crear conexión SAP ────────────────────────────────────
+
+  /**
+   * Abre el panel lateral derecho para crear una nueva conexión SAP.
+   * Equivalente al dialog.open(CreateOrUpdateConnectionComponent) del legacy Angular.
+   */
+  openCreateConnectionPanel() {
+    this.#resetConnectionPanel();
+    this.connPanelBackdropTarget.classList.remove('hidden');
+    this.connPanelTarget.classList.remove('translate-x-full');
+    document.body.style.overflow = 'hidden';
+    // Foco en el primer campo
+    setTimeout(() => this.connServerTarget.focus(), 310);
+  }
+
+  closeConnectionPanel() {
+    this.connPanelTarget.classList.add('translate-x-full');
+    this.connPanelBackdropTarget.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  toggleConnDbPass() {
+    const input = this.connDbPassTarget;
+    const icon  = this.connDbPassEyeIconTarget;
+    input.type       = input.type === 'password' ? 'text' : 'password';
+    icon.textContent = input.type === 'password' ? 'visibility_off' : 'visibility';
+  }
+
+  /**
+   * Crea la conexión vía API y auto-selecciona el nuevo registro en el select.
+   * Equivalente a dialogRef.afterClosed() + GetSAPConnectionsForAssignment() del legacy Angular.
+   */
+  async saveConnectionFromPanel() {
+    if (!this.#validateConnectionPanel()) {
+      showToast('Complete los campos requeridos.', 'warning');
+      return;
+    }
+
+    this.connSaveBtnTarget.disabled = true;
+
+    try {
+      const json = await this.#apiFetch('/api/Connections', {
+        method: 'POST',
+        body: JSON.stringify({
+          Id:            0,
+          Server:        this.connServerTarget.value.trim(),
+          LicenseServer: this.connLicenseServerTarget.value.trim(),
+          APIUrl:        this.connApiUrlTarget.value.trim(),
+          CrystalAPIUrl: this.connCrystalApiUrlTarget.value.trim(),
+          ODBCType:      this.connOdbcTypeTarget.value.trim(),
+          DBEngine:      this.connDbEngineTarget.value.trim(),
+          ServerType:    this.connServerTypeTarget.value.trim(),
+          DBUser:        this.connDbUserTarget.value.trim(),
+          DBPass:        this.connDbPassTarget.value,
+          BoSuppLangs:   this.connBoSuppLangsTarget.value.trim(),
+          DST:           this.connDstTarget.value.trim(),
+          UseTrusted:    this.connUseTrustedTarget.checked,
+        }),
+      });
+
+      if (!json.Data) {
+        this.#showErrorModal('Error al crear la conexión', json.Message || 'Error desconocido');
+        return;
+      }
+
+      // Recargar lista de conexiones y auto-seleccionar la recién creada (la última del listado).
+      // Mismo comportamiento que el legacy Angular: GetSAPConnectionsForAssignment + patchValue(lastConnection).
+      const sapResp = await this.#apiFetch('/api/Connections/for-assignment');
+      if (sapResp.Data?.length) {
+        this.#fillSapConnectionsSelect(sapResp.Data);
+        const lastConn = sapResp.Data[sapResp.Data.length - 1];
+        if (lastConn) {
+          this.sapConnectionIdTarget.value = String(lastConn.Id);
+          this.#validateForm();
+        }
+      }
+
+      this.closeConnectionPanel();
+      showToast('Conexión creada con éxito.', 'success');
+    } catch (err) {
+      this.#showErrorModal('Error al crear la conexión', err.message);
+    } finally {
+      this.connSaveBtnTarget.disabled = false;
+    }
+  }
+
+  #resetConnectionPanel() {
+    [
+      this.connServerTarget, this.connLicenseServerTarget, this.connApiUrlTarget,
+      this.connCrystalApiUrlTarget, this.connOdbcTypeTarget, this.connDbEngineTarget,
+      this.connServerTypeTarget, this.connDbUserTarget, this.connDbPassTarget,
+      this.connBoSuppLangsTarget, this.connDstTarget,
+    ].forEach(el => { el.value = ''; });
+
+    this.connUseTrustedTarget.checked  = false;
+    this.connDbPassTarget.type         = 'password';
+    this.connDbPassEyeIconTarget.textContent = 'visibility_off';
+
+    [
+      this.connServerErrorTarget, this.connApiUrlErrorTarget, this.connDbEngineErrorTarget,
+      this.connDbUserErrorTarget, this.connDbPassErrorTarget,
+    ].forEach(el => el.classList.add('hidden'));
+  }
+
+  #validateConnectionPanel() {
+    let valid = true;
+    const required = [
+      { input: this.connServerTarget,   error: this.connServerErrorTarget   },
+      { input: this.connApiUrlTarget,   error: this.connApiUrlErrorTarget   },
+      { input: this.connDbEngineTarget, error: this.connDbEngineErrorTarget },
+      { input: this.connDbUserTarget,   error: this.connDbUserErrorTarget   },
+      { input: this.connDbPassTarget,   error: this.connDbPassErrorTarget   },
+    ];
+    for (const { input, error } of required) {
+      const empty = !input.value.trim();
+      error.classList.toggle('hidden', !empty);
+      if (empty) valid = false;
+    }
+    return valid;
   }
 }

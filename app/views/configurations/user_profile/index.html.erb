@@ -129,16 +129,7 @@
     </form>
   </div>
 
-  <%# ---------------------------------------------------------------- %>
-  <%# TOAST (notificaciones) %>
-  <%# ---------------------------------------------------------------- %>
-  <div data-user-profile-target="toast"
-       class="hidden fixed top-5 right-5 z-50 flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-sm transition-all duration-300">
-    <span data-user-profile-target="toastIcon" class="material-icons text-base mt-0.5">info</span>
-    <span data-user-profile-target="toastMessage" data-testid="toast-message"></span>
-  </div>
-
-  <%# Toast de error (alias para data-testid) %>
+  <%# alias para tests: se muestra/oculta en errores de guardado %>
   <div data-testid="toast-error" class="hidden"></div>
 
   <%# ---------------------------------------------------------------- %>

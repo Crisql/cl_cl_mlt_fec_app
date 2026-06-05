@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
+import { showToast } from 'vendor/clavisco/alerts'
 
 /**
  * GeneralConfigsController — Configuraciones Generales.
@@ -25,6 +26,7 @@ export default class extends Controller {
     'updateFormatWrapper',
     'btnUpdateFormat',
     'cedulaInput',
+    'errorModal', 'errorTitle', 'errorSubtitle',
   ]
 
   // ----------------------------------------------------------------
@@ -87,12 +89,12 @@ export default class extends Controller {
         const fileName = fullPath ? fullPath.split('\\').at(-1) : ''
         this.printFormatInputTarget.value = fileName
 
-        this.#showToast('Configuraciones generales obtenidos con éxito!!!', 'success')
+        showToast('Configuraciones generales obtenidos con éxito!!!', 'success')
       } else {
-        this.#showToast(data.Message || 'No se encontraron configuraciones', 'warning')
+        showToast(data.Message || 'No se encontraron configuraciones', 'warning')
       }
     } catch (err) {
-      this.#showToast(err.message || 'Error al cargar configuraciones generales', 'error')
+      showToast(err.message || 'Error al cargar configuraciones generales', 'error')
     }
   }
 
@@ -106,10 +108,10 @@ export default class extends Controller {
           this.cedulaInputTarget.value = setting.Json
         }
       } else {
-        this.#showToast(data.Message || 'No se pudieron cargar los ajustes', 'warning')
+        showToast(data.Message || 'No se pudieron cargar los ajustes', 'warning')
       }
     } catch (err) {
-      this.#showToast(err.message || 'Error al cargar ajustes', 'error')
+      showToast(err.message || 'Error al cargar ajustes', 'error')
     }
   }
 
@@ -131,7 +133,7 @@ export default class extends Controller {
 
     const validExtension = /\.rpt$/i.test(file.name)
     if (!validExtension) {
-      this.#showToast(
+      showToast(
         'Por favor selecione un formato de impresión válido para continuar, gracias!!!',
         'error'
       )
@@ -167,7 +169,7 @@ export default class extends Controller {
         }
       )
 
-      this.#showToast('Configuración general editada con éxito!!!', 'success')
+      showToast('Configuración general editada con éxito!!!', 'success')
       this.#selectedFile = null
       this.fileInputTarget.value = ''
       this.btnUpdateFormatTarget.disabled = true
@@ -175,7 +177,7 @@ export default class extends Controller {
       // Recargar para mostrar el nombre actualizado
       await this.#loadGeneralConfigs()
     } catch (err) {
-      this.#showToast(err.message || 'Error al actualizar el formato de impresión', 'error')
+      this.#showErrorModal('Error al actualizar formato de impresión', err.message || 'Error desconocido')
     } finally {
       this.#hideOverlay()
     }
@@ -213,7 +215,7 @@ export default class extends Controller {
       link.click()
       window.URL.revokeObjectURL(url)
     } catch (err) {
-      this.#showToast(err.message || 'Error al descargar el formato de impresión', 'error')
+      showToast(err.message || 'Error al descargar el formato de impresión', 'error')
     } finally {
       this.#hideOverlay()
     }
@@ -244,10 +246,10 @@ export default class extends Controller {
         }),
       })
 
-      this.#showToast('Cédula proveedor sistemas actualizada con éxito!!!', 'success')
+      showToast('Cédula proveedor sistemas actualizada con éxito!!!', 'success')
       await this.#loadSettings()
     } catch (err) {
-      this.#showToast(err.message || 'Error al actualizar cédula', 'error')
+      this.#showErrorModal('Error al actualizar cédula', err.message || 'Error desconocido')
     } finally {
       this.#hideOverlay()
     }
@@ -315,32 +317,13 @@ export default class extends Controller {
     if (overlay) overlay.classList.add('hidden')
   }
 
-  // ----------------------------------------------------------------
-  // Helpers: Toast
-  // ----------------------------------------------------------------
-  #showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container')
-    if (!container) return
-
-    const colors = {
-      success: 'bg-green-600',
-      error:   'bg-red-600',
-      warning: 'bg-yellow-500',
-      info:    'bg-blue-600',
-    }
-
-    const toast       = document.createElement('div')
-    toast.className   = `${colors[type] || colors.info} text-white text-sm px-4 py-3 rounded-lg shadow-lg
-      pointer-events-auto flex items-center gap-2 max-w-sm`
-    toast.innerHTML   = `<span>${this.#escapeHtml(message)}</span>`
-
-    container.appendChild(toast)
-    setTimeout(() => toast.remove(), 4000)
+  #showErrorModal(title, subtitle) {
+    this.errorTitleTarget.textContent    = title
+    this.errorSubtitleTarget.textContent = subtitle
+    this.errorModalTarget.classList.remove('hidden')
   }
 
-  #escapeHtml(str) {
-    const div = document.createElement('div')
-    div.appendChild(document.createTextNode(str || ''))
-    return div.innerHTML
+  closeErrorModal() {
+    this.errorModalTarget.classList.add('hidden')
   }
 }

@@ -157,3 +157,512 @@ Para campos de tipo password el botón va **dentro** del input con `relative` + 
   </button>
 </div>
 ```
+
+---
+
+## 5. Formato de fechas
+
+Todas las fechas se muestran en formato **`yyyy-MM-dd HH:mm:ss`** (ISO 8601 con espacio, igual que `DATE_TIME_FORMAT` del legacy Angular).
+
+### Helper JS (copiar en cada controller que muestre fechas)
+
+```js
+/** Formatea fecha como yyyy-MM-dd HH:mm:ss (DATE_TIME_FORMAT del legacy Angular) */
+#formatDateTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+```
+
+### Regla
+
+- **NO usar** `toLocaleDateString()` ni `toLocaleString()` para fechas que vienen de la API.
+- Solo usar `toLocaleString('es-CR')` para **montos** (ver sección 3).
+
+---
+
+## 6. Manejo de errores de API — header `cl-message`
+
+El backend envía mensajes de error legibles en el header HTTP `cl-message` (URI-encoded).
+El proxy Rails reenvía este header al browser (`proxy_controller.rb`).
+
+En Angular, el `HttpAlertInterceptor` leía ese header y lo movía a `response.body.Message`.
+En Rails debemos hacer lo mismo manualmente en cada `#apiFetch`.
+
+### Patrón `#apiFetch` correcto (copiar en TODO controller)
+
+```js
+async #apiFetch(url, options = {}) {
+  const session = Storage.get('Session') || {};
+  const token   = session.access_token;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type':             'application/json',
+      'API':                      'ApiAppUrl',
+      'X-Skip-Error-Interceptor': 'true',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  });
+
+  // Leer cl-message header (equivalente a HttpAlertInterceptor de Angular).
+  // El proxy Rails reenvía este header; contiene el mensaje real de la API encoded en URI.
+  const clMessage = response.headers.get('cl-message');
+  const decodedMessage = clMessage ? (() => {
+    try { return decodeURIComponent(clMessage); } catch { return clMessage; }
+  })() : null;
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => response.statusText);
+    throw new Error(decodedMessage || text || `HTTP ${response.status}`);
+  }
+
+  const json = await response.json();
+
+  // Mover cl-message a json.Message si la respuesta no trae mensaje propio
+  if (decodedMessage && !json.Message) {
+    json.Message = decodedMessage;
+  }
+
+  return json;
+}
+```
+
+### Reglas
+
+- **NUNCA** ignorar el header `cl-message` en el fetch — es donde vive el mensaje de error real.
+- Para errores (non-2xx): usar `decodedMessage` como mensaje primario.
+- Para respuestas OK: asignar `decodedMessage` a `json.Message` si el JSON no trae uno.
+- Este patrón reemplaza el `#apiFetch` base de todos los controllers migrados.
+- Los controllers ya existentes (`roles_controller.js`, etc.) deben actualizarse al migrar o corregir.
+
+---
+
+## 7. Notificaciones toast — `showToast`
+
+Todos los controllers usan `showToast` importado de `vendor/clavisco/alerts`. **No copiar `#showToast` privado** en controllers nuevos.
+
+### Import
+
+```js
+import { showToast } from 'vendor/clavisco/alerts'
+```
+
+### Firma
+
+```js
+showToast(message, type = 'success', duration = 4000)
+// type: 'success' | 'error' | 'warning' | 'info'
+```
+
+### Uso
+
+```js
+showToast('Rol creado exitosamente.', 'success')
+showToast(err.message || 'Error al guardar', 'error')
+showToast('Sin permisos para esta acción.', 'info')
+```
+
+### Reglas
+
+- **NO** declarar `toast`, `toastIcon`, `toastMessage` en `static targets` — son legacy, ya eliminados.
+- **NO** agregar divs `data-xxx-target="toast"` en las views — el layout ya tiene `#toast-container`.
+- Los toasts se apilan verticalmente y cada uno se autodestruye independientemente (soporta múltiples simultáneos).
+- El mensaje se escapa internamente (XSS-safe) — no usar `.innerHTML` en el llamador.
+- La implementación vive en `app/javascript/vendor/clavisco/alerts/index.js` → método `AlertsService.showToast`.
+
+---
+
+## 8. Paneles laterales vs Modales
+
+### Regla general
+
+| Caso de uso | Componente | Razón |
+|---|---|---|
+| Formulario de creación/edición complejo | **Panel lateral** | Más espacio, no interrumpe el contexto |
+| Formulario anidado (ej: crear conexión dentro de compañía) | **Panel lateral** | No bloquea el formulario padre |
+| Flujos secundarios (ej: seleccionar ítem, adjuntar archivo) | **Panel lateral** | El usuario puede volver sin perder estado |
+| Confirmación de acción destructiva | **Modal** | Requiere decisión explícita antes de continuar |
+| Mensaje de error grave que bloquea el flujo | **Modal** | Necesita atención inmediata del usuario |
+| Notificación de éxito / advertencia no bloqueante | **Toast** | No interrumpe el flujo |
+
+### Cuándo usar panel lateral
+
+- Crear o editar un sub-recurso desde dentro de otro formulario (e.g. crear conexión SAP dentro del formulario de compañía).
+- Cualquier formulario con más de 3-4 campos que en Angular usaba un `MatDialog` con `width: '800px'` o mayor.
+- Flujos de selección o configuración que el usuario puede cancelar y volver al estado anterior.
+
+### Cuándo usar modal
+
+- **Solo** para alertas, confirmaciones y mensajes de error que requieren acción explícita del usuario antes de continuar.
+- Nunca para formularios de creación o edición.
+
+### Implementación — Panel lateral
+
+```html
+<%# Backdrop — cierra el panel al hacer click %>
+<div data-controller-target="panelBackdrop"
+     data-action="click->controller#closePanel"
+     class="hidden fixed inset-0 z-40 bg-black/40">
+</div>
+
+<%# Panel deslizable desde la derecha %>
+<div data-controller-target="panel"
+     class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+            translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+  <%# Header %>
+  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+    <h3 class="text-base font-semibold text-gray-800">Título del panel</h3>
+    <button type="button" data-action="click->controller#closePanel"
+            class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+      <span class="material-icons text-xl">close</span>
+    </button>
+  </div>
+
+  <%# Cuerpo — scrolleable %>
+  <div class="flex-1 overflow-y-auto px-6 py-5">
+    <%# campos del formulario %>
+  </div>
+
+  <%# Footer con botones %>
+  <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+    <button type="button" data-action="click->controller#closePanel"
+            class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+      <span class="material-icons text-base">cancel</span>
+      Cancelar
+    </button>
+    <button type="button" data-action="click->controller#saveFromPanel"
+            class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+      <span class="material-icons text-base">check</span>
+      Guardar
+    </button>
+  </div>
+
+</div>
+```
+
+### Implementación — métodos en el controller
+
+```js
+openPanel() {
+  this.panelBackdropTarget.classList.remove('hidden');
+  this.panelTarget.classList.remove('translate-x-full');
+  document.body.style.overflow = 'hidden';  // evita scroll del fondo
+}
+
+closePanel() {
+  this.panelTarget.classList.add('translate-x-full');
+  this.panelBackdropTarget.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+```
+
+### Reglas
+
+- El panel lleva `translate-x-full` por defecto y se abre quitando esa clase.
+- `transition-transform duration-300 ease-in-out` da la animación de deslizamiento.
+- `flex-shrink-0` en header y footer para que el cuerpo sea el único elemento scrolleable.
+- El backdrop cierra el panel al hacer click (comportamiento estándar).
+- `document.body.style.overflow = 'hidden'` mientras el panel está abierto para evitar doble scroll.
+- Los targets del panel pertenecen al **mismo controller** del formulario padre — no se requiere un controller separado a menos que la lógica sea muy compleja.
+
+---
+
+## 9. Cuándo usar toast vs modal de error
+
+| Situación | Mecanismo | Ejemplo |
+|---|---|---|
+| Éxito de escritura (POST/PATCH/DELETE) | Toast `success` | "Rol creado exitosamente." |
+| Error de escritura (POST/PATCH/DELETE) | **Modal de error** | Error al guardar, validación server-side |
+| Resultado de lectura (GET) vacío o advertencia | Toast `warning` / `info` | "No se encontraron resultados." |
+| Error de lectura (GET) | Toast `error` | "Error al cargar los datos." |
+| Validación client-side (antes de llamar la API) | Toast `warning` | "Complete los campos requeridos." |
+| Sin permisos | Toast `info` | "No cuenta con permisos para esta acción." |
+
+### Regla general
+
+- **Operaciones de escritura** (POST, PATCH, PUT, DELETE): los errores interrumpen el flujo del usuario — usar modal para que el usuario los lea y confirme. El éxito va en toast.
+- **Operaciones de lectura** (GET): los errores y advertencias son menos críticos — usar toast.
+
+### Patrón en controllers
+
+```js
+// Escritura — éxito: toast, error: modal
+async saveRole() {
+  try {
+    await this.#apiFetch('/api/Rol', { method: 'POST', body: JSON.stringify(payload) })
+    showToast('Rol creado exitosamente.', 'success')
+  } catch (err) {
+    this.#showErrorModal('Error al crear el rol', err.message)
+  }
+}
+
+// Lectura — todo va a toast
+async #loadRoles() {
+  try {
+    const data = await this.#apiFetch('/api/Rol/GetRoles?companyId=1')
+    if (!data.Data?.length) {
+      showToast('No se encontraron roles.', 'warning')
+    }
+  } catch (err) {
+    showToast(err.message || 'Error al cargar roles.', 'error')
+  }
+}
+```
+
+---
+
+## 5. Formato de fechas
+
+Todas las fechas se muestran en formato **`yyyy-MM-dd HH:mm:ss`** (ISO 8601 con espacio, igual que `DATE_TIME_FORMAT` del legacy Angular).
+
+### Helper JS (copiar en cada controller que muestre fechas)
+
+```js
+/** Formatea fecha como yyyy-MM-dd HH:mm:ss (DATE_TIME_FORMAT del legacy Angular) */
+#formatDateTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+```
+
+### Regla
+
+- **NO usar** `toLocaleDateString()` ni `toLocaleString()` para fechas que vienen de la API.
+- Solo usar `toLocaleString('es-CR')` para **montos** (ver sección 3).
+
+---
+
+## 6. Manejo de errores de API — header `cl-message`
+
+El backend envía mensajes de error legibles en el header HTTP `cl-message` (URI-encoded).
+El proxy Rails reenvía este header al browser (`proxy_controller.rb`).
+
+En Angular, el `HttpAlertInterceptor` leía ese header y lo movía a `response.body.Message`.
+En Rails debemos hacer lo mismo manualmente en cada `#apiFetch`.
+
+### Patrón `#apiFetch` correcto (copiar en TODO controller)
+
+```js
+async #apiFetch(url, options = {}) {
+  const session = Storage.get('Session') || {};
+  const token   = session.access_token;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type':             'application/json',
+      'API':                      'ApiAppUrl',
+      'X-Skip-Error-Interceptor': 'true',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  });
+
+  const clMessage = response.headers.get('cl-message');
+  const decodedMessage = clMessage ? (() => {
+    try { return decodeURIComponent(clMessage); } catch { return clMessage; }
+  })() : null;
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => response.statusText);
+    throw new Error(decodedMessage || text || `HTTP ${response.status}`);
+  }
+
+  const json = await response.json();
+
+  if (decodedMessage && !json.Message) {
+    json.Message = decodedMessage;
+  }
+
+  return json;
+}
+```
+
+### Reglas
+
+- **NUNCA** ignorar el header `cl-message` en el fetch — es donde vive el mensaje de error real.
+- Para errores (non-2xx): usar `decodedMessage` como mensaje primario.
+- Para respuestas OK: asignar `decodedMessage` a `json.Message` si el JSON no trae uno.
+- Este patrón reemplaza el `#apiFetch` base de todos los controllers migrados.
+- Los controllers ya existentes (`roles_controller.js`, etc.) deben actualizarse al migrar o corregir.
+
+---
+
+## 7. Notificaciones toast — `showToast`
+
+Todos los controllers usan `showToast` importado de `vendor/clavisco/alerts`. **No copiar `#showToast` privado** en controllers nuevos.
+
+### Import
+
+```js
+import { showToast } from 'vendor/clavisco/alerts'
+```
+
+### Firma
+
+```js
+showToast(message, type = 'success', duration = 4000)
+// type: 'success' | 'error' | 'warning' | 'info'
+```
+
+### Uso
+
+```js
+showToast('Rol creado exitosamente.', 'success')
+showToast(err.message || 'Error al guardar', 'error')
+showToast('Sin permisos para esta acción.', 'info')
+```
+
+### Reglas
+
+- **NO** declarar `toast`, `toastIcon`, `toastMessage` en `static targets` — son legacy, ya eliminados.
+- **NO** agregar divs `data-xxx-target="toast"` en las views — el layout ya tiene `#toast-container`.
+- Los toasts se apilan verticalmente y cada uno se autodestruye independientemente (soporta múltiples simultáneos).
+- El mensaje se escapa internamente (XSS-safe) — no usar `.innerHTML` en el llamador.
+- La implementación vive en `app/javascript/vendor/clavisco/alerts/index.js` → método `AlertsService.showToast`.
+
+---
+
+## 8. Paneles laterales vs Modales
+
+### Regla general
+
+| Caso de uso | Componente | Razón |
+|---|---|---|
+| Formulario de creación/edición complejo | **Panel lateral** | Más espacio, no interrumpe el contexto |
+| Formulario anidado (ej: crear conexión dentro de compañía) | **Panel lateral** | No bloquea el formulario padre |
+| Flujos secundarios (ej: seleccionar ítem, adjuntar archivo) | **Panel lateral** | El usuario puede volver sin perder estado |
+| Confirmación de acción destructiva | **Modal** | Requiere decisión explícita antes de continuar |
+| Mensaje de error grave que bloquea el flujo | **Modal** | Necesita atención inmediata del usuario |
+| Notificación de éxito / advertencia no bloqueante | **Toast** | No interrumpe el flujo |
+
+### Cuándo usar panel lateral
+
+- Crear o editar un sub-recurso desde dentro de otro formulario (e.g. crear conexión SAP dentro del formulario de compañía).
+- Cualquier formulario con más de 3-4 campos que en Angular usaba un `MatDialog` con `width: '800px'` o mayor.
+- Flujos de selección o configuración que el usuario puede cancelar y volver al estado anterior.
+
+### Cuándo usar modal
+
+- **Solo** para alertas, confirmaciones y mensajes de error que requieren acción explícita del usuario antes de continuar.
+- Nunca para formularios de creación o edición.
+
+### Implementación — Panel lateral
+
+```html
+<%# Backdrop %>
+<div data-controller-target="panelBackdrop"
+     data-action="click->controller#closePanel"
+     class="hidden fixed inset-0 z-40 bg-black/40">
+</div>
+
+<%# Panel deslizable desde la derecha %>
+<div data-controller-target="panel"
+     class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+            translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+    <h3 class="text-base font-semibold text-gray-800">Título del panel</h3>
+    <button type="button" data-action="click->controller#closePanel"
+            class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+      <span class="material-icons text-xl">close</span>
+    </button>
+  </div>
+
+  <div class="flex-1 overflow-y-auto px-6 py-5">
+    <%# campos del formulario %>
+  </div>
+
+  <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+    <button type="button" data-action="click->controller#closePanel"
+            class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+      <span class="material-icons text-base">cancel</span>
+      Cancelar
+    </button>
+    <button type="button" data-action="click->controller#saveFromPanel"
+            class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+      <span class="material-icons text-base">check</span>
+      Guardar
+    </button>
+  </div>
+</div>
+```
+
+### Implementación — métodos en el controller
+
+```js
+openPanel() {
+  this.panelBackdropTarget.classList.remove('hidden');
+  this.panelTarget.classList.remove('translate-x-full');
+  document.body.style.overflow = 'hidden';
+}
+
+closePanel() {
+  this.panelTarget.classList.add('translate-x-full');
+  this.panelBackdropTarget.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+```
+
+### Reglas
+
+- El panel lleva `translate-x-full` por defecto y se abre quitando esa clase.
+- `transition-transform duration-300 ease-in-out` da la animación de deslizamiento.
+- `flex-shrink-0` en header y footer para que el cuerpo sea el único elemento scrolleable.
+- El backdrop cierra el panel al hacer click (comportamiento estándar).
+- `document.body.style.overflow = 'hidden'` mientras el panel está abierto para evitar doble scroll.
+- Los targets del panel pertenecen al **mismo controller** del formulario padre — no se requiere un controller separado a menos que la lógica sea muy compleja.
+
+---
+
+## 9. Cuándo usar toast vs modal de error
+
+| Situación | Mecanismo | Ejemplo |
+|---|---|---|
+| Éxito de escritura (POST/PATCH/DELETE) | Toast `success` | "Rol creado exitosamente." |
+| Error de escritura (POST/PATCH/DELETE) | **Modal de error** | Error al guardar, validación server-side |
+| Resultado de lectura (GET) vacío o advertencia | Toast `warning` / `info` | "No se encontraron resultados." |
+| Error de lectura (GET) | Toast `error` | "Error al cargar los datos." |
+| Validación client-side (antes de llamar la API) | Toast `warning` | "Complete los campos requeridos." |
+| Sin permisos | Toast `info` | "No cuenta con permisos para esta acción." |
+
+### Regla general
+
+- **Operaciones de escritura** (POST, PATCH, PUT, DELETE): los errores interrumpen el flujo del usuario — usar modal para que el usuario los lea y confirme. El éxito va en toast.
+- **Operaciones de lectura** (GET): los errores y advertencias son menos críticos — usar toast.
+
+### Patrón en controllers
+
+```js
+// Escritura — éxito: toast, error: modal
+async saveRole() {
+  try {
+    await this.#apiFetch('/api/Rol', { method: 'POST', body: JSON.stringify(payload) })
+    showToast('Rol creado exitosamente.', 'success')
+  } catch (err) {
+    this.#showErrorModal('Error al crear el rol', err.message)
+  }
+}
+
+// Lectura — todo va a toast
+async #loadRoles() {
+  try {
+    const data = await this.#apiFetch('/api/Rol/GetRoles?companyId=1')
+    if (!data.Data?.length) {
+      showToast('No se encontraron roles.', 'warning')
+    }
+  } catch (err) {
+    showToast(err.message || 'Error al cargar roles.', 'error')
+  }
+}
+```
