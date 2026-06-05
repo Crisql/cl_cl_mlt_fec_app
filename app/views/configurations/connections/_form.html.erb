@@ -1,0 +1,213 @@
+<%# Partial compartido por new.html.erb y edit.html.erb %>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+
+  <%# Panel header %>
+  <div class="px-6 py-4 border-b border-gray-100">
+    <h3 class="text-base font-semibold text-gray-800">Configuración de Conexión SAP</h3>
+  </div>
+
+  <%# Formulario %>
+  <div class="px-6 py-5">
+    <div data-testid="connection-form"
+         class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+
+      <%# Servidor %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">
+          Servidor <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-connection-form-target="server"
+               data-testid="input-server"
+               placeholder="Servidor"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-connection-form-target="serverError"
+           class="hidden text-xs text-red-500">El servidor es requerido.</p>
+      </div>
+
+      <%# Servidor de Licencias %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">Servidor de Licencias</label>
+        <input type="text"
+               data-connection-form-target="licenseServer"
+               data-testid="input-license-server"
+               placeholder="Servidor de Licencias"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# URL API %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">
+          URL API <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-connection-form-target="apiUrl"
+               data-testid="input-api-url"
+               placeholder="https://servidor:50000"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-connection-form-target="apiUrlError"
+           class="hidden text-xs text-red-500">La URL de la API es requerida.</p>
+      </div>
+
+      <%# URL Crystal API %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">URL Crystal API</label>
+        <input type="text"
+               data-connection-form-target="crystalApiUrl"
+               data-testid="input-crystal-api-url"
+               placeholder="https://crystal.servidor.com"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Tipo ODBC %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">Tipo ODBC</label>
+        <input type="text"
+               data-connection-form-target="odbcType"
+               data-testid="input-odbc-type"
+               placeholder="HDBODBC"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Motor de Base de Datos %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">
+          Motor de Base de Datos <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-connection-form-target="dbEngine"
+               data-testid="input-db-engine"
+               placeholder="hdb"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-connection-form-target="dbEngineError"
+           class="hidden text-xs text-red-500">El motor de base de datos es requerido.</p>
+      </div>
+
+      <%# Tipo de Servidor %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">Tipo de Servidor</label>
+        <input type="text"
+               data-connection-form-target="serverType"
+               data-testid="input-server-type"
+               placeholder="HanaDb"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Usuario de Base de Datos %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">
+          Usuario de Base de Datos <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-connection-form-target="dbUser"
+               data-testid="input-db-user"
+               placeholder="sa"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-connection-form-target="dbUserError"
+           class="hidden text-xs text-red-500">El usuario de base de datos es requerido.</p>
+      </div>
+
+      <%# Contraseña de Base de Datos %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">
+          Contraseña de Base de Datos
+          <span data-connection-form-target="dbPassRequired" class="text-red-500"> *</span>
+        </label>
+        <div class="relative">
+          <input type="password"
+                 data-connection-form-target="dbPass"
+                 data-testid="input-db-pass"
+                 placeholder="••••••••"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button"
+                  data-connection-form-target="btnTogglePass"
+                  data-testid="btn-toggle-pass"
+                  data-action="click->connection-form#togglePassword"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700">
+            <span data-connection-form-target="togglePassIcon" class="material-icons text-base">visibility_off</span>
+          </button>
+        </div>
+        <p data-connection-form-target="dbPassError"
+           class="hidden text-xs text-red-500">La contraseña de base de datos es requerida.</p>
+      </div>
+
+      <%# Idiomas Soportados (BoSuppLangs) %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">Idiomas Soportados (BoSuppLangs)</label>
+        <input type="text"
+               data-connection-form-target="boSuppLangs"
+               data-testid="input-bo-supp-langs"
+               placeholder="93"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# DST %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">DST</label>
+        <input type="text"
+               data-connection-form-target="dst"
+               data-testid="input-dst"
+               placeholder="DST"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# UseTrusted checkbox %>
+      <div class="flex items-center gap-2 md:col-span-2">
+        <input type="checkbox"
+               id="useTrusted"
+               data-connection-form-target="useTrusted"
+               data-testid="input-use-trusted"
+               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
+        <label for="useTrusted" class="text-sm text-gray-700 cursor-pointer">
+          Usar Conexión de Confianza (Trusted)
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+  <%# Footer con botones %>
+  <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+    <button type="button"
+            data-testid="btn-cancel"
+            data-action="click->connection-form#cancel"
+            class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+      <span class="material-icons text-base">cancel</span>
+      Cancelar
+    </button>
+    <button type="button"
+            data-connection-form-target="submitBtn"
+            data-testid="btn-submit"
+            data-action="click->connection-form#save"
+            class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+      <span data-connection-form-target="submitIcon" class="material-icons text-base">save</span>
+      <span data-connection-form-target="submitLabel">Crear</span>
+    </button>
+  </div>
+
+</div>
+
+<%# ---------------------------------------------------------------- %>
+<%# MODAL DE ERROR / WARNING %>
+<%# ---------------------------------------------------------------- %>
+<div data-connection-form-target="errorModal"
+     data-testid="error-modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+    <div class="flex items-center gap-3 mb-3">
+      <span data-connection-form-target="errorIcon" class="material-icons text-red-500 text-2xl">error</span>
+      <h3 data-connection-form-target="errorTitle"
+          class="text-base font-semibold text-gray-800"></h3>
+    </div>
+    <p data-connection-form-target="errorSubtitle"
+       class="text-sm text-gray-600 mb-5 break-words"></p>
+    <div class="flex justify-end">
+      <button type="button"
+              data-action="click->connection-form#closeErrorModal"
+              class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>

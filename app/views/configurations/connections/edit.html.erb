@@ -1,0 +1,11 @@
+<% content_for :title, "Editar Conexión SAP" %>
+<% content_for :page_title, "Gestión de Conexiones SAP" %>
+
+<div data-controller="connection-form"
+     data-connection-form-connection-id-value="<%= params[:id] %>"
+     data-testid="connection-form-page"
+     class="p-6">
+
+  <%= render 'configurations/connections/form' %>
+
+</div>
