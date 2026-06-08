@@ -78,7 +78,7 @@ export default class extends Controller {
         { key: 'permissions',        label: 'Permisos',                         route: '/configurations/permissions',      requiredPermission: 'Configurations_Permissions_Access' },
         { key: 'Rol',                label: 'Roles',                            route: '/configurations/roles',            requiredPermission: 'S_Rols' },
         { key: 'rolUserCompany',     label: 'Roles por usuario',                route: '/configurations/roles-by-users',   requiredPermission: 'S_RolByUser' },
-        { key: 'sucursal',           label: 'Sucursal',                         route: '/sucursal',                        requiredPermission: 'S_Sucursal' },
+        { key: 'sucursal',           label: 'Sucursal',                         route: '/configurations/branches',         requiredPermission: 'S_Sucursal' },
         { key: 'wizardSetup',        label: 'Asistente de Configuración',       route: '/wizard-setup',                    requiredPermission: 'Configurations_WizardSetup_Access' },
         { key: 'mailParserConfig',   label: 'Procesador de Correos',            route: '/configurations/mail-parser',      requiredPermission: ['Configurations_MailParser_ViewConfigurations', 'Configurations_MailParser_ViewAllConfigurationsInApplication'] },
         { key: 'emailInbox',         label: 'Asignación de bandejas',           route: '/emailInbox',                      requiredPermission: 'Maintenance_EmailInbox_Access' },

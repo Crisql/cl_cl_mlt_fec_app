@@ -16,6 +16,7 @@ Rails.application.routes.draw do
     get 'roles-by-users',      to: 'roles_by_users#index', as: :roles_by_users
     get 'general',             to: 'general#index',      as: :general
     get 'numbering',           to: 'numbering#index',    as: :numbering
+    get 'branches',            to: 'branches#index',     as: :branches
 
     # Companies
     get 'companies',          to: 'companies#index', as: :companies

@@ -1,5 +1,42 @@
 # Convenciones de UI — FEC Rails Migration
 
+## 0. Registro obligatorio de Stimulus controllers
+
+**Regla:** Todo controller nuevo **DEBE** registrarse en `app/javascript/controllers/index.js`
+como parte del mismo paso en que se crea el archivo `*_controller.js`.
+Si no se registra, Stimulus no reconoce el `data-controller` y la página queda muda (sin errores visibles).
+
+### Patrón obligatorio
+
+```js
+// 1. Import al final del bloque de imports
+import BranchesController from 'controllers/branches_controller'
+
+// 2. Register al final del bloque de application.register(...)
+application.register('branches', BranchesController)
+```
+
+### Regla del nombre del identificador
+
+El identificador de `application.register` debe coincidir exactamente con el valor de
+`data-controller="..."` en la vista ERB.
+Convención: `snake_case` del archivo → `kebab-case` del identificador.
+
+| Archivo | Identificador |
+|---|---|
+| `branches_controller.js` | `branches` |
+| `roles_by_users_controller.js` | `roles-by-users` |
+| `company_form_controller.js` | `company-form` |
+
+### ⚠️ Error silencioso más frecuente en migraciones
+
+**Síntoma:** La página carga pero no hace ninguna llamada API, la tabla aparece vacía
+y no hay errores en consola.
+**Causa:** El controller no está registrado en `index.js`.
+**Verificación:** `grep 'NombreController' app/javascript/controllers/index.js`
+
+---
+
 ## 1. Badges de estado
 
 Todos los estados (activo/inactivo, estados de documentos, etc.) se renderizan como

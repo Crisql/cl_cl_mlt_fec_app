@@ -1,0 +1,283 @@
+<% content_for :title, "Sucursales" %>
+<% content_for :page_title, "Sucursales" %>
+
+<div data-controller="branches"
+     data-testid="branches-page"
+     class="p-6 flex flex-col h-full">
+
+  <%# ── Toolbar ──────────────────────────────────────────────────────── %>
+  <div class="mb-4 flex justify-end flex-shrink-0">
+    <button type="button"
+            data-action="click->branches#openCreatePanel"
+            data-testid="btn-new-branch"
+            class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+      <span class="material-icons text-base">add</span>
+      Nueva Sucursal
+    </button>
+  </div>
+
+  <%# ── Tabla ───────────────────────────────────────────────────────── %>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div data-branches-target="table"
+         data-testid="branches-table"
+         class="h-full">
+    </div>
+  </div>
+
+  <%# ── Modal de error ─────────────────────────────────────────────── %>
+  <div data-branches-target="errorModal"
+       data-testid="error-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+      <div class="flex items-start gap-3 mb-4">
+        <span class="material-icons text-red-500 text-2xl flex-shrink-0">error_outline</span>
+        <div>
+          <h3 data-branches-target="errorTitle"
+              class="text-base font-semibold text-gray-800"></h3>
+          <p data-branches-target="errorSubtitle"
+             class="mt-1 text-sm text-gray-600"></p>
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <button type="button"
+                data-action="click->branches#closeErrorModal"
+                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Backdrop panel ─────────────────────────────────────────────── %>
+  <div data-branches-target="panelBackdrop"
+       data-testid="panel-backdrop"
+       data-action="click->branches#closePanel"
+       class="hidden fixed inset-0 z-40 bg-black/40">
+  </div>
+
+  <%# ── Panel lateral crear/editar ─────────────────────────────────── %>
+  <div data-branches-target="panel"
+       data-testid="branch-panel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <%# Header %>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 data-branches-target="panelTitle"
+          data-testid="panel-title"
+          class="text-base font-semibold text-gray-800">Nueva Sucursal</h3>
+      <button type="button"
+              data-action="click->branches#closePanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <%# Cuerpo scrolleable %>
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+      <%# Fila: Sucursal + País %>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Sucursal <span class="text-red-500">*</span>
+          </label>
+          <input type="number"
+                 min="1"
+                 data-branches-target="inputSucursalNum"
+                 data-testid="input-sucursal-num"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p data-branches-target="errorSucursalNum"
+             data-testid="error-sucursal-num"
+             class="hidden mt-1 text-xs text-red-500">El número de sucursal es requerido.</p>
+          <p data-branches-target="errorSucursalNumPattern"
+             data-testid="error-sucursal-num-pattern"
+             class="hidden mt-1 text-xs text-red-500">El número de sucursal debe ser mayor a cero (0).</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">País</label>
+          <input type="text"
+                 value="Costa Rica"
+                 disabled
+                 data-testid="input-country"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100 text-gray-500 cursor-not-allowed">
+        </div>
+      </div>
+
+      <%# Fila: Provincia + Cantón %>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Provincia <span class="text-red-500">*</span>
+          </label>
+          <select data-branches-target="selectProvincia"
+                  data-testid="select-provincia"
+                  data-action="change->branches#onProvinciaChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Seleccione...</option>
+          </select>
+          <p data-branches-target="errorProvincia"
+             data-testid="error-provincia"
+             class="hidden mt-1 text-xs text-red-500">La provincia es requerida.</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Cantón <span class="text-red-500">*</span>
+          </label>
+          <select data-branches-target="selectCanton"
+                  data-testid="select-canton"
+                  data-action="change->branches#onCantonChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Seleccione...</option>
+          </select>
+          <p data-branches-target="errorCanton"
+             data-testid="error-canton"
+             class="hidden mt-1 text-xs text-red-500">El cantón es requerido.</p>
+        </div>
+      </div>
+
+      <%# Fila: Distrito + Barrio %>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Distrito <span class="text-red-500">*</span>
+          </label>
+          <select data-branches-target="selectDistrito"
+                  data-testid="select-distrito"
+                  data-action="change->branches#onDistritoChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Seleccione...</option>
+          </select>
+          <p data-branches-target="errorDistrito"
+             data-testid="error-distrito"
+             class="hidden mt-1 text-xs text-red-500">El distrito es requerido.</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Barrio <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <input type="text"
+                   autocomplete="off"
+                   data-branches-target="inputBarrio"
+                   data-testid="input-barrio"
+                   data-action="input->branches#onBarrioInput focus->branches#onBarrioFocus blur->branches#onBarrioBlur"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <ul data-branches-target="barrioDropdown"
+                class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto text-sm">
+            </ul>
+          </div>
+          <p data-branches-target="errorBarrio"
+             data-testid="error-barrio"
+             class="hidden mt-1 text-xs text-red-500">El barrio es requerido.</p>
+        </div>
+      </div>
+
+      <%# Dirección (full width) %>
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+          Dirección <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-branches-target="inputOtrasSenas"
+               data-testid="input-otras-senas"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-branches-target="errorOtrasSenas"
+           data-testid="error-otras-senas"
+           class="hidden mt-1 text-xs text-red-500">La dirección es requerida.</p>
+      </div>
+
+      <%# Fila: Teléfono + Fax %>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Teléfono <span class="text-red-500">*</span>
+          </label>
+          <input type="text"
+                 inputmode="numeric"
+                 data-branches-target="inputTelefono"
+                 data-testid="input-telefono"
+                 data-action="input->branches#onlyNumbers"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p data-branches-target="errorTelefono"
+             data-testid="error-telefono"
+             class="hidden mt-1 text-xs text-red-500">El número de teléfono es requerido.</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Fax</label>
+          <input type="text"
+                 inputmode="numeric"
+                 data-branches-target="inputFax"
+                 data-testid="input-fax"
+                 data-action="input->branches#onlyNumbers"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+
+      <%# E-mail (full width) %>
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+          E-mail Receptor <span class="text-red-500">*</span>
+        </label>
+        <input type="email"
+               data-branches-target="inputEmail"
+               data-testid="input-email"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-branches-target="errorEmail"
+           data-testid="error-email"
+           class="hidden mt-1 text-xs text-red-500">El correo electrónico es requerido.</p>
+        <p data-branches-target="errorEmailPattern"
+           data-testid="error-email-pattern"
+           class="hidden mt-1 text-xs text-red-500">El correo debe poseer el patrón de correos (correo@correo.com).</p>
+      </div>
+
+      <%# Alias (full width) %>
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+          Alias <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-branches-target="inputAlias"
+               data-testid="input-alias"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-branches-target="errorAlias"
+           data-testid="error-alias"
+           class="hidden mt-1 text-xs text-red-500">El alias es requerido.</p>
+      </div>
+
+      <%# Estado %>
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-medium text-gray-700">Estado</label>
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="checkbox"
+                 data-branches-target="inputActive"
+                 checked
+                 class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <span class="text-sm text-gray-700">Activo</span>
+        </label>
+      </div>
+
+    </div><%# /cuerpo %>
+
+    <%# Footer %>
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->branches#closePanel"
+              data-testid="btn-cancel-panel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>
+        Cancelar
+      </button>
+      <button type="button"
+              data-action="click->branches#saveFromPanel"
+              data-branches-target="saveBtn"
+              data-testid="btn-save-panel"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span data-branches-target="saveIcon" class="material-icons text-base">check</span>
+        <span data-branches-target="saveLabel">Guardar</span>
+      </button>
+    </div>
+
+  </div><%# /panel %>
+
+</div><%# /page %>
