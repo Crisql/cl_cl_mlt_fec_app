@@ -18,6 +18,7 @@ import ConnectionsController      from 'controllers/connections_controller'
 import ConnectionFormController   from 'controllers/connection_form_controller'
 import NumberingController        from 'controllers/numbering_controller'
 import RolesByUsersController     from 'controllers/roles_by_users_controller'
+import GroupController            from 'controllers/group_controller'
 
 application.register('login',             LoginController)
 application.register('auth-guard',        AuthGuardController)
@@ -34,3 +35,4 @@ application.register('connections',       ConnectionsController)
 application.register('connection-form',   ConnectionFormController)
 application.register('numbering',         NumberingController)
 application.register('roles-by-users',    RolesByUsersController)
+application.register('group',             GroupController)

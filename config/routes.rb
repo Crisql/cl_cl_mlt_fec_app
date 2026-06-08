@@ -22,6 +22,9 @@ Rails.application.routes.draw do
     get 'companies/new',      to: 'companies#new',   as: :new_company
     get 'companies/:id/edit', to: 'companies#edit',  as: :edit_company
 
+    # Group
+    get 'group', to: 'group#index', as: :group
+
     # Connections
     get 'connections',          to: 'connections#index', as: :connections
     get 'connections/new',      to: 'connections#new',   as: :new_connection

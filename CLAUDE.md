@@ -280,6 +280,13 @@ async #apiFetch(url, options = {}) {
     throw new Error(decodedMessage || text || `HTTP ${response.status}`);
   }
 
+  // 204 No Content (y cualquier respuesta sin body JSON) — no intentar parsear.
+  // Llamar .json() sobre un body vacío lanza "Unexpected end of JSON input".
+  const hasBody = response.status !== 204 &&
+                  response.headers.get('content-length') !== '0' &&
+                  response.headers.get('content-type')?.includes('application/json');
+  if (!hasBody) return { Message: decodedMessage || null };
+
   const json = await response.json();
 
   // Mover cl-message a json.Message si la respuesta no trae mensaje propio
@@ -296,6 +303,7 @@ async #apiFetch(url, options = {}) {
 - **NUNCA** ignorar el header `cl-message` en el fetch — es donde vive el mensaje de error real.
 - Para errores (non-2xx): usar `decodedMessage` como mensaje primario.
 - Para respuestas OK: asignar `decodedMessage` a `json.Message` si el JSON no trae uno.
+- **NUNCA** llamar `.json()` sin verificar que la respuesta tiene body** — las operaciones de escritura frecuentemente devuelven `204 No Content`. Verificar `status !== 204`, `content-length !== '0'` y `content-type: application/json` antes de parsear.
 - Este patrón reemplaza el `#apiFetch` base de todos los controllers migrados.
 - Los controllers ya existentes (`roles_controller.js`, etc.) deben actualizarse al migrar o corregir.
 
@@ -536,6 +544,13 @@ async #apiFetch(url, options = {}) {
     throw new Error(decodedMessage || text || `HTTP ${response.status}`);
   }
 
+  // 204 No Content (y cualquier respuesta sin body JSON) — no intentar parsear.
+  // Llamar .json() sobre un body vacío lanza "Unexpected end of JSON input".
+  const hasBody = response.status !== 204 &&
+                  response.headers.get('content-length') !== '0' &&
+                  response.headers.get('content-type')?.includes('application/json');
+  if (!hasBody) return { Message: decodedMessage || null };
+
   const json = await response.json();
 
   if (decodedMessage && !json.Message) {
@@ -551,6 +566,7 @@ async #apiFetch(url, options = {}) {
 - **NUNCA** ignorar el header `cl-message` en el fetch — es donde vive el mensaje de error real.
 - Para errores (non-2xx): usar `decodedMessage` como mensaje primario.
 - Para respuestas OK: asignar `decodedMessage` a `json.Message` si el JSON no trae uno.
+- **NUNCA** llamar `.json()` sin verificar que la respuesta tiene body — las operaciones de escritura frecuentemente devuelven `204 No Content`. Verificar `status !== 204`, `content-length !== '0'` y `content-type: application/json` antes de parsear.
 - Este patrón reemplaza el `#apiFetch` base de todos los controllers migrados.
 - Los controllers ya existentes (`roles_controller.js`, etc.) deben actualizarse al migrar o corregir.
 
