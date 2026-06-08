@@ -8,7 +8,7 @@
   <%# ---------------------------------------------------------------- %>
   <%# HEADER: botón Nuevo %>
   <%# ---------------------------------------------------------------- %>
-  <div class="mb-4">
+  <div class="mb-4 flex-shrink-0">
     <button type="button"
             data-testid="btn-new-role"
             data-action="click->roles#openCreateModal"
@@ -19,39 +19,10 @@
   </div>
 
   <%# ---------------------------------------------------------------- %>
-  <%# TABLA DE ROLES %>
+  <%# TABLA DE ROLES (Tabulator full-height) %>
   <%# ---------------------------------------------------------------- %>
-  <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-0">
-    <div class="flex-1 overflow-auto">
-      <table data-testid="roles-table"
-             data-roles-target="table"
-             class="w-full text-sm text-left text-gray-700">
-        <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
-          <tr>
-            <th class="px-4 py-3 font-medium">Nombre del Rol</th>
-            <th class="px-4 py-3 font-medium">Estado</th>
-            <th class="px-4 py-3 font-medium w-20">Acciones</th>
-          </tr>
-        </thead>
-        <tbody data-roles-target="tbody">
-          <%# Las filas se inyectan dinámicamente por Stimulus %>
-        </tbody>
-      </table>
-    </div>
-
-    <%# Estado vacío %>
-    <div data-roles-target="emptyState"
-         class="hidden py-12 text-center text-gray-400 text-sm">
-      <span class="material-icons text-3xl mb-2 block">manage_accounts</span>
-      No hay roles registrados
-    </div>
-
-    <%# Skeleton de carga %>
-    <div data-roles-target="loadingState"
-         class="hidden py-8 text-center text-gray-400 text-sm">
-      <span class="material-icons animate-spin text-2xl mb-2 block">refresh</span>
-      Cargando roles...
-    </div>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div data-roles-target="table" data-testid="roles-table" class="h-full"></div>
   </div>
 
   <%# ---------------------------------------------------------------- %>
@@ -107,16 +78,6 @@
       </div>
 
     </div>
-  </div>
-
-  <%# ---------------------------------------------------------------- %>
-  <%# TOAST (notificaciones) %>
-  <%# ---------------------------------------------------------------- %>
-  <div data-roles-target="toast"
-       data-testid="toast"
-       class="hidden fixed top-5 right-5 z-50 flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-sm transition-all duration-300">
-    <span data-roles-target="toastIcon" class="material-icons text-base mt-0.5">info</span>
-    <span data-roles-target="toastMessage"></span>
   </div>
 
   <%# ---------------------------------------------------------------- %>

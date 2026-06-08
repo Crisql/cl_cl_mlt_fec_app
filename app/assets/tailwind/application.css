@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+ * Loader de Tabulator — spinner circular limpio
+ * El CSS del CDN de Tabulator se carga DESPUÉS de este archivo, por eso se usa
+ * !important para ganar la cascada y eliminar la caja (borde/fondo) por defecto.
+ * Cubre tanto el loader de ajax (.tabulator-loader) como el alert manual
+ * (.tabulator-alert) usado en cargas client-side.
+ * El spinner SVG se define en app/javascript/controllers/tabulator_locale.js
+ * ------------------------------------------------------------------------- */
+.tabulator .tabulator-loader,
+.tabulator .tabulator-alert {
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+.tabulator .tabulator-loader .tabulator-loader-msg,
+.tabulator .tabulator-loader .tabulator-loader-msg.tabulator-loading,
+.tabulator .tabulator-loader .tabulator-loader-msg.tabulator-error,
+.tabulator .tabulator-alert .tabulator-alert-msg,
+.tabulator .tabulator-alert .tabulator-alert-msg.tabulator-alert-state-msg,
+.tabulator .tabulator-alert .tabulator-alert-msg.tabulator-alert-state-error {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  color: #6b7280 !important;
+  font-weight: 400 !important;
+}
+
+.fec-table-spinner svg {
+  display: block;
+  margin: 0 auto;
+}

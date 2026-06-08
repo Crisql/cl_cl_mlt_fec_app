@@ -1,37 +1,38 @@
-import { Controller } from '@hotwired/stimulus';
+import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
+import { showToast } from 'vendor/clavisco/alerts';
+import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
- * RolesController — Gestión de roles por compañía.
+ * RolesController — Gestión de roles por compañía (Tabulator).
  *
  * Replica la funcionalidad del componente Angular RolComponent:
- *   - Carga inicial: GET api/Rol/GetRoles?companyId={id}
- *   - Tabla con columnas: Nombre del Rol, Activo? (icono thumb_up/thumb_down)
+ *   - Carga inicial: GET api/Rol/GetRoles?companyId={id} (todos los roles, paginación client-side)
+ *   - Tabla Tabulator: Nombre del Rol, Estado (badge), Acciones (editar)
  *   - Botón "Nuevo" → abre modal crear
- *   - Botón "Editar" por fila → abre modal editar (OWNER bloqueado)
+ *   - Editar por fila → abre modal editar (OWNER bloqueado)
  *   - POST api/Rol para crear (Id=0, Active=true, GroupId=0)
  *   - PATCH api/Rol para editar
- *   - Toast de éxito / modal de error
+ *   - Toast de éxito (showToast) / modal de error
+ *
+ * Layout full-height: la tabla ocupa toda la altura del contenedor con scroll interno
+ * de filas y paginador al pie (height: "100%").
  */
-export default class extends Controller {
+export default class extends TabulatorController {
   static targets = [
-    'table',
-    'tbody',
-    'emptyState',
-    'loadingState',
+    ...TabulatorController.targets,
     'modal',
     'nameInput',
     'nameError',
     'submitBtn',
     'submitIcon',
     'submitLabel',
-    'toast',
-    'toastIcon',
-    'toastMessage',
     'errorModal',
     'errorTitle',
     'errorSubtitle',
   ];
+
+  static values = { ...TabulatorController.values };
 
   // ── Estado interno ─────────────────────────────────────────────────────────
 
@@ -47,21 +48,66 @@ export default class extends Controller {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   connect() {
-    this.#onLoad();
-  }
-
-  // ── Inicialización ────────────────────────────────────────────────────────
-
-  #onLoad() {
     const company = SStore.get('CurrentCompany');
     this.#companyId = company?.companyId ? parseInt(company.companyId) : null;
+
+    super.connect();   // construye la tabla Tabulator (vacía)
     this.#loadRoles();
+  }
+
+  // ── Configuración Tabulator ─────────────────────────────────────────────────
+
+  getTableConfig() {
+    return {
+      ...super.getTableConfig(),
+      height: '100%',        // llena el contenedor; scroll interno solo si se requiere
+      maxHeight: undefined,  // anula el tope de 500px del config base
+      movableRows: false,
+      layout: 'fitColumns',
+      placeholder: 'No hay roles registrados',
+      pagination: true,
+      paginationSize: 10,
+      paginationSizeSelector: [10, 20, 50, 100],
+      paginationCounter: 'rows',
+      locale: TABULATOR_LOCALE,
+      langs: TABULATOR_LANGS,
+      dataLoaderLoading: TABULATOR_LOADING_HTML,
+      columnDefaults: { headerSort: false },
+      columns: this.getColumns(),
+    };
+  }
+
+  getColumns() {
+    return [
+      { title: 'Nombre del Rol', field: 'Name', widthGrow: 3 },
+      {
+        title: 'Estado',
+        field: 'Active',
+        width: 130,
+        hozAlign: 'left',
+        formatter: (cell) => this.#statusBadge(cell.getValue()),
+      },
+      {
+        title: 'Acciones',
+        field: 'Id',
+        width: 110,
+        hozAlign: 'center',
+        formatter: () => this.#editButton(),
+        cellClick: (e, cell) => {
+          if (e.target.closest('[data-action-type="edit"]')) {
+            this.#editRole(cell.getRow().getData());
+          }
+        },
+      },
+    ];
   }
 
   // ── API ───────────────────────────────────────────────────────────────────
 
   async #loadRoles() {
-    this.#setLoading(true);
+    // Carga client-side: Tabulator no dispara su loader de ajax, así que
+    // mostramos el spinner manualmente vía alert() durante el fetch.
+    this.table?.alert(TABULATOR_LOADING_HTML);
     try {
       const json = await this.#apiFetch(`/api/Rol/GetRoles?companyId=${this.#companyId}`);
 
@@ -74,11 +120,11 @@ export default class extends Controller {
       }
 
       this.#roles = json.Data;
-      this.#renderTable();
+      this.setData(this.#roles);
     } catch (err) {
       this.#showErrorModal('Se produjo un error al obtener los roles', err.message);
     } finally {
-      this.#setLoading(false);
+      this.table?.clearAlert();
     }
   }
 
@@ -98,51 +144,27 @@ export default class extends Controller {
     return this.#apiFetch('/api/Rol', { method: 'PATCH', body: JSON.stringify(payload) });
   }
 
-  // ── Tabla ─────────────────────────────────────────────────────────────────
-
-  #renderTable() {
-    if (this.#roles.length === 0) {
-      this.tbodyTarget.innerHTML = '';
-      this.emptyStateTarget.classList.remove('hidden');
-      return;
-    }
-
-    this.emptyStateTarget.classList.add('hidden');
-    this.tbodyTarget.innerHTML = this.#roles.map(role => this.#rowHTML(role)).join('');
-  }
-
-  #rowHTML(role) {
-    return `
-      <tr data-testid="role-row-${role.Id}"
-          class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-        <td class="px-4 py-3">${this.#escapeHTML(role.Name)}</td>
-        <td class="px-4 py-3">
-          ${this.#statusBadge(role.Active)}
-        </td>
-        <td class="px-4 py-3">
-          <div class="relative group inline-block">
-            <button type="button"
-                    data-testid="btn-edit-role-${role.Id}"
-                    data-action="click->roles#onEditClick"
-                    data-role-id="${role.Id}"
-                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-              <span class="material-icons text-base">edit</span>
-            </button>
-            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1
-                         whitespace-nowrap rounded bg-gray-800 px-2 py-0.5 text-xs text-white
-                         opacity-0 group-hover:opacity-100 transition-opacity z-10">
-              Editar
-            </span>
-          </div>
-        </td>
-      </tr>
-    `;
-  }
+  // ── Render helpers (formatters Tabulator) ───────────────────────────────────
 
   #statusBadge(active) {
     return active
       ? `<span style="background-color:#e8f5ee; color:#3a7d52;" class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">Activo</span>`
       : `<span style="background-color:#fdecea; color:#c0392b;" class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">Inactivo</span>`;
+  }
+
+  #editButton() {
+    return `
+      <div class="relative group inline-block">
+        <button type="button" data-action-type="edit"
+                class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+          <span class="material-icons text-base">edit</span>
+        </button>
+        <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1
+                     whitespace-nowrap rounded bg-gray-800 px-2 py-0.5 text-xs text-white
+                     opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          Editar
+        </span>
+      </div>`;
   }
 
   // ── Handlers de eventos ───────────────────────────────────────────────────
@@ -155,13 +177,11 @@ export default class extends Controller {
     this.#openModal();
   }
 
-  onEditClick(event) {
-    const roleId = parseInt(event.currentTarget.dataset.roleId);
-    const role   = this.#roles.find(r => r.Id === roleId);
+  #editRole(role) {
     if (!role) return;
 
     if (role.Name === 'OWNER') {
-      this.#showToast('Este rol no permite su edición', 'info');
+      showToast('Este rol no permite su edición', 'info');
       return;
     }
 
@@ -177,11 +197,7 @@ export default class extends Controller {
   onNameInput() {
     const hasValue = this.nameInputTarget.value.trim().length > 0;
     this.submitBtnTarget.disabled = !hasValue;
-    if (hasValue) {
-      this.nameErrorTarget.classList.add('hidden');
-    } else {
-      this.nameErrorTarget.classList.remove('hidden');
-    }
+    this.nameErrorTarget.classList.toggle('hidden', hasValue);
   }
 
   async onSubmit() {
@@ -191,10 +207,10 @@ export default class extends Controller {
     try {
       if (this.#editingRole) {
         await this.#updateRole(this.#editingRole.Id, name);
-        this.#showToast('Se actualizó el rol correctamente!!!', 'success');
+        showToast('Se actualizó el rol correctamente!!!', 'success');
       } else {
         await this.#createRole(name);
-        this.#showToast('Se creó el rol correctamente!!!', 'success');
+        showToast('Se creó el rol correctamente!!!', 'success');
       }
       this.closeModal();
       await this.#loadRoles();
@@ -225,30 +241,6 @@ export default class extends Controller {
     this.nameErrorTarget.classList.add('hidden');
   }
 
-  #setLoading(loading) {
-    this.loadingStateTarget.classList.toggle('hidden', !loading);
-    if (loading) this.tbodyTarget.innerHTML = '';
-  }
-
-  #showToast(message, type = 'success') {
-    const toast = this.toastTarget;
-    const iconEl = this.toastIconTarget;
-    const msgEl  = this.toastMessageTarget;
-
-    const config = {
-      success: { bg: 'bg-green-500', icon: 'check_circle' },
-      info:    { bg: 'bg-blue-500',  icon: 'info'          },
-      error:   { bg: 'bg-red-500',   icon: 'error'         },
-    }[type] ?? { bg: 'bg-gray-700', icon: 'notifications' };
-
-    iconEl.textContent  = config.icon;
-    msgEl.textContent   = message;
-    toast.className     = `fixed top-5 right-5 z-50 flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg text-sm text-white max-w-sm transition-all duration-300 ${config.bg}`;
-
-    clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => toast.classList.add('hidden'), 4000);
-  }
-
   #showErrorModal(title, subtitle) {
     this.errorTitleTarget.textContent    = title;
     this.errorSubtitleTarget.textContent = subtitle;
@@ -270,9 +262,14 @@ export default class extends Controller {
       },
     });
 
+    const clMessage = response.headers.get('cl-message');
+    const decodedMessage = clMessage ? (() => {
+      try { return decodeURIComponent(clMessage); } catch { return clMessage; }
+    })() : null;
+
     if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      throw new Error(text || `HTTP ${response.status}`);
+      const text = await response.text().catch(() => response.statusText);
+      throw new Error(decodedMessage || text || `HTTP ${response.status}`);
     }
 
     const contentType   = response.headers.get('content-type') || '';
@@ -281,14 +278,8 @@ export default class extends Controller {
 
     const text = await response.text();
     if (!text || !text.trim()) return {};
-    return JSON.parse(text);
-  }
-
-  #escapeHTML(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    const json = JSON.parse(text);
+    if (decodedMessage && !json.Message) json.Message = decodedMessage;
+    return json;
   }
 }

@@ -1,72 +1,50 @@
-import { Controller } from '@hotwired/stimulus';
+import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
+import { showToast } from 'vendor/clavisco/alerts';
+import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
- * CompaniesController — Búsqueda y listado paginado de compañías.
+ * CompaniesController — Búsqueda y listado paginado de compañías (Tabulator).
  *
  * Replica: Angular CompanyComponent
- *   - GET api/Companies/GetCompanies (paginado)
- *   - Tabla: Nombre Legal, Nombre Comercial, Identificación, Favorita (star), Activa (badge)
- *   - Botón "Consultar" → resetea página a 0 y recarga
- *   - Botón "Crear" → navega a /new (permiso F_CreateCompany)
- *   - Por fila: Favorita (star) + Actualizar (edit)
- *   - POST api/companies/{id}/favorite → confirmación previa
- *   - Paginación: 5/10/15 por página, server-side
+ *   - GET api/Companies/GetCompanies (paginado server-side)
+ *   - Tabla Tabulator con paginación REMOTA (StartPos/StepPos + MaxQtyRowsFetch)
+ *   - Columnas: Nombre Legal, Nombre Comercial, Identificación, Favorita (star), Activa (badge), Acciones
+ *   - "Consultar" → resetea a página 1 y recarga
+ *   - "Crear" → navega a /new (permiso F_CreateCompany)
+ *   - Favorita (star) con confirmación previa · Actualizar (edit, permiso F_ModifyCompany)
+ *
+ * Layout full-height: height "100%"; el paginador de Tabulator queda al pie y las filas
+ * hacen scroll interno solo cuando se requiere.
  *
  * Storage (ver fec-migration-docs/STORAGE-KEY-MAPPING.md):
- *   - localStorage.Session         → { access_token, expires_at, ... }
+ *   - localStorage.Session          → { access_token, ... }
  *   - sessionStorage.CurrentCompany → { companyId, companyName, groupId, ... }
- *   - sessionStorage.Permissions    → string[]  (e.g. ["F_CreateCompany", "S_Company"])
+ *   - sessionStorage.Permissions    → string[]
  */
-export default class extends Controller {
+export default class extends TabulatorController {
   static targets = [
+    ...TabulatorController.targets,
     'searchLegalName',
     'searchComercialName',
     'searchIdentification',
     'btnCreate',
-    'table',
-    'tbody',
-    'emptyState',
-    'loadingState',
-    'pagination',
-    'pageSizeSelect',
-    'pageInfo',
-    'currentPage',
-    'prevBtn',
-    'nextBtn',
     'confirmModal',
     'errorModal',
     'errorTitle',
     'errorSubtitle',
-    'toast',
-    'toastIcon',
-    'toastMessage',
   ];
+
+  static values = { ...TabulatorController.values };
 
   // ── Estado interno ─────────────────────────────────────────────────────────
 
-  #companies    = [];
-  #currentPage  = 0;   // 0-indexed internamente; se envía +1 a la API
-  #itemsPerPage = 5;
-  #totalRecords = 0;
+  #permissions = [];        // string[]
   #pendingFavoriteId = null;
-
-  #companyId   = null;
-  #permissions = [];   // string[] — e.g. ["F_CreateCompany", "F_ModifyCompany"]
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   connect() {
-    this.#onLoad();
-  }
-
-  // ── Inicialización ─────────────────────────────────────────────────────────
-
-  #onLoad() {
-    const company = SStore.get('CurrentCompany');
-    this.#companyId = company?.companyId ? parseInt(company.companyId) : null;
-
-    // Permissions es array de strings en sessionStorage
     this.#permissions = SStore.get('Permissions') || [];
 
     if (this.#hasPerm('F_CreateCompany')) {
@@ -74,39 +52,111 @@ export default class extends Controller {
       this.btnCreateTarget.classList.add('inline-flex');
     }
 
-    this.#loadCompanies();
+    super.connect();   // construye la tabla y dispara la carga remota de la página 1
+  }
+
+  // ── Configuración Tabulator (paginación remota) ──────────────────────────────
+
+  getTableConfig() {
+    return {
+      height: '100%',
+      layout: 'fitColumns',
+      movableRows: false,
+      placeholder: 'No se encontraron compañías',
+      columnDefaults: { headerSort: false },
+
+      // Paginación server-side
+      pagination: true,
+      paginationMode: 'remote',
+      paginationSize: 5,
+      paginationSizeSelector: [5, 10, 15],
+      paginationCounter: 'rows',
+      locale: TABULATOR_LOCALE,
+      langs: TABULATOR_LANGS,
+      dataLoaderLoading: TABULATOR_LOADING_HTML,
+      ajaxURL: '/api/Companies/GetCompanies',
+      ajaxRequestFunc: (url, config, params) => this.#fetchPage(url, params),
+
+      columns: this.getColumns(),
+    };
+  }
+
+  getColumns() {
+    return [
+      { title: 'Nombre Legal', field: 'EmsrNombre', widthGrow: 2 },
+      { title: 'Nombre Comercial', field: 'EmsrNombreComercial', widthGrow: 2 },
+      { title: 'Identificación', field: 'EmsrIdeNumero', widthGrow: 1 },
+      {
+        title: 'Compañía Favorita', field: 'Favorite', width: 160, hozAlign: 'center',
+        formatter: (cell) => cell.getValue()
+          ? '<span class="material-icons" style="color:#FFC107;">star</span>'
+          : '',
+      },
+      {
+        title: 'Activa', field: 'Active', width: 110,
+        formatter: (cell) => this.#statusBadge(cell.getValue() ? 'active' : 'inactive'),
+      },
+      {
+        title: 'Acciones', field: 'Id', width: 110, hozAlign: 'center',
+        formatter: () => this.#actionButtons(),
+        cellClick: (e, cell) => {
+          const row = cell.getRow().getData();
+          if (e.target.closest('[data-action-type="favorite"]')) this.#onFavoriteClick(row);
+          else if (e.target.closest('[data-action-type="edit"]')) this.#onEditClick(row);
+        },
+      },
+    ];
+  }
+
+  /**
+   * Función de carga remota para Tabulator.
+   * @param {string} url       ajaxURL configurada
+   * @param {Object} params    { page (1-indexed), size, ... }
+   * @returns {Promise<{data: Array, last_page: number}>}
+   */
+  async #fetchPage(url, params) {
+    const page = params.page || 1;
+    const size = params.size || 5;
+
+    const qp = new URLSearchParams({
+      LegalName:         this.searchLegalNameTarget.value.trim(),
+      ComercialName:     this.searchComercialNameTarget.value.trim(),
+      Identification:    this.searchIdentificationTarget.value.trim(),
+      StartPos:          String(page),
+      StepPos:           String(size),
+      RequirePagination: 'true',
+      status:            '',
+    });
+
+    try {
+      const json = await this.#apiFetch(`${url}?${qp}`);
+
+      if (json.Error || !json.Data) {
+        this.#showErrorModal(
+          'Se produjo un error al obtener información de Compañías',
+          json.Message || 'Error desconocido'
+        );
+        return { data: [], last_page: 1 };
+      }
+
+      const total    = json.Data[0]?.MaxQtyRowsFetch || 0;
+      const lastPage = Math.max(1, Math.ceil(total / size));
+      return { data: json.Data, last_page: lastPage };
+    } catch (err) {
+      this.#showErrorModal('Se produjo un error al obtener las compañías', err.message);
+      return { data: [], last_page: 1 };
+    }
   }
 
   // ── Acciones públicas ──────────────────────────────────────────────────────
 
   search() {
-    this.#currentPage = 0;
-    this.#loadCompanies();
+    // setData() recarga vía ajax y vuelve a la página 1
+    this.table.setData();
   }
 
   navigateCreate() {
     window.location.href = '/configurations/companies/new';
-  }
-
-  onPageSizeChange() {
-    this.#itemsPerPage = parseInt(this.pageSizeSelectTarget.value);
-    this.#currentPage  = 0;
-    this.#loadCompanies();
-  }
-
-  prevPage() {
-    if (this.#currentPage > 0) {
-      this.#currentPage--;
-      this.#loadCompanies();
-    }
-  }
-
-  nextPage() {
-    const totalPages = Math.ceil(this.#totalRecords / this.#itemsPerPage);
-    if (this.#currentPage < totalPages - 1) {
-      this.#currentPage++;
-      this.#loadCompanies();
-    }
   }
 
   closeErrorModal() {
@@ -128,132 +178,21 @@ export default class extends Controller {
     try {
       const json = await this.#apiFetch(`/api/companies/${id}/favorite`, { method: 'POST' });
       if (json.Error) {
-        this.#showToast('error', `Error al cambiar la compañía favorita. ${json.Message}`);
+        showToast(`Error al cambiar la compañía favorita. ${json.Message}`, 'error');
       } else {
-        this.#showToast('success', 'Compañía favorita cambiada con éxito');
-        this.#loadCompanies();
+        showToast('Compañía favorita cambiada con éxito', 'success');
+        this.table.replaceData();   // recarga la página actual
       }
     } catch (err) {
-      this.#showToast('error', `Error: ${err.message}`);
+      showToast(`Error: ${err.message}`, 'error');
     }
-  }
-
-  // ── API ────────────────────────────────────────────────────────────────────
-
-  async #loadCompanies() {
-    this.#setLoading(true);
-
-    const legalName      = this.searchLegalNameTarget.value.trim();
-    const comercialName  = this.searchComercialNameTarget.value.trim();
-    const identification = this.searchIdentificationTarget.value.trim();
-
-    const params = new URLSearchParams({
-      LegalName:         legalName,
-      ComercialName:     comercialName,
-      Identification:    identification,
-      StartPos:          String(this.#currentPage + 1),
-      StepPos:           String(this.#itemsPerPage),
-      RequirePagination: 'true',
-      status:            '',
-    });
-
-    try {
-      const json = await this.#apiFetch(`/api/Companies/GetCompanies?${params}`);
-
-      if (json.Error || !json.Data) {
-        this.#showErrorModal(
-          'Se produjo un error al obtener información de Compañías',
-          json.Message || 'Error desconocido'
-        );
-        this.#companies = [];
-        this.#renderTable();
-        return;
-      }
-
-      this.#companies    = json.Data;
-      this.#totalRecords = json.Data[0]?.MaxQtyRowsFetch || 0;
-      this.#renderTable();
-    } catch (err) {
-      this.#showErrorModal('Se produjo un error al obtener las compañías', err.message);
-      this.#companies = [];
-      this.#renderTable();
-    } finally {
-      this.#setLoading(false);
-    }
-  }
-
-  // ── Renderizado ────────────────────────────────────────────────────────────
-
-  #renderTable() {
-    const tbody = this.tbodyTarget;
-    tbody.innerHTML = '';
-
-    if (!this.#companies.length) {
-      this.emptyStateTarget.classList.remove('hidden');
-      this.paginationTarget.classList.add('hidden');
-      return;
-    }
-
-    this.emptyStateTarget.classList.add('hidden');
-
-    this.#companies.forEach(company => {
-      const tr = document.createElement('tr');
-      tr.className = 'border-b border-gray-100 hover:bg-gray-50 transition-colors';
-      tr.innerHTML = `
-        <td class="px-4 py-3 text-gray-800">${this.#esc(company.EmsrNombre)}</td>
-        <td class="px-4 py-3 text-gray-700">${this.#esc(company.EmsrNombreComercial)}</td>
-        <td class="px-4 py-3 text-gray-700">${this.#esc(company.EmsrIdeNumero)}</td>
-        <td class="px-4 py-3 text-center" data-testid="favorite-cell">
-          ${company.Favorite
-            ? '<span class="material-icons" style="color:#FFC107;">star</span>'
-            : ''}
-        </td>
-        <td class="px-4 py-3" data-testid="status-badge">
-          ${this.#statusBadge(company.Active ? 'active' : 'inactive')}
-        </td>
-        <td class="px-4 py-3">
-          <div class="flex items-center gap-1">
-            ${this.#actionBtn('star', 'Establecer como Favorita', 'favorite', company.Id)}
-            ${this.#actionBtn('edit', 'Actualizar', 'edit', company.Id)}
-          </div>
-        </td>
-      `;
-
-      tr.querySelector('[data-action-type="favorite"]')
-        .addEventListener('click', () => this.#onFavoriteClick(company));
-      tr.querySelector('[data-action-type="edit"]')
-        .addEventListener('click', () => this.#onEditClick(company));
-
-      tbody.appendChild(tr);
-    });
-
-    this.#renderPagination();
-  }
-
-  #renderPagination() {
-    if (!this.#totalRecords) {
-      this.paginationTarget.classList.add('hidden');
-      return;
-    }
-
-    this.paginationTarget.classList.remove('hidden');
-
-    const totalPages = Math.max(1, Math.ceil(this.#totalRecords / this.#itemsPerPage));
-    const page       = this.#currentPage;
-    const from       = page * this.#itemsPerPage + 1;
-    const to         = Math.min((page + 1) * this.#itemsPerPage, this.#totalRecords);
-
-    this.pageInfoTarget.textContent    = `${from}–${to} de ${this.#totalRecords}`;
-    this.currentPageTarget.textContent = String(page + 1);
-    this.prevBtnTarget.disabled        = page === 0;
-    this.nextBtnTarget.disabled        = page >= totalPages - 1;
   }
 
   // ── Event handlers de fila ─────────────────────────────────────────────────
 
   #onFavoriteClick(company) {
     if ((company.QtyRolAssign ?? 1) === 0) {
-      this.#showToast('info', 'Opción no disponible, ya que no posee asignaciones.');
+      showToast('Opción no disponible, ya que no posee asignaciones.', 'info');
       return;
     }
     this.#pendingFavoriteId = company.Id;
@@ -262,13 +201,13 @@ export default class extends Controller {
 
   #onEditClick(company) {
     if (!this.#hasPerm('F_ModifyCompany')) {
-      this.#showToast('info', 'Opción no disponible, ya que no posee los permisos.');
+      showToast('Opción no disponible, ya que no posee los permisos.', 'info');
       return;
     }
     window.location.href = `/configurations/companies/${company.Id}/edit`;
   }
 
-  // ── Helpers de UI ──────────────────────────────────────────────────────────
+  // ── Render helpers (formatters Tabulator) ────────────────────────────────────
 
   #statusBadge(status) {
     const map = {
@@ -276,72 +215,29 @@ export default class extends Controller {
       inactive: { bg: '#fdecea', color: '#c0392b', label: 'Inactivo' },
     };
     const { bg, color, label } = map[status] ?? { bg: '#f3f4f6', color: '#4b5563', label: status };
-    return `<span style="background-color:${bg}; color:${color};"
-                  class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">
-      ${label}
-    </span>`;
+    return `<span style="background-color:${bg}; color:${color};" class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">${label}</span>`;
   }
 
-  #actionBtn(icon, tooltip, type, id) {
-    return `
+  #actionButtons() {
+    const btn = (icon, tooltip, type) => `
       <div class="relative group inline-block">
-        <button type="button"
-                data-action-type="${type}"
-                data-id="${id}"
-                data-testid="btn-${type}"
+        <button type="button" data-action-type="${type}"
                 class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
           <span class="material-icons text-base">${icon}</span>
         </button>
         <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1
                      whitespace-nowrap rounded bg-gray-800 px-2 py-0.5 text-xs text-white
-                     opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          ${tooltip}
-        </span>
+                     opacity-0 group-hover:opacity-100 transition-opacity z-10">${tooltip}</span>
       </div>`;
+    return `<div class="flex items-center justify-center gap-1">${btn('star', 'Establecer como Favorita', 'favorite')}${btn('edit', 'Actualizar', 'edit')}</div>`;
   }
 
-  #setLoading(isLoading) {
-    if (isLoading) {
-      this.loadingStateTarget.classList.remove('hidden');
-      this.emptyStateTarget.classList.add('hidden');
-      this.tbodyTarget.innerHTML = '';
-    } else {
-      this.loadingStateTarget.classList.add('hidden');
-    }
-  }
+  // ── Helpers de UI ──────────────────────────────────────────────────────────
 
   #showErrorModal(title, subtitle) {
     this.errorTitleTarget.textContent    = title;
     this.errorSubtitleTarget.textContent = subtitle;
     this.errorModalTarget.classList.remove('hidden');
-  }
-
-  #showToast(type, message) {
-    const config = {
-      success: { bg: 'bg-green-600', icon: 'check_circle'  },
-      error:   { bg: 'bg-red-600',   icon: 'error_outline' },
-      info:    { bg: 'bg-blue-600',  icon: 'info'          },
-    };
-    const { bg, icon } = config[type] ?? config.info;
-
-    const toast = this.toastTarget;
-    toast.className = `fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium min-w-64 max-w-sm ${bg}`;
-    this.toastIconTarget.textContent    = icon;
-    this.toastMessageTarget.textContent = message;
-    toast.classList.remove('hidden');
-
-    setTimeout(() => toast.classList.add('hidden'), 3500);
-  }
-
-  // ── Utilidades ─────────────────────────────────────────────────────────────
-
-  #esc(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
   }
 
   /** Permissions es string[] — e.g. ["F_CreateCompany", "S_Company"] */
@@ -356,19 +252,26 @@ export default class extends Controller {
     const response = await fetch(url, {
       ...options,
       headers: {
-        'Content-Type':            'application/json',
-        'API':                     'ApiAppUrl',
+        'Content-Type':             'application/json',
+        'API':                      'ApiAppUrl',
         'X-Skip-Error-Interceptor': 'true',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {}),
       },
     });
 
+    const clMessage = response.headers.get('cl-message');
+    const decodedMessage = clMessage ? (() => {
+      try { return decodeURIComponent(clMessage); } catch { return clMessage; }
+    })() : null;
+
     if (!response.ok) {
       const text = await response.text().catch(() => response.statusText);
-      throw new Error(text || `HTTP ${response.status}`);
+      throw new Error(decodedMessage || text || `HTTP ${response.status}`);
     }
 
-    return response.json();
+    const json = await response.json();
+    if (decodedMessage && !json.Message) json.Message = decodedMessage;
+    return json;
   }
 }

@@ -8,7 +8,7 @@
   <%# ---------------------------------------------------------------- %>
   <%# HEADER: búsqueda + botones %>
   <%# ---------------------------------------------------------------- %>
-  <div class="mb-4 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+  <div class="mb-4 bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-shrink-0">
     <div class="flex flex-wrap gap-3 items-end">
 
       <%# Servidor %>
@@ -54,79 +54,10 @@
   </div>
 
   <%# ---------------------------------------------------------------- %>
-  <%# TABLA DE CONEXIONES %>
+  <%# TABLA DE CONEXIONES (Tabulator full-height, paginación remota) %>
   <%# ---------------------------------------------------------------- %>
-  <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-0">
-    <div class="flex-1 overflow-auto">
-      <table data-testid="connections-table"
-             data-connections-target="table"
-             class="w-full text-sm text-left text-gray-700">
-        <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
-          <tr>
-            <th class="px-4 py-3 font-medium">ID</th>
-            <th class="px-4 py-3 font-medium">Servidor</th>
-            <th class="px-4 py-3 font-medium">Usuario</th>
-            <th class="px-4 py-3 font-medium">Motor de base de datos</th>
-            <th class="px-4 py-3 font-medium">URL API</th>
-            <th class="px-4 py-3 font-medium">URL Crystal API</th>
-            <th class="px-4 py-3 font-medium w-20">Acciones</th>
-          </tr>
-        </thead>
-        <tbody data-connections-target="tbody">
-          <%# Filas inyectadas por Stimulus %>
-        </tbody>
-      </table>
-    </div>
-
-    <%# Estado vacío %>
-    <div data-connections-target="emptyState"
-         data-testid="empty-state"
-         class="hidden py-12 text-center text-gray-400 text-sm">
-      <span class="material-icons text-3xl mb-2 block">cloud_off</span>
-      No hay conexiones registradas
-    </div>
-
-    <%# Skeleton de carga %>
-    <div data-connections-target="loadingState"
-         data-testid="loading-state"
-         class="hidden py-8 text-center text-gray-400 text-sm">
-      <span class="material-icons animate-spin text-2xl mb-2 block">refresh</span>
-      Cargando conexiones...
-    </div>
-
-    <%# ---- Paginación ---- %>
-    <div data-connections-target="pagination"
-         data-testid="pagination"
-         class="hidden border-t border-gray-100 px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
-
-      <div class="flex items-center gap-2 text-sm text-gray-600">
-        <span>Filas por página:</span>
-        <select data-connections-target="pageSizeSelect"
-                data-action="change->connections#onPageSizeChange"
-                class="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="5">5</option>
-          <option value="10">10</option>
-          <option value="15">15</option>
-        </select>
-      </div>
-
-      <div class="flex items-center gap-3 text-sm text-gray-600">
-        <span data-connections-target="pageInfo"></span>
-        <button type="button"
-                data-connections-target="prevBtn"
-                data-action="click->connections#prevPage"
-                class="p-1 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-          <span class="material-icons text-base">chevron_left</span>
-        </button>
-        <button type="button"
-                data-connections-target="nextBtn"
-                data-action="click->connections#nextPage"
-                class="p-1 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-          <span class="material-icons text-base">chevron_right</span>
-        </button>
-      </div>
-
-    </div>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div data-connections-target="table" data-testid="connections-table" class="h-full"></div>
   </div>
 
   <%# ---------------------------------------------------------------- %>

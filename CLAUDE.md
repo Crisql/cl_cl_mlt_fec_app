@@ -666,3 +666,45 @@ async #loadRoles() {
   }
 }
 ```
+
+---
+
+## 10. Idioma de la interfaz — todo en español
+
+**Regla obligatoria:** todo texto visible para el usuario final debe estar en **español**.
+Esto incluye, sin limitarse a: títulos, labels, placeholders, botones, tooltips, mensajes
+de toast/modal, estados vacíos, encabezados de tabla, y **los textos de componentes de
+terceros** (paginadores, contadores, selectores de tamaño de página, etc.).
+
+- **Nunca** dejar textos por defecto en inglés de librerías externas (Tabulator, date pickers, etc.).
+- Configurar el `locale` del componente cuando exista; si no, sobreescribir los labels manualmente.
+
+### Tabulator — locale español + íconos en el paginador
+
+Todas las tablas Tabulator deben aplicar el locale compartido. Los botones de navegación
+(primera/anterior/siguiente/última) usan **íconos Material Icons** en lugar de texto.
+
+```js
+import { TABULATOR_LOCALE, TABULATOR_LANGS } from 'controllers/tabulator_locale'
+
+getTableConfig() {
+  return {
+    ...,
+    paginationCounter: 'rows',
+    locale: TABULATOR_LOCALE,   // 'es-es'
+    langs:  TABULATOR_LANGS,    // labels español + íconos de flecha
+  }
+}
+```
+
+La definición vive en `app/javascript/controllers/tabulator_locale.js`:
+
+- `first` → `first_page`, `prev` → `chevron_left`, `next` → `chevron_right`, `last` → `last_page`
+  (renderizados como `<span class="material-icons">`; Tabulator asigna el label vía `innerHTML`).
+- `page_size` → "Filas por página", contador → "Mostrando X a Y de Z filas".
+- Los `*_title` (tooltips) también en español: "Primera página", "Página anterior", etc.
+
+### Regla
+
+- **NO** dejar "First / Prev / Next / Last / Page Size / Showing … of …" en inglés.
+- Reutilizar `TABULATOR_LANGS`; no redefinir labels por tabla.
