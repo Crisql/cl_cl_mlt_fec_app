@@ -74,7 +74,7 @@ export default class extends Controller {
         { key: 'udfs',               label: 'UDFs',                             route: '/udfs',                            requiredPermission: 'S_Udfs' },
         { key: 'users',              label: 'Usuarios',                         route: '/configurations/users',            requiredPermission: 'Configurations_Users_Access' },
         { key: 'groups',             label: 'Grupos',                           route: '/configurations/group',            requiredPermission: 'S_Groups' },
-        { key: 'numbering',          label: 'Numeración',                       route: '/numbering',                       requiredPermission: 'S_Numbering' },
+        { key: 'numbering',          label: 'Numeración',                       route: '/configurations/numbering',        requiredPermission: 'S_Numbering' },
         { key: 'permissions',        label: 'Permisos',                         route: '/configurations/permissions',      requiredPermission: 'Configurations_Permissions_Access' },
         { key: 'Rol',                label: 'Roles',                            route: '/configurations/roles',            requiredPermission: 'S_Rols' },
         { key: 'rolUserCompany',     label: 'Roles por usuario',                route: '/rolUserCompany',                  requiredPermission: 'S_RolByUser' },

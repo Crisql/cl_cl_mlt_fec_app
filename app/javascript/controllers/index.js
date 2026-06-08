@@ -16,6 +16,7 @@ import CompaniesController        from 'controllers/companies_controller'
 import CompanyFormController      from 'controllers/company_form_controller'
 import ConnectionsController      from 'controllers/connections_controller'
 import ConnectionFormController   from 'controllers/connection_form_controller'
+import NumberingController        from 'controllers/numbering_controller'
 
 application.register('login',             LoginController)
 application.register('auth-guard',        AuthGuardController)
@@ -30,3 +31,4 @@ application.register('companies',         CompaniesController)
 application.register('company-form',      CompanyFormController)
 application.register('connections',       ConnectionsController)
 application.register('connection-form',   ConnectionFormController)
+application.register('numbering',         NumberingController)

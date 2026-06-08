@@ -14,6 +14,7 @@ Rails.application.routes.draw do
     get 'user-profile',        to: 'user_profile#index', as: :user_profile
     get 'roles',               to: 'roles#index',        as: :roles
     get 'general',             to: 'general#index',      as: :general
+    get 'numbering',           to: 'numbering#index',    as: :numbering
 
     # Companies
     get 'companies',          to: 'companies#index', as: :companies

@@ -160,6 +160,63 @@ Para campos de tipo password el botón va **dentro** del input con `relative` + 
 
 ---
 
+## 11. Tablas Tabulator — altura relativa al contenedor
+
+Las tablas deben ocupar el **contenedor** que se les asigna, no el viewport ni la página completa.
+Para lograrlo se requieren tres capas alineadas:
+
+### Regla obligatoria
+
+| Capa | Qué aplicar |
+|---|---|
+| Card / wrapper externo (el que crece) | `flex-1 min-h-0` (en layout `flex flex-col`) |
+| Cuerpo de sección (si hay toolbar encima) | `flex-1 min-h-0 flex flex-col` |
+| Toolbar dentro del cuerpo | `flex-shrink-0` |
+| Div contenedor de la tabla | `flex-1 min-h-0` (o altura explícita) |
+| Div target de Tabulator | `class="h-full"` |
+| Config Tabulator | `height: '100%'` |
+
+### Ejemplo — tabla única, página full-height
+
+```html
+<%# Página %>
+<div data-controller="mi-modulo" class="p-6 flex flex-col h-full">
+  <div class="mb-4 flex-shrink-0"><!-- toolbar/botones --></div>
+
+  <%# Contenedor — ocupa el resto de la altura %>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div data-mi-modulo-target="table" class="h-full"></div>
+  </div>
+</div>
+```
+
+### Ejemplo — acordeón con dos secciones
+
+El **card activo** lleva `flex-1 min-h-0` y el **card inactivo** lleva `flex-shrink-0`.
+El JS intercambia estas clases al hacer toggle:
+
+```js
+toggleSeccion() {
+  const collapsed = this.seccionSectionTarget.classList.toggle('hidden');
+  this.seccionChevronTarget.classList.toggle('rotate-180', !collapsed);
+  // Card crece al expandir, se comprime al colapsar
+  this.seccionCardTarget.classList.toggle('flex-1',        !collapsed);
+  this.seccionCardTarget.classList.toggle('min-h-0',       !collapsed);
+  this.seccionCardTarget.classList.toggle('flex-shrink-0', collapsed);
+  // La tabla estaba oculta al init → forzar redibujado
+  if (!collapsed) requestAnimationFrame(() => this.table?.redraw(true));
+}
+```
+
+### ⚠️ Errores comunes
+
+- **`height: '100%'` sin contenedor con altura explícita** → Tabulator lee 0 px y la tabla se colapsa.
+- **`h-full` en el target sin `min-h-0` en el padre** → el padre no restringe su alto y el scroll nunca aparece.
+- **Inicializar Tabulator dentro de un elemento `hidden`** → el alto calculado es 0; llamar `redraw(true)` al mostrar el elemento resuelve el problema.
+- **`import('tabulator-tables')` dinámico** → la instancia se crea de forma asíncrona; si se llama `setData` de inmediato, la tabla todavía no existe. Siempre usar import estático: `import { TabulatorFull } from 'tabulator-tables'`.
+
+---
+
 ## 5. Formato de fechas
 
 Todas las fechas se muestran en formato **`yyyy-MM-dd HH:mm:ss`** (ISO 8601 con espacio, igual que `DATE_TIME_FORMAT` del legacy Angular).

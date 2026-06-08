@@ -1,0 +1,426 @@
+<% content_for :title, "Numeración" %>
+<% content_for :page_title, "Numeración" %>
+
+<div data-controller="numbering"
+     data-testid="numbering-page"
+     class="p-6 flex flex-col gap-4 h-full">
+
+  <%# ================================================================ %>
+  <%# SECCIÓN 1: Numeración %>
+  <%# ================================================================ %>
+  <%# flex-1 min-h-0: ocupa el espacio disponible del flex padre %>
+  <div data-numbering-target="numberingCard"
+       class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-1 min-h-0">
+
+    <%# Header colapsable — flex-shrink-0 para que no se comprima %>
+    <button type="button"
+            data-action="click->numbering#toggleNumbering"
+            data-numbering-target="numberingHeader"
+            class="flex items-center justify-between w-full px-5 py-3 text-left hover:bg-gray-50 transition-colors flex-shrink-0">
+      <span class="text-sm font-semibold text-gray-800">Numeración</span>
+      <span class="material-icons text-gray-500 text-xl transition-transform rotate-180"
+            data-numbering-target="numberingChevron">expand_more</span>
+    </button>
+
+    <%# Cuerpo — flex-1 min-h-0 para que la tabla pueda crecer %>
+    <div data-numbering-target="numberingSection"
+         class="border-t border-gray-100 flex-1 min-h-0 flex flex-col">
+
+      <%# Toolbar %>
+      <div class="px-5 py-3 flex justify-end flex-shrink-0">
+        <button type="button"
+                data-action="click->numbering#openCreateNumbering"
+                data-testid="btn-new-numbering"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-base">add</span>
+          Nueva Numeración
+        </button>
+      </div>
+
+      <%# Contenedor de tabla — flex-1 min-h-0 para que h-full funcione %>
+      <div class="flex-1 min-h-0 px-5 pb-5">
+        <div data-numbering-target="numberingTable"
+             data-testid="numbering-table"
+             class="h-full">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# ================================================================ %>
+  <%# SECCIÓN 2: Numeración de Recepción %>
+  <%# ================================================================ %>
+  <%# flex-shrink-0: colapsada por defecto, solo ocupa el header %>
+  <div data-numbering-target="receptionCard"
+       class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-shrink-0">
+
+    <%# Header colapsable %>
+    <button type="button"
+            data-action="click->numbering#toggleReception"
+            data-numbering-target="receptionHeader"
+            class="flex items-center justify-between w-full px-5 py-3 text-left hover:bg-gray-50 transition-colors flex-shrink-0">
+      <span class="text-sm font-semibold text-gray-800">Numeración de Recepción</span>
+      <span class="material-icons text-gray-500 text-xl transition-transform"
+            data-numbering-target="receptionChevron">expand_more</span>
+    </button>
+
+    <%# Cuerpo — colapsado por defecto %>
+    <div data-numbering-target="receptionSection"
+         class="border-t border-gray-100 hidden flex-1 min-h-0 flex flex-col">
+
+      <%# Toolbar %>
+      <div class="px-5 py-3 flex justify-end flex-shrink-0">
+        <button type="button"
+                data-action="click->numbering#openCreateReception"
+                data-testid="btn-new-reception"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-base">add</span>
+          Nueva Numeración de Recepción
+        </button>
+      </div>
+
+      <%# Contenedor de tabla %>
+      <div class="flex-1 min-h-0 px-5 pb-5">
+        <div data-numbering-target="receptionTable"
+             data-testid="reception-table"
+             class="h-full">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# ================================================================ %>
+  <%# PANEL LATERAL — Numeración %>
+  <%# ================================================================ %>
+
+  <%# Backdrop %>
+  <div data-numbering-target="numberingPanelBackdrop"
+       data-action="click->numbering#closeNumberingPanel"
+       class="hidden fixed inset-0 z-40 bg-black/40">
+  </div>
+
+  <%# Panel %>
+  <div data-numbering-target="numberingPanel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800"
+          data-numbering-target="numberingPanelTitle">Numeración</h3>
+      <button type="button"
+              data-action="click->numbering#closeNumberingPanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+
+      <%# Número Siguiente %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Número Siguiente <span class="text-red-500">*</span>
+        </label>
+        <input type="number"
+               min="1"
+               data-numbering-target="numNextNumber"
+               data-testid="input-next-number"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+               placeholder="Número Siguiente">
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="numNextNumberError">
+          El número siguiente es requerido.
+        </p>
+      </div>
+
+      <%# Tipo de Documento %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Tipo de Documento <span class="text-red-500">*</span>
+        </label>
+        <select data-numbering-target="numDocType"
+                data-testid="select-doc-type"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Seleccione --</option>
+          <option value="01">FE</option>
+          <option value="02">ND</option>
+          <option value="03">NC</option>
+          <option value="04">TE</option>
+          <option value="08">FEC</option>
+          <option value="09">FEE</option>
+          <option value="10">REP</option>
+        </select>
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="numDocTypeError">
+          El tipo de documento es requerido.
+        </p>
+      </div>
+
+      <%# Sucursal %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Sucursal <span class="text-red-500">*</span>
+        </label>
+        <select data-numbering-target="numSucursal"
+                data-testid="select-sucursal"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Seleccione --</option>
+        </select>
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="numSucursalError">
+          La sucursal es requerida.
+        </p>
+      </div>
+
+      <%# Terminal %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Terminal <span class="text-red-500">*</span>
+        </label>
+        <input type="number"
+               min="0"
+               data-numbering-target="numTerminal"
+               data-testid="input-terminal"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+               placeholder="Terminal">
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="numTerminalError">
+          La terminal es requerida y no puede ser negativa.
+        </p>
+      </div>
+
+      <%# Observaciones %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Observaciones <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-numbering-target="numObvs"
+               data-testid="input-obvs"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+               placeholder="Observaciones">
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="numObvsError">
+          Las observaciones son requeridas.
+        </p>
+      </div>
+
+      <%# Tipo de Integración %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Tipo de Integración <span class="text-red-500">*</span>
+        </label>
+        <select data-numbering-target="numIntegration"
+                data-testid="select-integration"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Seleccione --</option>
+          <option value="1">Integrador</option>
+          <option value="2">AppFE</option>
+        </select>
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="numIntegrationError">
+          El tipo de integración es requerido.
+        </p>
+      </div>
+
+      <%# Estado %>
+      <div class="flex items-center gap-3">
+        <label class="text-sm font-medium text-gray-700">Estado</label>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox"
+                 data-numbering-target="numActive"
+                 data-testid="check-active"
+                 checked
+                 class="sr-only peer">
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500
+                      rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white
+                      after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                      after:bg-white after:border-gray-300 after:border after:rounded-full
+                      after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          <span class="ml-2 text-sm text-gray-600" data-numbering-target="numActiveLabel">Activo</span>
+        </label>
+      </div>
+
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->numbering#closeNumberingPanel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>
+        Cancelar
+      </button>
+      <button type="button"
+              data-action="click->numbering#saveNumbering"
+              data-numbering-target="numSaveBtn"
+              data-testid="btn-save-numbering"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base" data-numbering-target="numSaveIcon">check</span>
+        <span data-numbering-target="numSaveLabel">Crear</span>
+      </button>
+    </div>
+  </div>
+
+  <%# ================================================================ %>
+  <%# PANEL LATERAL — Numeración de Recepción %>
+  <%# ================================================================ %>
+
+  <%# Backdrop %>
+  <div data-numbering-target="receptionPanelBackdrop"
+       data-action="click->numbering#closeReceptionPanel"
+       class="hidden fixed inset-0 z-40 bg-black/40">
+  </div>
+
+  <%# Panel %>
+  <div data-numbering-target="receptionPanel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800"
+          data-numbering-target="receptionPanelTitle">Numeración de Recepción</h3>
+      <button type="button"
+              data-action="click->numbering#closeReceptionPanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+
+      <%# Número Siguiente — solo editable en modo edición %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Número Siguiente <span class="text-red-500">*</span>
+        </label>
+        <input type="number"
+               min="1"
+               data-numbering-target="recNextNumber"
+               data-testid="input-rec-next-number"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+               placeholder="Número Siguiente">
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="recNextNumberError">
+          El número siguiente es requerido.
+        </p>
+      </div>
+
+      <%# Sucursal %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Sucursal <span class="text-red-500">*</span>
+        </label>
+        <select data-numbering-target="recSucursal"
+                data-testid="select-rec-sucursal"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Seleccione --</option>
+        </select>
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="recSucursalError">
+          La sucursal es requerida.
+        </p>
+      </div>
+
+      <%# Terminal %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Terminal <span class="text-red-500">*</span>
+        </label>
+        <input type="number"
+               min="0"
+               data-numbering-target="recTerminal"
+               data-testid="input-rec-terminal"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+               placeholder="Terminal">
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="recTerminalError">
+          La terminal es requerida.
+        </p>
+      </div>
+
+      <%# Observaciones %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Observaciones <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-numbering-target="recObvs"
+               data-testid="input-rec-obvs"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+               placeholder="Observaciones">
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="recObvsError">
+          Las observaciones son requeridas.
+        </p>
+      </div>
+
+      <%# Tipo de Integración %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Tipo de Integración <span class="text-red-500">*</span>
+        </label>
+        <select data-numbering-target="recIntegration"
+                data-testid="select-rec-integration"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Seleccione --</option>
+          <option value="1">Integrador</option>
+          <option value="2">AppFE</option>
+        </select>
+        <p class="hidden mt-1 text-xs text-red-600" data-numbering-target="recIntegrationError">
+          El tipo de integración es requerido.
+        </p>
+      </div>
+
+      <%# Estado %>
+      <div class="flex items-center gap-3">
+        <label class="text-sm font-medium text-gray-700">Estado</label>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox"
+                 data-numbering-target="recActive"
+                 data-testid="check-rec-active"
+                 checked
+                 class="sr-only peer">
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500
+                      rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white
+                      after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                      after:bg-white after:border-gray-300 after:border after:rounded-full
+                      after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          <span class="ml-2 text-sm text-gray-600" data-numbering-target="recActiveLabel">Activo</span>
+        </label>
+      </div>
+
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->numbering#closeReceptionPanel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>
+        Cancelar
+      </button>
+      <button type="button"
+              data-action="click->numbering#saveReception"
+              data-numbering-target="recSaveBtn"
+              data-testid="btn-save-reception"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base" data-numbering-target="recSaveIcon">check</span>
+        <span data-numbering-target="recSaveLabel">Crear</span>
+      </button>
+    </div>
+  </div>
+
+  <%# ================================================================ %>
+  <%# MODAL DE ERROR %>
+  <%# ================================================================ %>
+  <div data-numbering-target="errorModal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+        <span class="material-icons text-red-500">error</span>
+        <h3 class="text-base font-semibold text-gray-800" data-numbering-target="errorTitle"></h3>
+      </div>
+      <div class="px-6 py-4">
+        <p class="text-sm text-gray-600" data-numbering-target="errorSubtitle"></p>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end">
+        <button type="button"
+                data-action="click->numbering#closeErrorModal"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-base">check</span>
+          Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
