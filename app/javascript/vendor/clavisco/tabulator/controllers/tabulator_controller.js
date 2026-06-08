@@ -75,6 +75,7 @@ export default class extends Controller {
     this.table = new Tabulator(this.tableTarget, config)
 
     this.setupEventListeners()
+    this.setupTooltip()
 
     console.log("[tabulator] Table initialized with config:", config)
   }
@@ -124,6 +125,58 @@ export default class extends Controller {
    */
   getColumns() {
     throw new Error("getColumns() must be implemented by child controller")
+  }
+
+  /**
+   * Setup fixed-position tooltip for action buttons.
+   * Uses event delegation on the table container to avoid being clipped
+   * by Tabulator's overflow:hidden on cells.
+   * Buttons must carry a data-tooltip="..." attribute to activate.
+   */
+  setupTooltip() {
+    if (!document.getElementById('cl-tabulator-tooltip')) {
+      const tip = document.createElement('div')
+      tip.id = 'cl-tabulator-tooltip'
+      tip.style.cssText = [
+        'position:fixed',
+        'z-index:9999',
+        'pointer-events:none',
+        'background:#1f2937',
+        'color:#fff',
+        'padding:2px 8px',
+        'border-radius:4px',
+        'font-size:12px',
+        'white-space:nowrap',
+        'opacity:0',
+        'transition:opacity 0.15s',
+      ].join(';')
+      document.body.appendChild(tip)
+    }
+    const tip = document.getElementById('cl-tabulator-tooltip')
+    let activeBtn = null
+
+    this.tableTarget.addEventListener('mouseover', (e) => {
+      const btn = e.target.closest('[data-tooltip]')
+      if (btn && btn !== activeBtn) {
+        activeBtn = btn
+        tip.textContent = btn.dataset.tooltip
+        tip.style.opacity = '1'
+      } else if (!btn) {
+        activeBtn = null
+        tip.style.opacity = '0'
+      }
+    })
+
+    this.tableTarget.addEventListener('mousemove', (e) => {
+      if (!activeBtn) return
+      tip.style.left = (e.clientX + 10) + 'px'
+      tip.style.top  = (e.clientY - 32) + 'px'
+    })
+
+    this.tableTarget.addEventListener('mouseleave', () => {
+      activeBtn = null
+      tip.style.opacity = '0'
+    })
   }
 
   /**

@@ -220,15 +220,10 @@ export default class extends TabulatorController {
 
   #actionButtons() {
     const btn = (icon, tooltip, type) => `
-      <div class="relative group inline-block">
-        <button type="button" data-action-type="${type}"
-                class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-          <span class="material-icons text-base">${icon}</span>
-        </button>
-        <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1
-                     whitespace-nowrap rounded bg-gray-800 px-2 py-0.5 text-xs text-white
-                     opacity-0 group-hover:opacity-100 transition-opacity z-10">${tooltip}</span>
-      </div>`;
+      <button type="button" data-action-type="${type}" data-tooltip="${tooltip}"
+              class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+        <span class="material-icons text-base">${icon}</span>
+      </button>`;
     return `<div class="flex items-center justify-center gap-1">${btn('star', 'Establecer como Favorita', 'favorite')}${btn('edit', 'Actualizar', 'edit')}</div>`;
   }
 

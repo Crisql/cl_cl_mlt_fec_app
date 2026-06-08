@@ -56,31 +56,32 @@ Todos los estados (activo/inactivo, estados de documentos, etc.) se renderizan c
 ## 2. Botones de acción en tablas
 
 Los botones de acción en filas de tabla usan **ícono + tooltip**, sin texto visible.
-El tooltip aparece al hacer hover con CSS puro (sin JS).
+El tooltip se muestra via JS con `position: fixed` (no CSS puro) para evitar ser recortado
+por el `overflow: hidden` que Tabulator aplica en las celdas.
 
-### Estructura HTML
+### Estructura HTML (dentro de formatters Tabulator)
 
 ```html
-<div class="relative group inline-block">
-  <button type="button"
-          data-action="click->controller#handler"
-          class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-    <span class="material-icons text-base">edit</span>
-  </button>
-  <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1
-               whitespace-nowrap rounded bg-gray-800 px-2 py-0.5 text-xs text-white
-               opacity-0 group-hover:opacity-100 transition-opacity z-10">
-    Editar
-  </span>
-</div>
+<button type="button"
+        data-action-type="edit"
+        data-tooltip="Editar"
+        class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+  <span class="material-icons text-base">edit</span>
+</button>
 ```
+
+### Cómo funciona
+
+`TabulatorController.setupTooltip()` (llamado automáticamente en `initializeTable()`) registra
+event delegation sobre el contenedor de la tabla. Al hacer hover en cualquier `[data-tooltip]`,
+mueve un `div#cl-tabulator-tooltip` con `position: fixed; z-index: 9999` a las coordenadas
+del cursor — nunca queda dentro del stacking context de la celda.
 
 ### Reglas
 
-- Un `div.relative.group` envuelve **cada** botón + su tooltip
-- El tooltip siempre va `bottom-full` (aparece arriba del botón)
-- `pointer-events-none` en el tooltip para que no interfiera con clicks
-- Para filas en la parte inferior de la tabla usar `top-full` en lugar de `bottom-full`
+- Agregar `data-tooltip="Texto"` directamente en el `<button>` — **no** en el span de ícono
+- **No usar** `<div class="relative group">` + `<span class="...group-hover:opacity-100...">` en tablas Tabulator — el `overflow:hidden` de las celdas recorta esos tooltips
+- Para tooltips **fuera de Tabulator** (formularios, toolbar) sí se puede usar el patrón CSS puro con `group-hover`
 
 ---
 

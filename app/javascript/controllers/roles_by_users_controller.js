@@ -100,17 +100,10 @@ export default class extends TabulatorController {
         hozAlign: 'center',
         headerHozAlign: 'center',
         formatter: () => `
-          <div class="relative group inline-block">
-            <button type="button"
-                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer action-edit">
-              <span class="material-icons text-base">edit</span>
-            </button>
-            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1
-                         whitespace-nowrap rounded bg-gray-800 px-2 py-0.5 text-xs text-white
-                         opacity-0 group-hover:opacity-100 transition-opacity z-10">
-              Editar
-            </span>
-          </div>`,
+          <button type="button" data-tooltip="Editar"
+                  class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer action-edit">
+            <span class="material-icons text-base">edit</span>
+          </button>`,
         cellClick: (_e, cell) => this.#onEditClick(cell.getRow().getData()),
       },
     ];
