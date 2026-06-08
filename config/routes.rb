@@ -13,6 +13,7 @@ Rails.application.routes.draw do
     get 'permissions/global',  to: 'permissions#index',  as: :permissions_global
     get 'user-profile',        to: 'user_profile#index', as: :user_profile
     get 'roles',               to: 'roles#index',        as: :roles
+    get 'roles-by-users',      to: 'roles_by_users#index', as: :roles_by_users
     get 'general',             to: 'general#index',      as: :general
     get 'numbering',           to: 'numbering#index',    as: :numbering
 

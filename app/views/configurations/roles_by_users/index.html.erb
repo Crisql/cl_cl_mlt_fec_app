@@ -1,0 +1,144 @@
+<% content_for :title, "Roles por usuario" %>
+<% content_for :page_title, "Roles por usuario" %>
+
+<%# Roles por usuario — migración de /rolUserCompany %>
+<div data-controller="roles-by-users"
+     class="p-6 flex flex-col h-full">
+
+  <%# ── Toolbar ──────────────────────────────────────────────────────────── %>
+  <div class="mb-4 flex-shrink-0 flex items-end gap-4">
+
+    <%# Filtro por rol %>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-gray-600">Rol</label>
+      <select data-roles-by-users-target="roleFilter"
+              data-action="change->roles-by-users#onRoleFilterChange"
+              class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]">
+        <option value="0">-- Todos --</option>
+      </select>
+    </div>
+
+    <%# Botón Nuevo %>
+    <button type="button"
+            data-action="click->roles-by-users#openPanelNew"
+            class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+      <span class="material-icons text-base">add</span>
+      Nuevo
+    </button>
+
+  </div>
+
+  <%# ── Tabla ───────────────────────────────────────────────────────────── %>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div data-roles-by-users-target="table" class="h-full"></div>
+  </div>
+
+  <%# ── Modal de error ──────────────────────────────────────────────────── %>
+  <div data-roles-by-users-target="errorModal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
+        <span class="material-icons text-red-500">error_outline</span>
+        <h3 data-roles-by-users-target="errorTitle"
+            class="text-base font-semibold text-gray-800"></h3>
+      </div>
+      <div class="px-6 py-4">
+        <p data-roles-by-users-target="errorSubtitle"
+           class="text-sm text-gray-600"></p>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end">
+        <button type="button"
+                data-action="click->roles-by-users#closeErrorModal"
+                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Backdrop del panel ──────────────────────────────────────────────── %>
+  <div data-roles-by-users-target="panelBackdrop"
+       data-action="click->roles-by-users#closePanel"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <%# ── Panel lateral ───────────────────────────────────────────────────── %>
+  <div data-roles-by-users-target="panel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <%# Header %>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 data-roles-by-users-target="panelTitle"
+          class="text-base font-semibold text-gray-800">Asignación Rol por Usuario</h3>
+      <button type="button"
+              data-action="click->roles-by-users#closePanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <%# Cuerpo %>
+    <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+
+      <%# Rol %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">
+          Rol <span class="text-red-500">*</span>
+        </label>
+        <select data-roles-by-users-target="panelRole"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </select>
+        <span data-roles-by-users-target="panelRoleError"
+              class="hidden text-xs text-red-500">Campo requerido</span>
+      </div>
+
+      <%# Usuario %>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">
+          Usuario <span class="text-red-500">*</span>
+        </label>
+        <select data-roles-by-users-target="panelUser"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </select>
+        <span data-roles-by-users-target="panelUserError"
+              class="hidden text-xs text-red-500">Campo requerido</span>
+      </div>
+
+      <%# Compañía — solo para @clavisco.com %>
+      <div data-roles-by-users-target="companyWrapper" class="hidden flex-col gap-1">
+        <label class="text-sm font-medium text-gray-700">Compañía</label>
+        <div class="relative">
+          <input type="text"
+                 data-roles-by-users-target="companyInput"
+                 data-action="input->roles-by-users#onCompanyInput focus->roles-by-users#onCompanyFocus"
+                 placeholder="Buscar compañía..."
+                 autocomplete="off"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <ul data-roles-by-users-target="companyDropdown"
+              class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto text-sm">
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <%# Footer %>
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->roles-by-users#closePanel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>
+        Cancelar
+      </button>
+      <button type="button"
+              data-roles-by-users-target="submitBtn"
+              data-action="click->roles-by-users#onSubmit"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span data-roles-by-users-target="submitIcon" class="material-icons text-base">check</span>
+        <span data-roles-by-users-target="submitLabel">Crear</span>
+      </button>
+    </div>
+
+  </div>
+
+</div>
