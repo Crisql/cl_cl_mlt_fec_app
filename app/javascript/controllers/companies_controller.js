@@ -9,7 +9,7 @@ import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'contr
  * Replica: Angular CompanyComponent
  *   - GET api/Companies/GetCompanies (paginado server-side)
  *   - Tabla Tabulator con paginación REMOTA (StartPos/StepPos + MaxQtyRowsFetch)
- *   - Columnas: Nombre Legal, Nombre Comercial, Identificación, Favorita (star), Activa (badge), Acciones
+ *   - Columnas: Nombre Legal, Nombre Comercial, Identificación, Favorita (star), Estado (badge), Acciones
  *   - "Consultar" → resetea a página 1 y recarga
  *   - "Crear" → navega a /new (permiso F_CreateCompany)
  *   - Favorita (star) con confirmación previa · Actualizar (edit, permiso F_ModifyCompany)
@@ -93,7 +93,7 @@ export default class extends TabulatorController {
           : '',
       },
       {
-        title: 'Activa', field: 'Active', width: 110,
+        title: 'Estado', field: 'Active', width: 110,
         formatter: (cell) => this.#statusBadge(cell.getValue() ? 'active' : 'inactive'),
       },
       {
