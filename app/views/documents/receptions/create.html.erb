@@ -1,0 +1,791 @@
+<% content_for :title, "Crear Factura Proveedor" %>
+<% content_for :page_title, "Búsqueda de documentos Aceptados" %>
+
+<div data-controller="documents-reception-create"
+     data-documents-reception-create-doc-id-value="<%= params[:id] %>"
+     data-testid="create-reception-page"
+     class="p-6 flex flex-col h-full gap-4">
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# ACORDEÓN: Recepción de Documentos (solo si shouldRecept) %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="receptAccordion"
+       data-testid="recept-accordion"
+       class="hidden bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+
+    <button type="button"
+            data-action="click->documents-reception-create#toggleReceptAccordion"
+            class="w-full flex items-center justify-between px-5 py-4 text-left">
+      <span class="text-sm font-semibold text-gray-800">Recepción de Documentos</span>
+      <span data-documents-reception-create-target="receptAccordionIcon"
+            class="material-icons text-gray-500 transition-transform duration-200">expand_more</span>
+    </button>
+
+    <div data-documents-reception-create-target="receptAccordionBody" class="px-5 pb-5">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <%# Mensaje %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Seleccione la respuesta <span class="text-red-500">*</span></label>
+          <select data-documents-reception-create-target="receptMensaje"
+                  data-action="change->documents-reception-create#onReceptMensajeChange"
+                  data-testid="recept-mensaje"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">-- Seleccione --</option>
+            <option value="1">Aceptado</option>
+            <option value="2">Aceptar Parcialmente</option>
+            <option value="3">Rechazado</option>
+          </select>
+          <p data-documents-reception-create-target="errorReceptMensaje"
+             class="hidden mt-1 text-xs text-red-600">La respuesta es requerida.</p>
+        </div>
+
+        <%# Condición Impuesto %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Condición Impuesto <span class="text-red-500">*</span></label>
+          <select data-documents-reception-create-target="receptCondicionImpuesto"
+                  data-action="change->documents-reception-create#onReceptCondicionChange"
+                  data-testid="recept-condicion-impuesto"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="01">01 — Genera crédito IVA</option>
+            <option value="02">02 — Genera crédito parcial del IVA</option>
+            <option value="03">03 — Bienes de capital</option>
+            <option value="04">04 — Gasto corriente no genera crédito</option>
+            <option value="05">05 — Proporcionalidad</option>
+          </select>
+        </div>
+
+        <%# TaxFactor %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Factor %</label>
+          <input type="text"
+                 disabled
+                 data-documents-reception-create-target="receptTaxFactor"
+                 data-testid="recept-tax-factor"
+                 placeholder="Factor %"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 text-gray-400 cursor-not-allowed">
+          <p data-documents-reception-create-target="errorReceptTaxFactor"
+             class="hidden mt-1 text-xs text-red-600">El factor de impuesto es requerido.</p>
+        </div>
+
+        <%# Código Actividad %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Código Actividad <span class="text-red-500">*</span></label>
+          <input type="text"
+                 data-documents-reception-create-target="receptCodigoActividad"
+                 data-testid="recept-codigo-actividad"
+                 placeholder="Código de actividad (6 dígitos)"
+                 maxlength="6"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p data-documents-reception-create-target="errorReceptCodigoActividad"
+             data-testid="error-codigo-actividad"
+             class="hidden mt-1 text-xs text-red-600">El código de actividad debe tener exactamente 6 caracteres.</p>
+        </div>
+
+      </div>
+
+      <%# Detalle Mensaje (full width) %>
+      <div class="mt-4">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Mensaje</label>
+        <textarea data-documents-reception-create-target="receptDetalleMensaje"
+                  data-testid="recept-detalle-mensaje"
+                  rows="4"
+                  maxlength="254"
+                  placeholder="Detalle del mensaje (opcional)"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+        <p data-documents-reception-create-target="errorReceptDetalleMensaje"
+           class="hidden mt-1 text-xs text-red-600">El detalle del mensaje es requerido.</p>
+      </div>
+
+      <%# Botón Previsualizar %>
+      <div class="mt-4 flex justify-end">
+        <button type="button"
+                data-action="click->documents-reception-create#previewReceptDoc"
+                data-testid="btn-previsualizar"
+                class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          <span class="material-icons text-base">print</span>
+          Previsualizar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# OVERLAY DE CARGA %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="loadingOverlay"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl px-8 py-6 shadow-xl flex items-center gap-4">
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+      <p data-documents-reception-create-target="loadingMessage"
+         class="text-sm text-gray-700">Cargando...</p>
+    </div>
+  </div>
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# TABS %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="tabsContainer"
+       class="hidden flex-1 flex flex-col min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+
+    <%# Tab headers %>
+    <div class="flex border-b border-gray-200 flex-shrink-0">
+      <button type="button"
+              data-documents-reception-create-target="tabBtnCabecera"
+              data-action="click->documents-reception-create#switchTab"
+              data-tab="cabecera"
+              data-testid="tab-cabecera"
+              class="tab-btn px-5 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-white transition-colors">
+        Cabecera
+      </button>
+      <button type="button"
+              data-documents-reception-create-target="tabBtnLineas"
+              data-action="click->documents-reception-create#switchTab"
+              data-tab="lineas"
+              data-testid="tab-lineas"
+              class="tab-btn hidden px-5 py-3 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300 transition-colors">
+        Líneas
+      </button>
+      <button type="button"
+              data-documents-reception-create-target="tabBtnOtrosCargos"
+              data-action="click->documents-reception-create#switchTab"
+              data-tab="otros-cargos"
+              data-testid="tab-otros-cargos"
+              class="tab-btn hidden px-5 py-3 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300 transition-colors">
+        Otros Cargos
+      </button>
+    </div>
+
+    <%# ── TAB: CABECERA ─────────────────────────────── %>
+    <div data-documents-reception-create-target="tabCabecera"
+         class="flex-1 overflow-y-auto p-6">
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+
+        <%# RefDocType %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo documento de referencia</label>
+          <select data-documents-reception-create-target="selectRefDocType"
+                  data-action="change->documents-reception-create#onRefDocTypeChange"
+                  data-testid="select-ref-doc-type"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">-- Ninguno --</option>
+          </select>
+        </div>
+
+        <%# RefDocEntry (autocomplete) %>
+        <div class="relative">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Número documento de referencia</label>
+          <input type="text"
+                 disabled
+                 data-documents-reception-create-target="inputRefDocEntry"
+                 data-action="input->documents-reception-create#onRefDocEntryInput"
+                 data-testid="input-ref-doc-entry"
+                 placeholder="Buscar por número, código o nombre de proveedor"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 text-gray-400 cursor-not-allowed">
+          <div data-documents-reception-create-target="refDocAutocompleteList"
+               data-testid="ref-doc-autocomplete-list"
+               class="hidden absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto text-sm">
+          </div>
+          <p data-documents-reception-create-target="loadingRefDoc"
+             class="hidden mt-1 text-xs text-gray-500">
+            <span class="material-icons text-xs align-middle animate-spin">refresh</span>
+            Buscando documentos...
+          </p>
+        </div>
+
+        <%# Cerrar documento de referencia %>
+        <div class="flex items-center gap-2 col-span-full">
+          <input type="checkbox"
+                 disabled
+                 data-documents-reception-create-target="checkCloseRefDoc"
+                 data-testid="check-close-ref-doc"
+                 class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <label class="text-sm text-gray-700">Cerrar documento de referencia</label>
+        </div>
+
+        <%# CardCode (autocomplete proveedores) %>
+        <div class="relative">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Código proveedor <span class="text-red-500">*</span></label>
+          <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+            <input type="text"
+                   data-documents-reception-create-target="inputCardCode"
+                   data-action="input->documents-reception-create#onCardCodeInput"
+                   data-testid="input-card-code"
+                   placeholder="Código o nombre de proveedor"
+                   class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+            <button type="button"
+                    data-action="click->documents-reception-create#refreshData"
+                    data-testid="btn-refresh"
+                    data-tooltip="Refrescar Datos"
+                    class="self-stretch flex items-center px-2 border-l border-gray-200 text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+              <span class="material-icons text-base leading-none">autorenew</span>
+            </button>
+          </div>
+          <div data-documents-reception-create-target="supplierAutocompleteList"
+               data-testid="autocomplete-supplier-list"
+               class="hidden absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto text-sm">
+          </div>
+          <p data-documents-reception-create-target="errorCardCode"
+             data-testid="error-card-code"
+             class="hidden mt-1 text-xs text-red-600">Seleccione un proveedor.</p>
+        </div>
+
+        <%# DocDate %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Fecha contabilización</label>
+          <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+            <input type="date"
+                   data-documents-reception-create-target="inputDocDate"
+                   data-testid="input-doc-date"
+                   class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+            <button type="button"
+                    data-action="click->documents-reception-create#setToday"
+                    data-field="inputDocDate"
+                    data-testid="btn-today-doc-date"
+                    class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+              Hoy
+            </button>
+          </div>
+        </div>
+
+        <%# CardName %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Nombre</label>
+          <input type="text"
+                 data-documents-reception-create-target="inputCardName"
+                 data-testid="input-card-name"
+                 placeholder="Nombre del proveedor"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <%# DocDueDate %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Fecha vencimiento</label>
+          <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+            <input type="date"
+                   data-documents-reception-create-target="inputDocDueDate"
+                   data-testid="input-doc-due-date"
+                   class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+            <button type="button"
+                    data-action="click->documents-reception-create#setToday"
+                    data-field="inputDocDueDate"
+                    class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+              Hoy
+            </button>
+          </div>
+        </div>
+
+        <%# NumAtCard %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Referencia</label>
+          <input type="text"
+                 data-documents-reception-create-target="inputNumAtCard"
+                 data-testid="input-num-at-card"
+                 placeholder="Número de referencia del proveedor"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <%# TaxDate %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Fecha XML</label>
+          <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+            <input type="date"
+                   data-documents-reception-create-target="inputTaxDate"
+                   data-action="change->documents-reception-create#onTaxDateChange"
+                   data-testid="input-tax-date"
+                   class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+            <button type="button"
+                    data-action="click->documents-reception-create#setToday"
+                    data-field="inputTaxDate"
+                    class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+              Hoy
+            </button>
+          </div>
+        </div>
+
+        <%# DocCur (readonly) %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Moneda</label>
+          <input type="text"
+                 readonly
+                 data-documents-reception-create-target="inputDocCur"
+                 data-testid="input-doc-cur"
+                 placeholder="Moneda"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 outline-none cursor-default text-gray-700">
+        </div>
+
+      </div>
+
+      <%# UDFs dinámicos %>
+      <div data-documents-reception-create-target="udfsContainer"
+           class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      </div>
+
+      <%# Tabla de líneas (read-only, llena desde tab Líneas) %>
+      <div class="mb-6 border border-gray-200 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código SAP</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código XML</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Detalle</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Cuenta</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Proyecto</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Cantidad</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Almacén</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Precio</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Descuento</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Impuesto</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Monto</th>
+              </tr>
+            </thead>
+            <tbody data-documents-reception-create-target="apInvoiceLinesBody">
+              <tr>
+                <td colspan="11" class="px-3 py-4 text-center text-xs text-gray-400">Sin líneas agregadas</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <%# Comentario + Totales %>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+        <%# Comentario %>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Comentario</label>
+          <textarea data-documents-reception-create-target="inputComments"
+                    data-action="input->documents-reception-create#onCommentsInput"
+                    data-testid="input-comments"
+                    rows="5"
+                    maxlength="254"
+                    placeholder="Comentario"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+          <p class="mt-1 text-xs text-gray-400">
+            <span data-documents-reception-create-target="commentsCharCount"
+                  data-testid="comments-char-count">0</span> / 254
+          </p>
+        </div>
+
+        <%# Totales %>
+        <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+          <table class="w-full text-sm">
+            <tbody>
+              <tr class="border-b border-gray-200">
+                <td class="py-1.5 text-xs text-gray-600 font-medium">SubTotal:</td>
+                <td data-documents-reception-create-target="totalsSubtotal"
+                    data-testid="totals-subtotal"
+                    class="py-1.5 text-xs text-gray-800 text-right font-semibold">₡ 0.00</td>
+              </tr>
+              <tr class="border-b border-gray-200">
+                <td class="py-1.5 text-xs text-gray-600 font-medium">Total otros cargos:</td>
+                <td data-documents-reception-create-target="totalsOtrosCargos"
+                    class="py-1.5 text-xs text-gray-800 text-right font-semibold">₡ 0.00</td>
+              </tr>
+              <tr class="border-b border-gray-200">
+                <td class="py-1.5 text-xs text-gray-600 font-medium">Impuestos:</td>
+                <td data-documents-reception-create-target="totalsImpuestos"
+                    data-testid="totals-impuestos"
+                    class="py-1.5 text-xs text-gray-800 text-right font-semibold">₡ 0.00</td>
+              </tr>
+              <tr class="border-b border-gray-200">
+                <td class="py-1.5 text-xs text-gray-600 font-medium">Descuento:</td>
+                <td data-documents-reception-create-target="totalsDescuento"
+                    data-testid="totals-descuento"
+                    class="py-1.5 text-xs text-gray-800 text-right font-semibold">₡ 0.00</td>
+              </tr>
+              <tr>
+                <td class="py-2 text-sm text-gray-800 font-bold">Total:</td>
+                <td data-documents-reception-create-target="totalsTotal"
+                    data-testid="totals-total"
+                    class="py-2 text-sm text-blue-700 text-right font-bold">₡ 0.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <%# Botones de acción %>
+      <div class="flex justify-end gap-3">
+        <button type="button"
+                disabled
+                data-documents-reception-create-target="btnCreateDraft"
+                data-action="click->documents-reception-create#createDraft"
+                data-testid="btn-create-draft"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <span class="material-icons text-base">post_add</span>
+          Crear borrador en SAP
+        </button>
+        <button type="button"
+                disabled
+                data-documents-reception-create-target="btnCreateSap"
+                data-action="click->documents-reception-create#createInSap"
+                data-testid="btn-create-sap"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <span class="material-icons text-base">post_add</span>
+          Crear en SAP
+        </button>
+      </div>
+
+    </div>
+
+    <%# ── TAB: LÍNEAS ─────────────────────────────────── %>
+    <div data-documents-reception-create-target="tabLineas"
+         class="hidden flex-1 overflow-y-auto p-6 space-y-6">
+
+      <%# Tabla XML %>
+      <div>
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Líneas del XML</h4>
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm" data-testid="xml-lines-table">
+              <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Detalle</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Cantidad</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Precio</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Descuento</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Impuesto</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Monto Línea</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Disponible</th>
+                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-600">Acción</th>
+                </tr>
+              </thead>
+              <tbody data-documents-reception-create-target="xmlLinesBody">
+                <tr>
+                  <td colspan="9" class="px-3 py-4 text-center text-xs text-gray-400">Sin líneas</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <%# Tabla líneas SAP %>
+      <div>
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Líneas a enviar a SAP</h4>
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm" data-testid="sap-lines-table">
+              <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código SAP</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código XML</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Detalle</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Cuenta</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Proyecto</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Cantidad</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Almacén</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Precio</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Descuento</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Impuesto</th>
+                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Monto</th>
+                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-600">Acciones</th>
+                </tr>
+              </thead>
+              <tbody data-documents-reception-create-target="sapLinesBody">
+                <tr>
+                  <td colspan="12" class="px-3 py-4 text-center text-xs text-gray-400">Sin líneas</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <%# ── TAB: OTROS CARGOS ──────────────────────────── %>
+    <div data-documents-reception-create-target="tabOtrosCargos"
+         class="hidden flex-1 overflow-y-auto p-6">
+      <h4 class="text-sm font-semibold text-gray-700 mb-4">Otros Cargos del XML</h4>
+      <div class="border border-gray-200 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Detalle</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Cantidad</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Precio</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Disponible</th>
+                <th class="px-3 py-2 text-center text-xs font-medium text-gray-600">Acción</th>
+              </tr>
+            </thead>
+            <tbody data-documents-reception-create-target="otrosCargosBody">
+              <tr>
+                <td colspan="6" class="px-3 py-4 text-center text-xs text-gray-400">Sin cargos adicionales</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# MODAL: Selección de moneda (currency mismatch) %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="currencyMismatchModal"
+       data-testid="currency-mismatch-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+      <h3 class="text-base font-semibold text-gray-800 mb-2">Moneda no encontrada</h3>
+      <p class="text-sm text-gray-600 mb-4">
+        La moneda del XML (<strong data-documents-reception-create-target="currencyMismatchXmlCode"></strong>)
+        no está configurada en la compañía. Seleccione la moneda con la que desea continuar:
+      </p>
+      <div class="mb-4">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Moneda</label>
+        <select data-documents-reception-create-target="currencyMismatchSelect"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Seleccione --</option>
+        </select>
+      </div>
+      <label class="flex items-center gap-2 mb-6 cursor-pointer">
+        <input type="checkbox"
+               data-documents-reception-create-target="currencyMismatchSave"
+               class="h-4 w-4 rounded border-gray-300 text-blue-600">
+        <span class="text-sm text-gray-700">Guardar este mapeo para futuros documentos</span>
+      </label>
+      <div class="flex justify-end gap-3">
+        <button type="button"
+                data-action="click->documents-reception-create#cancelCurrencyMismatch"
+                class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          Cancelar
+        </button>
+        <button type="button"
+                data-action="click->documents-reception-create#confirmCurrencyMismatch"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+          Continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# MODAL: Tolerancia de montos %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="toleranceModal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+      <h3 class="text-base font-semibold text-gray-800 mb-2">Tolerancia no configurada</h3>
+      <p class="text-sm text-gray-600 mb-4">
+        La moneda del documento (<strong data-documents-reception-create-target="toleranceDocCurrency"></strong>)
+        no tiene una tolerancia configurada. Seleccione la tolerancia con la que desea continuar:
+      </p>
+      <div class="mb-6">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Tolerancia</label>
+        <select data-documents-reception-create-target="toleranceSelect"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Seleccione --</option>
+        </select>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button type="button"
+                data-action="click->documents-reception-create#cancelTolerance"
+                class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          Cancelar
+        </button>
+        <button type="button"
+                data-action="click->documents-reception-create#confirmTolerance"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+          Continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# MODAL: Confirmación Refrescar Datos %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="confirmRefreshModal"
+       data-testid="confirm-refresh-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+      <h3 class="text-base font-semibold text-gray-800 mb-2">Actualizar Página</h3>
+      <p class="text-sm text-gray-600 mb-6">¿Desea actualizar la información? Esta acción recargará la página y podría resultar en la pérdida de datos no guardados.</p>
+      <div class="flex justify-end gap-3">
+        <button type="button"
+                data-action="click->documents-reception-create#closeConfirmRefresh"
+                class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          No
+        </button>
+        <button type="button"
+                data-action="click->documents-reception-create#confirmRefresh"
+                data-testid="confirm-refresh-yes"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+          Sí
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# MODAL: Éxito %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="successModal"
+       data-testid="success-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+      <span class="material-icons text-5xl text-green-500 mb-3">check_circle</span>
+      <p data-documents-reception-create-target="successModalMessage"
+         class="text-sm text-gray-700 mb-6"></p>
+      <button type="button"
+              data-action="click->documents-reception-create#closeSuccessModal"
+              data-testid="success-modal-ok"
+              class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+        OK
+      </button>
+    </div>
+  </div>
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# MODAL: Advertencia / Error %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="warningModal"
+       data-testid="warning-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+      <span class="material-icons text-5xl text-amber-500 mb-3">warning</span>
+      <p data-documents-reception-create-target="warningModalMessage"
+         class="text-sm text-gray-700 mb-6"></p>
+      <button type="button"
+              data-action="click->documents-reception-create#closeWarningModal"
+              class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+        Continuar
+      </button>
+    </div>
+  </div>
+
+  <%# MODAL: Error %>
+  <div data-documents-reception-create-target="errorModal"
+       data-testid="error-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+      <span class="material-icons text-5xl text-red-500 mb-3">error</span>
+      <p data-documents-reception-create-target="errorModalMessage"
+         class="text-sm text-gray-700 mb-6"></p>
+      <button type="button"
+              data-action="click->documents-reception-create#closeErrorModal"
+              class="px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
+        Cerrar
+      </button>
+    </div>
+  </div>
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# PANEL: Previsualización del documento de recepción %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="previewBackdrop"
+       data-action="click->documents-reception-create#closePreview"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-reception-create-target="previewPanel"
+       data-testid="preview-panel"
+       class="fixed top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Vista previa del documento</h3>
+      <button type="button"
+              data-action="click->documents-reception-create#closePreview"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div data-documents-reception-create-target="previewBody"
+         class="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-sm text-gray-700">
+    </div>
+
+  </div>
+
+  <%# ──────────────────────────────────────────────────── %>
+  <%# PANEL LATERAL: Selección de ítem (líneas) %>
+  <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="itemPanelBackdrop"
+       data-action="click->documents-reception-create#cancelItemSelection"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-reception-create-target="itemPanel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Agregar línea</h3>
+      <button type="button"
+              data-action="click->documents-reception-create#cancelItemSelection"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+      <%# Info de la línea XML seleccionada %>
+      <div data-documents-reception-create-target="itemPanelLineInfo"
+           class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Artículo SAP <span class="text-red-500">*</span></label>
+        <select data-documents-reception-create-target="itemSelectItem"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Almacén <span class="text-red-500">*</span></label>
+        <select data-documents-reception-create-target="itemSelectWarehouse"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad <span class="text-red-500">*</span></label>
+        <input type="number"
+               min="1"
+               data-documents-reception-create-target="itemQuantity"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Cuenta SAP</label>
+        <select data-documents-reception-create-target="itemSelectAccount"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Sin cuenta --</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Proyecto</label>
+        <select data-documents-reception-create-target="itemSelectProject"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Sin proyecto --</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->documents-reception-create#cancelItemSelection"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>Cancelar
+      </button>
+      <button type="button"
+              data-action="click->documents-reception-create#confirmItemSelection"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <span class="material-icons text-base">check</span>Agregar línea
+      </button>
+    </div>
+
+  </div>
+
+</div>

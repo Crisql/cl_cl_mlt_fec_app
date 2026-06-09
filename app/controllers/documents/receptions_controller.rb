@@ -5,5 +5,7 @@ module Documents
     layout 'protected'
 
     def index; end
+
+    def create; end
   end
 end

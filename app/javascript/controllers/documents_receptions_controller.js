@@ -2,6 +2,7 @@ import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator
 import { Storage, SStore } from 'vendor/clavisco/core';
 import { showToast } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
+import { showLoading, hideLoading } from 'vendor/clavisco/overlay';
 
 /**
  * DocumentsReceptionsController — Búsqueda de documentos recibidos/aceptados.
@@ -22,14 +23,14 @@ import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'contr
  */
 
 const DOC_STATUS = {
-  1: { label: 'Aceptado',                   bg: '#e8f5ee', color: '#3a7d52' },
-  2: { label: 'Procesando',                 bg: '#fffbeb', color: '#b45309' },
-  3: { label: 'En Hacienda',                bg: '#fffbeb', color: '#b45309' },
-  4: { label: 'Rechazado',                  bg: '#fdecea', color: '#c0392b' },
-  5: { label: 'Error',                      bg: '#fffbeb', color: '#b45309' },
-  6: { label: 'Reprocesar',                 bg: '#fffbeb', color: '#b45309' },
-  7: { label: 'Obtenido del Correo',        bg: '#fffbeb', color: '#b45309' },
-  8: { label: 'Obtenido Correo Automático', bg: '#fffbeb', color: '#b45309' },
+  1: { label: 'Aceptado',                   bg: '#e8f5ee', color: '#3a7d52' },  // verde
+  2: { label: 'Procesando',                 bg: '#e8f0fe', color: '#1a56db' },  // azul
+  3: { label: 'En Hacienda',                bg: '#e8f0fe', color: '#1a56db' },  // azul
+  4: { label: 'Rechazado',                  bg: '#fdecea', color: '#c0392b' },  // rojo
+  5: { label: 'Error',                      bg: '#fffbeb', color: '#b45309' },  // amarillo
+  6: { label: 'Reprocesar',                 bg: '#e8f0fe', color: '#1a56db' },  // azul
+  7: { label: 'Obtenido del Correo',        bg: '#f3f4f6', color: '#4b5563' },  // gris
+  8: { label: 'Obtenido Correo Automático', bg: '#f3f4f6', color: '#4b5563' },  // gris
 };
 
 const MESSAGE_TYPES = { 1: 'Aceptado', 2: 'Aceptado Parcialmente', 3: 'Rechazado' };
@@ -524,8 +525,8 @@ export default class extends TabulatorController {
   async #viewXMLHacienda(id) {
     try {
       const json = await this.#apiFetch(`/api/Documents/GetDocumentXMLAccepted?docId=${id}`);
-      if (!json.Data) { showToast('No se encontró la respuesta XML de Hacienda', 'info'); return; }
-      const decoded = this.#b64DecodeUnicode(json.Data);
+      if (!json.Data?.HrRespuestaXml) { showToast('No se encontró la respuesta XML de Hacienda', 'info'); return; }
+      const decoded = this.#b64DecodeUnicode(json.Data.HrRespuestaXml);
       const blob    = new Blob([decoded], { type: 'application/xml' });
       const url     = URL.createObjectURL(blob);
       const tab     = window.open();
@@ -601,6 +602,7 @@ export default class extends TabulatorController {
   async saveFromReceptPanel() {
     if (!this.#activeReceptDoc) return;
     try {
+      showLoading('Procesando documento, espere por favor...');
       await this.#apiFetch('/api/Documents/ReceptMessageFromMailParser/', {
         method: 'POST',
         body: JSON.stringify({
@@ -620,10 +622,12 @@ export default class extends TabulatorController {
         }),
         headers: { 'API': 'ApiFEUrl' },
       });
+      hideLoading();
       showToast('Documento recepcionado con éxito', 'success');
       this.closeReceptPanel();
       this.table?.replaceData();
     } catch (err) {
+      hideLoading();
       showToast(err.message, 'error');
     }
   }
@@ -699,13 +703,13 @@ export default class extends TabulatorController {
   #renderStatusCounters() {
     const STATUS_MAP = {
       1: { label: 'Aceptado',                   bg: '#e8f5ee', color: '#3a7d52' },
-      2: { label: 'Procesando',                 bg: '#fffbeb', color: '#b45309' },
-      3: { label: 'En Hacienda',                bg: '#fffbeb', color: '#b45309' },
+      2: { label: 'Procesando',                 bg: '#e8f0fe', color: '#1a56db' },
+      3: { label: 'En Hacienda',                bg: '#e8f0fe', color: '#1a56db' },
       4: { label: 'Rechazado',                  bg: '#fdecea', color: '#c0392b' },
       5: { label: 'Error',                      bg: '#fffbeb', color: '#b45309' },
-      6: { label: 'Reprocesar',                 bg: '#fffbeb', color: '#b45309' },
-      7: { label: 'Obtenido del Correo',        bg: '#fffbeb', color: '#b45309' },
-      8: { label: 'Obtenido Correo Automático', bg: '#fffbeb', color: '#b45309' },
+      6: { label: 'Reprocesar',                 bg: '#e8f0fe', color: '#1a56db' },
+      7: { label: 'Obtenido del Correo',        bg: '#f3f4f6', color: '#4b5563' },
+      8: { label: 'Obtenido Correo Automático', bg: '#f3f4f6', color: '#4b5563' },
     };
 
     const container = this.statusCountersTarget;

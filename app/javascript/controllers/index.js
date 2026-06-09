@@ -23,7 +23,8 @@ import BranchesController         from 'controllers/branches_controller'
 import DocumentsIssuedController   from 'controllers/documents_issued_controller'
 import DocumentsReportsController    from 'controllers/documents_reports_controller'
 import DocumentsReceptionController  from 'controllers/documents_reception_controller'
-import DocumentsReceptionsController from 'controllers/documents_receptions_controller'
+import DocumentsReceptionsController      from 'controllers/documents_receptions_controller'
+import DocumentsReceptionCreateController from 'controllers/documents_reception_create_controller'
 
 application.register('login',             LoginController)
 application.register('auth-guard',        AuthGuardController)
@@ -45,4 +46,5 @@ application.register('branches',          BranchesController)
 application.register('documents-issued',  DocumentsIssuedController)
 application.register('documents-reports',    DocumentsReportsController)
 application.register('documents-reception',  DocumentsReceptionController)
-application.register('documents-receptions', DocumentsReceptionsController)
+application.register('documents-receptions',       DocumentsReceptionsController)
+application.register('documents-reception-create', DocumentsReceptionCreateController)

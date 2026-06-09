@@ -33,8 +33,9 @@ Rails.application.routes.draw do
   end
 
   namespace :documents do
-    get 'issued',     to: 'issued#index',     as: :issued
-    get 'receptions', to: 'receptions#index', as: :receptions
+    get 'issued',                 to: 'issued#index',      as: :issued
+    get 'receptions',             to: 'receptions#index',  as: :receptions
+    get 'receptions/:id/create',  to: 'receptions#create', as: :create_reception
   end
 
   get 'documents-reports',   to: 'documents/reports#index',              as: :documents_reports
