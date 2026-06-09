@@ -36,12 +36,12 @@
   <%# ---------------------------------------------------------------- %>
   <%# TAB CONTENT %>
   <%# ---------------------------------------------------------------- %>
-  <div class="flex-1 overflow-auto">
+  <div class="flex-1 min-h-0 flex flex-col">
 
     <%# === PANEL: PERMISOS POR ROL === %>
     <div data-permissions-target="panelByRole"
          data-testid="panel-by-role"
-         class="hidden p-6 max-w-7xl mx-auto">
+         class="hidden p-6 flex flex-col h-full">
 
       <%# Selector de rol + badge cambios %>
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
@@ -69,14 +69,14 @@
       <%# Drag & Drop panel %>
       <div data-permissions-target="dragDropPanel"
            data-testid="drag-drop-panel"
-           class="hidden">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+           class="hidden flex-1 min-h-0 flex flex-col">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col flex-1 min-h-0">
 
           <%# Las dos listas %>
-          <div class="grid grid-cols-[1fr_auto_1fr] gap-6 mb-6">
+          <div class="grid grid-cols-[1fr_auto_1fr] gap-6 mb-4 flex-1 min-h-0">
 
             <%# Lista disponibles %>
-            <div class="flex flex-col min-h-96">
+            <div class="flex flex-col min-h-0">
               <div class="flex items-center gap-3 px-4 py-3 rounded-t-lg text-white"
                    style="background: linear-gradient(135deg, #4db8e8 0%, #0082c0 100%)">
                 <span class="material-icons text-xl">security</span>
@@ -95,7 +95,7 @@
                    data-testid="unassigned-list"
                    data-drop-zone="unassigned"
                    data-action="dragover->permissions#onDragOver drop->permissions#onDrop"
-                   class="flex-1 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 min-h-72 bg-gray-50 overflow-y-auto max-h-[500px] transition-colors">
+                   class="flex-1 min-h-0 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 bg-gray-50 overflow-y-auto transition-colors">
                 <div data-permissions-target="emptyUnassigned"
                      class="flex flex-col items-center justify-center h-full text-gray-400 py-10">
                   <span class="material-icons text-5xl opacity-40 mb-3">check_circle</span>
@@ -111,7 +111,7 @@
             </div>
 
             <%# Lista asignados %>
-            <div class="flex flex-col min-h-96">
+            <div class="flex flex-col min-h-0">
               <div class="flex items-center gap-3 px-4 py-3 rounded-t-lg text-white"
                    style="background: linear-gradient(135deg, #0082c0 0%, #005a85 100%)">
                 <button data-action="click->permissions#unassignAll"
@@ -130,7 +130,7 @@
                    data-testid="assigned-list"
                    data-drop-zone="assigned"
                    data-action="dragover->permissions#onDragOver drop->permissions#onDrop"
-                   class="flex-1 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 min-h-72 bg-gray-50 overflow-y-auto max-h-[500px] transition-colors">
+                   class="flex-1 min-h-0 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 bg-gray-50 overflow-y-auto transition-colors">
                 <div data-permissions-target="emptyAssigned"
                      class="flex flex-col items-center justify-center h-full text-gray-400 py-10">
                   <span class="material-icons text-5xl opacity-40 mb-3">inbox</span>
@@ -193,7 +193,7 @@
     <%# === PANEL: PERMISOS GLOBALES === %>
     <div data-permissions-target="panelGlobal"
          data-testid="panel-global"
-         class="hidden p-6 max-w-7xl mx-auto">
+         class="hidden p-6 flex flex-col h-full">
 
       <%# Autocomplete usuario + badge %>
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
@@ -227,13 +227,13 @@
       <%# Drag & Drop panel global %>
       <div data-permissions-target="dragDropPanelGlobal"
            data-testid="drag-drop-panel-global"
-           class="hidden">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+           class="hidden flex-1 min-h-0 flex flex-col">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col flex-1 min-h-0">
 
-          <div class="grid grid-cols-[1fr_auto_1fr] gap-6 mb-6">
+          <div class="grid grid-cols-[1fr_auto_1fr] gap-6 mb-4 flex-1 min-h-0">
 
             <%# Lista disponibles global %>
-            <div class="flex flex-col min-h-96">
+            <div class="flex flex-col min-h-0">
               <div class="flex items-center gap-3 px-4 py-3 rounded-t-lg text-white"
                    style="background: linear-gradient(135deg, #4db8e8 0%, #0082c0 100%)">
                 <span class="material-icons text-xl">security</span>
@@ -252,7 +252,7 @@
                    data-testid="unassigned-list-global"
                    data-drop-zone="unassigned-global"
                    data-action="dragover->permissions#onDragOverGlobal drop->permissions#onDropGlobal"
-                   class="flex-1 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 min-h-72 bg-gray-50 overflow-y-auto max-h-[500px] transition-colors">
+                   class="flex-1 min-h-0 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 bg-gray-50 overflow-y-auto transition-colors">
                 <div data-permissions-target="emptyUnassignedGlobal"
                      class="flex flex-col items-center justify-center h-full text-gray-400 py-10">
                   <span class="material-icons text-5xl opacity-40 mb-3">check_circle</span>
@@ -268,7 +268,7 @@
             </div>
 
             <%# Lista asignados global %>
-            <div class="flex flex-col min-h-96">
+            <div class="flex flex-col min-h-0">
               <div class="flex items-center gap-3 px-4 py-3 rounded-t-lg text-white"
                    style="background: linear-gradient(135deg, #0082c0 0%, #005a85 100%)">
                 <button data-action="click->permissions#unassignAllGlobal"
@@ -287,7 +287,7 @@
                    data-testid="assigned-list-global"
                    data-drop-zone="assigned-global"
                    data-action="dragover->permissions#onDragOverGlobal drop->permissions#onDropGlobal"
-                   class="flex-1 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 min-h-72 bg-gray-50 overflow-y-auto max-h-[500px] transition-colors">
+                   class="flex-1 min-h-0 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 bg-gray-50 overflow-y-auto transition-colors">
                 <div data-permissions-target="emptyAssignedGlobal"
                      class="flex flex-col items-center justify-center h-full text-gray-400 py-10">
                   <span class="material-icons text-5xl opacity-40 mb-3">inbox</span>
