@@ -153,17 +153,13 @@ class OverlayService {
     if (!loader) {
       loader = document.createElement('div')
       loader.id = 'cl-global-loader'
-      loader.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50'
+      loader.className = 'fixed inset-0 z-[9999] flex items-center justify-center'
+      loader.style.backgroundColor = 'rgba(255,255,255,0.45)'
       loader.innerHTML = `
-        <div class="bg-white rounded-lg p-6 flex flex-col items-center space-y-4">
-          <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-          <span class="text-gray-700" id="cl-loader-message">${message}</span>
-        </div>
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
       `
       document.body.appendChild(loader)
     } else {
-      const messageEl = loader.querySelector('#cl-loader-message')
-      if (messageEl) messageEl.textContent = message
       loader.classList.remove('hidden')
     }
 

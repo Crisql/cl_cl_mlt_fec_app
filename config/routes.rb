@@ -36,5 +36,8 @@ Rails.application.routes.draw do
     get 'issued', to: 'issued#index', as: :issued
   end
 
+  get 'documents-reports',      to: 'documents/reports#index',              as: :documents_reports
+  get 'reception_documents',    to: 'documents/reception_documents#index',  as: :reception_documents
+
   root to: 'sessions#new'
 end

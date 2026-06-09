@@ -55,7 +55,7 @@ export default class extends Controller {
       key: 'reports',
       label: 'Reportes',
       icon: 'print',
-      route: '/docReport',
+      route: '/documents-reports',
       visible: false,
       requiredPermission: ['S_DocumentReport', 'S_DocumentReceptionReport'],
       nodes: []

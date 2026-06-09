@@ -1,0 +1,130 @@
+<% content_for :title, "Reportes de Documentos" %>
+<% content_for :page_title, "Reportes de Documentos" %>
+
+<div data-controller="documents-reports"
+     data-testid="documents-reports-page"
+     class="p-6 flex flex-col h-full">
+
+  <%# ── Formulario de filtros ── %>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-shrink-0">
+    <h2 class="text-base font-semibold text-gray-800 mb-5"
+        data-documents-reports-target="pageTitle">
+      Reporte de Documentos
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+      <%# StartDate %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-documents-reports-target="startDate"
+                 data-action="change->documents-reports#validateDates"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->documents-reports#setTodayStart"
+                  data-tooltip="Fecha de hoy"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors flex-shrink-0 text-sm font-medium">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+      <%# EndDate %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-documents-reports-target="endDate"
+                 data-action="change->documents-reports#validateDates"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->documents-reports#setTodayEnd"
+                  data-tooltip="Fecha de hoy"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors flex-shrink-0 text-sm font-medium">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <%# Tipo de reporte %>
+    <div class="mt-5">
+      <p class="text-sm font-medium text-gray-700 mb-2">Tipo de reporte:</p>
+      <div class="flex flex-wrap gap-6">
+
+        <label data-documents-reports-target="radioDocWrapper"
+               class="hidden items-center gap-2 cursor-pointer">
+          <input type="radio"
+                 name="report_type"
+                 value="1"
+                 data-report-type="1"
+                 data-action="change->documents-reports#onReportTypeChange"
+                 class="text-blue-600 focus:ring-blue-500">
+          <span class="text-sm text-gray-700">Reporte de Documentos</span>
+        </label>
+
+        <label data-documents-reports-target="radioRecepWrapper"
+               class="hidden items-center gap-2 cursor-pointer">
+          <input type="radio"
+                 name="report_type"
+                 value="2"
+                 data-report-type="2"
+                 data-action="change->documents-reports#onReportTypeChange"
+                 class="text-blue-600 focus:ring-blue-500">
+          <span class="text-sm text-gray-700">Reporte de Documentos Recepcionados</span>
+        </label>
+
+      </div>
+    </div>
+  </div>
+
+  <%# ── Toolbar ── %>
+  <div class="mt-4 flex-shrink-0 flex justify-end">
+    <button type="button"
+            data-action="click->documents-reports#submit"
+            data-documents-reports-target="submitBtn"
+            disabled
+            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium
+                   rounded-lg hover:bg-blue-700 transition-colors
+                   disabled:opacity-50 disabled:cursor-not-allowed">
+      <span class="material-icons text-base">filter_alt</span>
+      Consultar
+    </button>
+  </div>
+
+  <%# ── Overlay de carga ── %>
+  <div data-documents-reports-target="overlay"
+       class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl px-8 py-6 flex flex-col items-center gap-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      <p class="text-sm text-gray-600 font-medium">Generando reporte, espere por favor...</p>
+    </div>
+  </div>
+
+  <%# ── Modal de validación ── %>
+  <div data-documents-reports-target="validationModal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center">
+    <div class="fixed inset-0 bg-black/40"
+         data-action="click->documents-reports#closeModal"></div>
+    <div class="relative bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 z-10">
+      <div class="flex items-start gap-3">
+        <span class="material-icons text-blue-500 text-2xl flex-shrink-0">info</span>
+        <p data-documents-reports-target="modalMessage"
+           class="text-sm text-gray-700 mt-0.5"></p>
+      </div>
+      <div class="mt-5 flex justify-end">
+        <button type="button"
+                data-action="click->documents-reports#closeModal"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm
+                       font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-base">check</span>
+          Continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

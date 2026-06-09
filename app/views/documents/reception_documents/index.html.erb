@@ -1,0 +1,372 @@
+<% content_for :title, "Recepción de Documentos" %>
+<% content_for :page_title, "Recepción de Documentos" %>
+
+<div data-controller="documents-reception"
+     data-testid="documents-reception-page"
+     class="p-6 flex flex-col h-full gap-6">
+
+  <%# ---------------------------------------------------------------- %>
+  <%# FORMULARIO %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+      <%# Adjuntar documento %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Adjuntar documento <span class="text-red-500">*</span>
+        </label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-gray-50">
+          <input type="text"
+                 data-documents-reception-target="inputAdjunto"
+                 data-testid="input-adjunto"
+                 readonly
+                 placeholder="Seleccione un archivo .xml"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none cursor-default">
+          <button type="button"
+                  data-action="click->documents-reception#triggerFileInput"
+                  data-testid="btn-upload"
+                  data-tooltip="Adjuntar archivo"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+            <span class="material-icons text-base leading-none">cloud_upload</span>
+          </button>
+        </div>
+        <input type="file"
+               data-documents-reception-target="fileInput"
+               data-action="change->documents-reception#onFileSelected"
+               data-testid="file-input"
+               accept=".xml"
+               class="hidden">
+        <p data-documents-reception-target="errorAdjunto"
+           class="hidden mt-1 text-xs text-red-500">Seleccione un archivo .xml válido</p>
+      </div>
+
+      <%# Seleccione la respuesta %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Seleccione la respuesta <span class="text-red-500">*</span>
+        </label>
+        <select data-documents-reception-target="selectMensaje"
+                data-action="change->documents-reception#onMensajeChange"
+                data-testid="select-mensaje"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="1">Aceptado</option>
+          <option value="2">Aceptar Parcialmente</option>
+          <option value="3">Rechazado</option>
+        </select>
+      </div>
+
+      <%# Condición Impuesto %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Condición Impuesto <span class="text-red-500">*</span>
+        </label>
+        <select data-documents-reception-target="selectCondicionImpuesto"
+                data-action="change->documents-reception#onCondicionImpuestoChange"
+                data-testid="select-condicion-impuesto"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="01">Genera Credito IVA</option>
+          <option value="02">Genera Crédito parcial del IVA</option>
+          <option value="03">Bienes de Capital</option>
+          <option value="04">Gasto corriente no genera crédito</option>
+          <option value="05">Proporcionalidad</option>
+        </select>
+      </div>
+
+      <%# Factor % %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Factor %</label>
+        <input type="text"
+               data-documents-reception-target="inputTaxFactor"
+               data-testid="input-tax-factor"
+               value="0"
+               disabled
+               placeholder="Factor %"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed">
+        <p data-documents-reception-target="errorTaxFactor"
+           class="hidden mt-1 text-xs text-red-500">El factor es requerido para esta condición</p>
+      </div>
+
+      <%# Código Actividad %>
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Código Actividad <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-documents-reception-target="inputCodigoActividad"
+               data-testid="input-codigo-actividad"
+               placeholder="Código de 6 dígitos"
+               maxlength="6"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-documents-reception-target="errorCodigoActividad"
+           class="hidden mt-1 text-xs text-red-500">El código de actividad debe tener exactamente 6 caracteres</p>
+      </div>
+
+      <%# Detalle Mensaje %>
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Mensaje</label>
+        <textarea data-documents-reception-target="inputDetalleMensaje"
+                  data-testid="input-detalle-mensaje"
+                  rows="5"
+                  maxlength="254"
+                  placeholder="Detalle del mensaje (requerido para rechazo parcial o total)"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+        <p data-documents-reception-target="errorDetalleMensaje"
+           class="hidden mt-1 text-xs text-red-500">El detalle del mensaje es requerido para esta respuesta</p>
+      </div>
+
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# BOTONES DE ACCIÓN %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="flex-shrink-0 flex justify-end gap-3">
+    <button type="button"
+            data-action="click->documents-reception#getPreview"
+            data-testid="btn-preview"
+            class="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
+      <span class="material-icons text-base">print</span>
+      Previsualizar
+    </button>
+    <button type="button"
+            data-action="click->documents-reception#onSubmit"
+            data-testid="btn-submit"
+            class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+      <span class="material-icons text-base">send</span>
+      Enviar
+    </button>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# PANEL LATERAL: Previsualización del Documento %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-reception-target="previewBackdrop"
+       data-action="click->documents-reception#closePreview"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-reception-target="previewPanel"
+       data-testid="preview-panel"
+       class="fixed top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Previsualización del Documento</h3>
+      <button type="button"
+              data-action="click->documents-reception#closePreview"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-3">
+
+      <%# Información del Documento %>
+      <details class="border border-gray-200 rounded-lg" open>
+        <summary class="px-4 py-3 text-sm font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+          Información del Documento
+        </summary>
+        <div class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Número Consecutivo</p>
+            <p data-documents-reception-target="previewNumeroConsecutivo" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Fecha de Emisión</p>
+            <p data-documents-reception-target="previewFechaEmision" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Moneda</p>
+            <p data-documents-reception-target="previewMoneda" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Tipo de Cambio</p>
+            <p data-documents-reception-target="previewTipoCambio" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div class="sm:col-span-2">
+            <p class="text-xs text-gray-500 mb-0.5">Clave</p>
+            <p data-documents-reception-target="previewClave" class="text-sm text-gray-800 font-medium break-all">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Plazo Crédito</p>
+            <p data-documents-reception-target="previewPlazoCredito" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+        </div>
+        <div data-documents-reception-target="previewMedioPago" class="px-4 pb-4 space-y-2"></div>
+      </details>
+
+      <%# Información del Emisor %>
+      <details class="border border-gray-200 rounded-lg" open>
+        <summary class="px-4 py-3 text-sm font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+          Información del Emisor
+        </summary>
+        <div class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Nombre</p>
+            <p data-documents-reception-target="previewEmsrNombre" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Nombre Comercial</p>
+            <p data-documents-reception-target="previewEmsrNombreComercial" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Identificación</p>
+            <p data-documents-reception-target="previewEmsrNumero" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Correo Electrónico</p>
+            <p data-documents-reception-target="previewEmsrCorreo" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Teléfono</p>
+            <p data-documents-reception-target="previewEmsrTelefono" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+        </div>
+      </details>
+
+      <%# Información del Receptor %>
+      <details class="border border-gray-200 rounded-lg" open>
+        <summary class="px-4 py-3 text-sm font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+          Información del Receptor
+        </summary>
+        <div class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Nombre</p>
+            <p data-documents-reception-target="previewRcprNombre" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Nombre Comercial</p>
+            <p data-documents-reception-target="previewRcprNombreComercial" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Identificación</p>
+            <p data-documents-reception-target="previewRcprNumero" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Correo Electrónico</p>
+            <p data-documents-reception-target="previewRcprCorreo" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Teléfono</p>
+            <p data-documents-reception-target="previewRcprTelefono" class="text-sm text-gray-800 font-medium">—</p>
+          </div>
+        </div>
+      </details>
+
+      <%# Detalle del Documento %>
+      <details class="border border-gray-200 rounded-lg" open>
+        <summary class="px-4 py-3 text-sm font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+          Detalle del Documento
+        </summary>
+        <div class="px-4 pb-4 mt-2 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-200 text-xs text-gray-500">
+                <th class="text-left pb-2 pr-3 font-medium">Código</th>
+                <th class="text-left pb-2 pr-3 font-medium">Detalle</th>
+                <th class="text-right pb-2 pr-3 font-medium">Cant.</th>
+                <th class="text-right pb-2 pr-3 font-medium">Precio Unit.</th>
+                <th class="text-right pb-2 font-medium">Total</th>
+              </tr>
+            </thead>
+            <tbody data-documents-reception-target="previewDetalleBody">
+              <tr><td colspan="5" class="text-center text-gray-400 py-3 text-xs">Sin líneas</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <%# Detalle de Cargos %>
+      <details class="border border-gray-200 rounded-lg">
+        <summary class="px-4 py-3 text-sm font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+          Detalle de Cargos
+        </summary>
+        <div class="px-4 pb-4 mt-2 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-200 text-xs text-gray-500">
+                <th class="text-left pb-2 pr-3 font-medium">Tipo</th>
+                <th class="text-left pb-2 pr-3 font-medium">Descripción</th>
+                <th class="text-right pb-2 font-medium">Monto</th>
+              </tr>
+            </thead>
+            <tbody data-documents-reception-target="previewCargosBody">
+              <tr><td colspan="3" class="text-center text-gray-400 py-3 text-xs">Sin cargos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <%# Totales %>
+      <details class="border border-gray-200 rounded-lg" open>
+        <summary class="px-4 py-3 text-sm font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+          Totales
+        </summary>
+        <div class="px-4 pb-4 mt-2">
+          <table class="w-full text-sm">
+            <tbody data-documents-reception-target="previewTotalesBody" class="divide-y divide-gray-100">
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end flex-shrink-0">
+      <button type="button"
+              data-action="click->documents-reception#closePreview"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">close</span>
+        Cerrar
+      </button>
+    </div>
+
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL DE ERROR %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-reception-target="errorModal"
+       data-testid="error-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="material-icons text-2xl text-red-500">error_outline</span>
+        <h3 class="text-base font-semibold text-gray-800">Error</h3>
+      </div>
+      <p data-documents-reception-target="errorModalMessage" class="text-sm text-gray-600 mb-5"></p>
+      <div class="flex justify-end">
+        <button type="button"
+                data-action="click->documents-reception#closeErrorModal"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+          <span class="material-icons text-base">close</span>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL DE ADVERTENCIA (archivo / empresa) %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-reception-target="warningModal"
+       data-testid="warning-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="material-icons text-2xl text-yellow-500">warning_amber</span>
+        <h3 class="text-base font-semibold text-gray-800">Atención</h3>
+      </div>
+      <p data-documents-reception-target="warningModalMessage" class="text-sm text-gray-600 mb-5"></p>
+      <div class="flex justify-end">
+        <button type="button"
+                data-action="click->documents-reception#closeWarningModal"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-base">check</span>
+          Continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -319,11 +319,18 @@ showToast(message, type = 'success', duration = 4000)
 |---|---|
 | Formulario de creación/edición complejo | **Panel lateral** |
 | Formulario anidado | **Panel lateral** |
+| Vista de detalle / previsualización de documento | **Panel lateral** |
+| Modal de Angular legacy con contenido extenso | **Panel lateral** |
 | Confirmación de acción destructiva | **Modal** |
 | Mensaje de error grave | **Modal** |
 | Notificación no bloqueante | **Toast** |
 
-Nunca usar modal para formularios de creación o edición.
+Nunca usar modal para formularios de creación, edición o previsualización de contenido.
+
+### Regla de migración desde Angular
+
+Toda `MatDialog` / modal de Angular legacy que muestre **formularios, detalles o previsualización** se migra como **panel lateral**.
+Solo se conserva como modal: confirmaciones destructivas, mensajes de error bloqueantes y advertencias simples (sin contenido extenso).
 
 ### Implementación — Panel lateral
 
