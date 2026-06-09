@@ -71,6 +71,9 @@ export default class extends TabulatorController {
   /** Contadores de estado (del último fetch) */
   #quantities = {};
 
+  /** Total real de registros (para el counter de paginación) */
+  #totalRecords = 0;
+
   /** Tabla de correos (Tabulator secundaria) */
   #emailTabulator = null;
 
@@ -130,7 +133,15 @@ export default class extends TabulatorController {
       paginationMode: 'remote',
       paginationSize: 10,
       paginationSizeSelector: [5, 10, 15],
-      paginationCounter: 'rows',
+      // paginationCounter custom — Tabulator calcula el total como last_page*pageSize, lo que
+      // sobreestima cuando la última página no está llena. Usamos el total real del servidor.
+      paginationCounter: (_pageSize, currentRow, _currentPage, _totalRows, _totalPages) => {
+        const total = this.#totalRecords;
+        if (!total) return '';
+        const from = currentRow;
+        const to   = Math.min(currentRow + _pageSize - 1, total);
+        return `Mostrando ${from.toLocaleString('es-CR')}-${to.toLocaleString('es-CR')} de ${total.toLocaleString('es-CR')} filas`;
+      },
       // ajaxURL es requerido para activar el modo remote; el request real lo hace ajaxRequestFunc
       ajaxURL: '/api/documents',
       ajaxRequestFunc: (_url, _config, params) => this.#tabulatorRequest(params),
@@ -238,6 +249,7 @@ export default class extends TabulatorController {
 
     // MaxQtyRowsFetch viene en cada objeto del listado con el total real de registros
     const total    = docs[0]?.MaxQtyRowsFetch || 0;
+    this.#totalRecords = total;
     const lastPage = Math.ceil(total / pageSize) || 1;
 
     if (docs.length > 0) this.btnChartTarget.classList.remove('hidden');
@@ -1076,40 +1088,14 @@ export default class extends TabulatorController {
     if (!tip) {
       tip = document.createElement('div');
       tip.id = 'cl-dropdown-tooltip';
-      tip.style.cssText = [
-        'position:fixed',
-        'z-index:10000',
-        'background:#1f2937',
-        'color:#fff',
-        'font-size:12px',
-        'line-height:1.5',
-        'border-radius:8px',
-        'padding:8px 12px',
-        'max-width:220px',
-        'pointer-events:none',
-        'box-shadow:0 4px 12px rgba(0,0,0,.25)',
-      ].join(';');
+      tip.style.cssText = 'position:fixed;z-index:10000;background:#1f2937;color:#fff;font-size:12px;line-height:1.5;border-radius:8px;padding:8px 12px;max-width:220px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.25);';
       document.body.appendChild(tip);
     }
     tip.textContent = text;
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    let left = rect.right + 8;
-    let top  = rect.top + rect.height / 2;
-
-    tip.style.visibility = 'hidden';
-    tip.style.display    = 'block';
-
-    const tw = tip.offsetWidth;
-    const th = tip.offsetHeight;
-
-    // Si se sale por la derecha, mostrar a la izquierda del botón
-    if (left + tw > window.innerWidth - 8) left = rect.left - tw - 8;
-    top = top - th / 2;
-
-    tip.style.left       = `${left}px`;
-    tip.style.top        = `${top}px`;
-    tip.style.visibility = 'visible';
+    tip.style.display = 'block';
+    const rect = event.target.getBoundingClientRect();
+    tip.style.left = `${rect.right + 8}px`;
+    tip.style.top  = `${rect.top + rect.height / 2 - 12}px`;
   }
 
   #hideDropdownTooltip() {
@@ -1117,19 +1103,6 @@ export default class extends TabulatorController {
     if (tip) tip.style.display = 'none';
   }
 
-  // ── Formatter respuesta Hacienda ──────────────────────────────────────────
-
-  /**
-   * Parsea el texto de respuesta de Hacienda y lo convierte en HTML legible.
-   *
-   * Formato recibido:
-   *   "Texto preámbulo. [ codigo, mensaje, fila, columna
-   *    -37, ""Mensaje error 1"", 0, 0
-   *    -410, ""Mensaje error 2"", 0, 0 ]"
-   *
-   * Se extrae el preámbulo y cada entrada código + mensaje.
-   * fila y columna se omiten (generalmente son 0, 0 y no aportan valor).
-   */
   #formatHaciendaError(text) {
     if (!text) return '';
 
@@ -1144,8 +1117,7 @@ export default class extends TabulatorController {
     const preamble     = text.substring(0, bracketStart).trim();
     const arrayContent = text.substring(bracketStart + 1, bracketEnd !== -1 ? bracketEnd : undefined).trim();
 
-    // Parsear entradas: cada una empieza con un número (positivo o negativo)
-    // Patrón: código, ""mensaje"", fila, columna
+    // Parsear entradas: código, ""mensaje"", fila, columna
     const entries = [];
     const regex = /(-?\d+),\s*""([\s\S]*?)"",\s*-?\d+,\s*-?\d+/g;
     let match;
@@ -1155,12 +1127,10 @@ export default class extends TabulatorController {
 
     let html = '';
 
-    // Preámbulo
     if (preamble) {
       html += `<p class="text-sm text-gray-600 mb-3 leading-relaxed">${this.#escapeHtml(preamble)}</p>`;
     }
 
-    // Cards de errores
     if (entries.length > 0) {
       html += '<div class="space-y-2">';
       for (const e of entries) {
@@ -1174,7 +1144,6 @@ export default class extends TabulatorController {
       }
       html += '</div>';
     } else if (arrayContent) {
-      // No se pudo parsear — mostrar contenido crudo
       html += `<p class="text-sm text-red-600 break-all">${this.#escapeHtml(arrayContent)}</p>`;
     }
 
@@ -1189,13 +1158,11 @@ export default class extends TabulatorController {
       .replace(/"/g, '&quot;');
   }
 
-  // ── apiFetch (patrón canónico CLAUDE.md) ──────────────────────────────────
+  // ── apiFetch (patrón canónico CLAUDE.md) ─────────────────────────────────
 
   async #apiFetch(url, options = {}) {
     const isFESync = (options.headers?.['API'] ?? 'ApiAppUrl') === 'ApiFEUrl';
 
-    // Token: el servidor FE Sync usa su propio token (sessionStorage.currentFEUser)
-    //        El App server usa el token principal de sesión (localStorage.Session)
     const token = isFESync
       ? (JSON.parse(sessionStorage.getItem('currentFEUser') || '{}')?.access_token ?? null)
       : (Storage.get('Session') || {}).access_token;

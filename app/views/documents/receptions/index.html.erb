@@ -1,0 +1,488 @@
+<% content_for :title, "Documentos Recibidos" %>
+<% content_for :page_title, "Búsqueda de Documentos Recibidos" %>
+
+<div data-controller="documents-receptions"
+     data-testid="documents-receptions-page"
+     class="p-6 flex flex-col h-full gap-4">
+
+  <%# ---------------------------------------------------------------- %>
+  <%# FORMULARIO DE FILTROS %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+
+      <%# Fecha de Inicio %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Inicio</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-documents-receptions-target="inputStartDate"
+                 data-testid="input-start-date"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->documents-receptions#setTodayStartDate"
+                  data-testid="btn-today-start"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+      <%# Fecha Final %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha Final</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-documents-receptions-target="inputEndDate"
+                 data-testid="input-end-date"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->documents-receptions#setTodayEndDate"
+                  data-testid="btn-today-end"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+      <%# Tipo de fechas (checkbox useXMLDates) %>
+      <div class="flex flex-col justify-end">
+        <label class="flex items-center gap-2 cursor-pointer select-none pb-2">
+          <input type="checkbox"
+                 data-documents-receptions-target="checkUseXMLDates"
+                 data-action="change->documents-receptions#toggleUseXMLDates"
+                 data-testid="check-use-xml-dates"
+                 class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <span class="text-sm text-gray-700">¿Fechas de Emisión de Documento?</span>
+        </label>
+        <p class="text-xs text-gray-500">
+          Tipo de fecha:
+          <span data-documents-receptions-target="labelDateType"
+                data-testid="label-date-type"
+                class="font-semibold text-gray-700">Recepción</span>
+        </p>
+      </div>
+
+      <%# Petición (MessageType) %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Petición</label>
+        <select data-documents-receptions-target="selectMessageType"
+                data-testid="select-message-type"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="0" selected>Todos</option>
+          <option value="1">Aceptado</option>
+          <option value="2">Aceptado Parcialmente</option>
+          <option value="3">Rechazado</option>
+        </select>
+      </div>
+
+      <%# Estado %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+        <select data-documents-receptions-target="selectStatus"
+                data-testid="select-status"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="0" selected>Todos</option>
+          <option value="1">Aceptado</option>
+          <option value="2">Procesando</option>
+          <option value="3">En Hacienda</option>
+          <option value="4">Rechazado</option>
+          <option value="5">Error</option>
+          <option value="7">Obtenido del Correo</option>
+          <option value="8">Obtenido Correo Automático</option>
+        </select>
+      </div>
+
+      <%# Nombre del Emisor %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del Emisor</label>
+        <input type="text"
+               data-documents-receptions-target="inputNombreEmisor"
+               data-testid="input-nombre-emisor"
+               placeholder="Nombre del emisor"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Clave %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Clave</label>
+        <input type="text"
+               data-documents-receptions-target="inputClave"
+               data-testid="input-clave"
+               placeholder="Clave del comprobante"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Cédula Emisor %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Cédula Emisor</label>
+        <input type="text"
+               data-documents-receptions-target="inputCedula"
+               data-testid="input-cedula"
+               placeholder="Cédula del emisor"
+               maxlength="12"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Consecutivo Emisor %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Consecutivo Emisor</label>
+        <input type="text"
+               data-documents-receptions-target="inputConsecutivoEmisor"
+               data-testid="input-consecutivo-emisor"
+               placeholder="N° Consecutivo del emisor"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Tipo de Documento %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Documento</label>
+        <select data-documents-receptions-target="selectDocType"
+                data-testid="select-doc-type"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="01" selected>FE</option>
+          <option value="02">ND</option>
+          <option value="03">NC</option>
+          <option value="04">TE</option>
+          <option value="08">FEC</option>
+          <option value="09">FEE</option>
+          <option value="10">REP</option>
+        </select>
+      </div>
+
+      <%# Bandeja (se carga dinámicamente) %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Bandeja</label>
+        <select data-documents-receptions-target="selectBandeja"
+                data-testid="select-bandeja"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">Todas</option>
+        </select>
+      </div>
+
+      <%# Código de Moneda (con autocomplete) %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Código de Moneda</label>
+        <input type="text"
+               data-documents-receptions-target="inputCodigoMoneda"
+               data-action="input->documents-receptions#onCodigoMonedaInput"
+               data-testid="input-codigo-moneda"
+               placeholder="Ej: CRC, USD"
+               list="currency-codes-list"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <datalist id="currency-codes-list"></datalist>
+      </div>
+
+      <%# Botón Consultar %>
+      <div class="flex items-end">
+        <button type="button"
+                data-action="click->documents-receptions#search"
+                data-testid="btn-search"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors w-full justify-center">
+          <span class="material-icons text-base">filter_alt</span>
+          Consultar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# TOOLBAR DE LA TABLA %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="flex-shrink-0 flex items-center justify-between gap-3">
+
+    <%# Contadores de estado %>
+    <div class="flex flex-wrap gap-2"
+         data-documents-receptions-target="statusCounters"
+         data-testid="status-counters">
+    </div>
+
+    <%# Botones de acción %>
+    <div class="flex gap-2">
+    <button type="button"
+            data-documents-receptions-target="btnChart"
+            data-action="click->documents-receptions#openChartModal"
+            data-testid="btn-chart"
+            class="hidden inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+      <span class="material-icons text-base">query_stats</span>
+      Más Información
+    </button>
+
+    <button type="button"
+            data-documents-receptions-target="btnBulkDownload"
+            data-action="click->documents-receptions#bulkDownload"
+            data-testid="btn-bulk-download"
+            class="hidden inline-flex items-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
+      <span class="material-icons text-base">file_download</span>
+      Descarga Masiva
+    </button>
+    </div>
+
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# TABLA TABULATOR (full-height) %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div data-documents-receptions-target="table"
+         data-testid="documents-receptions-table"
+         class="h-full"></div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# PANEL LATERAL: Recepcionar Documento %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-receptions-target="receptBackdrop"
+       data-action="click->documents-receptions#closeReceptPanel"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-receptions-target="receptPanel"
+       data-testid="recept-panel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Recepcionar Documento</h3>
+      <button type="button"
+              data-action="click->documents-receptions#closeReceptPanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+      <%# Nombre del Documento (readonly) %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Documento</label>
+        <input type="text"
+               data-documents-receptions-target="receptDocName"
+               data-testid="recept-doc-name"
+               readonly
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 outline-none cursor-default text-gray-700">
+      </div>
+
+      <%# Mensaje %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Mensaje</label>
+        <select data-documents-receptions-target="receptMensaje"
+                data-testid="recept-mensaje"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="1">Aceptado</option>
+          <option value="2">Aceptado Parcialmente</option>
+          <option value="3">Rechazado</option>
+        </select>
+      </div>
+
+      <%# Condición de Impuesto %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Condición de Impuesto</label>
+        <select data-documents-receptions-target="receptCondicionImpuesto"
+                data-testid="recept-condicion-impuesto"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="01">01 — Genera crédito IVA</option>
+          <option value="02">02 — Proporción crédito IVA</option>
+          <option value="03">03 — Bienes de capital</option>
+          <option value="04">04 — Gasto o costo</option>
+          <option value="05">05 — No genera crédito</option>
+        </select>
+      </div>
+
+      <%# TaxFactor %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Factor de Impuesto</label>
+        <input type="number"
+               step="0.01"
+               min="0"
+               max="100"
+               data-documents-receptions-target="receptTaxFactor"
+               data-testid="recept-tax-factor"
+               placeholder="0.00"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Código de Actividad %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Código de Actividad</label>
+        <input type="text"
+               data-documents-receptions-target="receptCodigoActividad"
+               data-testid="recept-codigo-actividad"
+               placeholder="Código de actividad económica"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Detalle del Mensaje %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Detalle del Mensaje</label>
+        <textarea data-documents-receptions-target="receptDetalleMensaje"
+                  data-testid="recept-detalle-mensaje"
+                  rows="4"
+                  placeholder="Descripción del mensaje de recepción"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+      </div>
+
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->documents-receptions#closeReceptPanel"
+              data-testid="btn-recept-cancel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>
+        Cancelar
+      </button>
+      <button type="button"
+              data-action="click->documents-receptions#saveFromReceptPanel"
+              data-testid="btn-recept-submit"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <span class="material-icons text-base">send</span>
+        Enviar
+      </button>
+    </div>
+
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# PANEL LATERAL: Consultar Información (igual que documents-issued) %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-receptions-target="infoPanelBackdrop"
+       data-action="click->documents-receptions#closeInfoPanel"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-receptions-target="infoPanel"
+       data-testid="info-panel"
+       class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Información del documento</h3>
+      <button type="button"
+              data-action="click->documents-receptions#closeInfoPanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      <div>
+        <p class="text-xs font-medium text-gray-500 mb-0.5">Fecha de Emisión</p>
+        <p data-documents-receptions-target="infoFechaEmision"
+           data-testid="info-fecha-emision"
+           class="text-sm text-gray-800"></p>
+      </div>
+      <div data-documents-receptions-target="infoErrorSection" class="hidden">
+        <p class="text-xs font-medium text-gray-500 mb-2">Error interno</p>
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+          <p data-documents-receptions-target="infoError"
+             data-testid="info-error"
+             class="text-sm text-red-800 leading-relaxed"></p>
+        </div>
+      </div>
+      <div data-documents-receptions-target="infoErrorHaciendaSection" class="hidden">
+        <p class="text-xs font-medium text-gray-500 mb-2">Respuesta Hacienda</p>
+        <div data-documents-receptions-target="infoErrorHacienda"
+             data-testid="info-error-hacienda"></div>
+      </div>
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end flex-shrink-0">
+      <button type="button"
+              data-action="click->documents-receptions#closeInfoPanel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">close</span>
+        Cerrar
+      </button>
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL: Información (genérico — bandeja, detalle mensaje) %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-receptions-target="infoModal"
+       data-testid="info-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="material-icons text-2xl text-blue-500">info</span>
+        <h3 data-documents-receptions-target="infoTitle"
+            data-testid="info-title"
+            class="text-base font-semibold text-gray-800"></h3>
+      </div>
+      <p data-documents-receptions-target="infoBody"
+         data-testid="info-body"
+         class="text-sm text-gray-600 whitespace-pre-line mb-5"></p>
+      <div class="flex justify-end">
+        <button type="button"
+                data-action="click->documents-receptions#closeInfoModal"
+                class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          <span class="material-icons text-base">close</span>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL: Confirmación (Descarga Masiva) %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-receptions-target="confirmModal"
+       data-testid="confirm-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="material-icons text-2xl text-blue-500">info</span>
+        <h3 data-documents-receptions-target="confirmTitle"
+            data-testid="confirm-title"
+            class="text-base font-semibold text-gray-800"></h3>
+      </div>
+      <p data-documents-receptions-target="confirmSubtitle"
+         data-testid="confirm-subtitle"
+         class="text-sm text-gray-600 mb-5"></p>
+      <div class="flex justify-end gap-3">
+        <button type="button"
+                data-action="click->documents-receptions#cancelConfirm"
+                class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          <span class="material-icons text-base">cancel</span>
+          Cancelar
+        </button>
+        <button type="button"
+                data-documents-receptions-target="confirmBtn"
+                data-action="click->documents-receptions#acceptConfirm"
+                data-testid="confirm-btn"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-base">check</span>
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL: Error %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-receptions-target="errorModal"
+       data-testid="error-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="material-icons text-2xl text-red-500">error</span>
+        <h3 data-documents-receptions-target="errorTitle"
+            data-testid="error-title"
+            class="text-base font-semibold text-gray-800"></h3>
+      </div>
+      <p data-documents-receptions-target="errorSubtitle"
+         data-testid="error-subtitle"
+         class="text-sm text-gray-600 mb-5"></p>
+      <div class="flex justify-end">
+        <button type="button"
+                data-action="click->documents-receptions#closeErrorModal"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+          <span class="material-icons text-base">close</span>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

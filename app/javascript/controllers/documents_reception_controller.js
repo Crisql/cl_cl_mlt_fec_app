@@ -281,9 +281,7 @@ export default class extends Controller {
     this.previewMonedaTarget.textContent            = moneda                  || '—'
     this.previewTipoCambioTarget.textContent        = `${moneda} ${data.ResumenFactura?.TipoCambio ?? ''}`.trim() || '—'
     this.previewClaveTarget.textContent             = data.Clave              ?? '—'
-    this.previewPlazoCreditorTarget
-      ? (this.previewPlazoCreditoTarget.textContent = data.PlazoCredito ?? '—')
-      : null
+    this.previewPlazoCreditoTarget.textContent      = data.PlazoCredito       ?? '—'
 
     // Medio de pago
     const medioPago = data.ResumenFactura?.MedioPago ?? []
@@ -323,14 +321,14 @@ export default class extends Controller {
         `).join('')
       : '<tr><td colspan="5" class="text-center text-gray-400 py-3 text-xs">Sin líneas</td></tr>'
 
-    // Cargos
-    const cargos = data.OtrosCargos ?? []
+    // Cargos — campo correcto del modelo: DetalleCargos (no OtrosCargos)
+    const cargos = data.DetalleCargos ?? []
     this.previewCargosBodyTarget.innerHTML = cargos.length
       ? cargos.map(c => `
           <tr class="border-b border-gray-100">
             <td class="py-1.5 pr-3 text-xs">${c.TipoDocumento ?? ''}</td>
             <td class="py-1.5 pr-3 text-xs">${c.Detalle ?? ''}</td>
-            <td class="py-1.5 text-xs text-right">${this.#fmt(c.MontoCargo, moneda)}</td>
+            <td class="py-1.5 text-xs text-right">${this.#fmt(c.PrecioUnitario, moneda)}</td>
           </tr>
         `).join('')
       : '<tr><td colspan="3" class="text-center text-gray-400 py-3 text-xs">Sin cargos</td></tr>'
