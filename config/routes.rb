@@ -32,5 +32,9 @@ Rails.application.routes.draw do
     get 'connections/:id/edit', to: 'connections#edit',  as: :edit_connection
   end
 
+  namespace :documents do
+    get 'issued', to: 'issued#index', as: :issued
+  end
+
   root to: 'sessions#new'
 end

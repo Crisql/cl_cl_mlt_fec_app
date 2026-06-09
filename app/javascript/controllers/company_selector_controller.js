@@ -223,11 +223,75 @@ export default class extends Controller {
     // 2. Limpiar permisos anteriores
     sessionStorage.removeItem('Permissions')
 
-    // 3. Cargar nuevos permisos
-    await this.#reloadPermissions(company.Id)
+    // 3. Cargar nuevos permisos y token del servidor FE Sync en paralelo
+    await Promise.all([
+      this.#reloadPermissions(company.Id),
+      this.#reloadFEToken(company.Id),
+    ])
 
     // 4. Recargar página
     window.location.reload()
+  }
+
+  /**
+   * Obtiene las credenciales FE de la empresa y hace login en el servidor Sync
+   * para obtener el token que se usa en requests ApiFEUrl.
+   * Replica el flujo de UsabilityInformationService.GetFECredentialsObservable() del Angular legacy.
+   * El token se guarda en sessionStorage.currentFEUser.
+   */
+  async #reloadFEToken(companyId) {
+    try {
+      const session   = Storage.get('Session') || {}
+      const token     = session.access_token
+      if (!token) return
+
+      // 1. Obtener credenciales FE para esta empresa (App server)
+      const credsResp = await fetch(
+        `/api/Credentials/GetFeCredentials?companyId=${companyId}`,
+        {
+          headers: {
+            'Content-Type':             'application/json',
+            'API':                      'ApiAppUrl',
+            'X-Skip-Error-Interceptor': 'true',
+            'Authorization':            `Bearer ${token}`,
+          },
+        }
+      )
+      if (!credsResp.ok) return
+      const credsData = await credsResp.json()
+      const creds = credsData?.Data?.[0]
+      if (!creds) return
+
+      // 2. Limpiar token FE anterior
+      sessionStorage.removeItem('currentFEUser')
+
+      // 3. Login en el servidor FE Sync (form-encoded, igual que Angular getFEToken)
+      //    El proxy stripea /api/token → /token cuando API: ApiFEUrl
+      const body = new URLSearchParams({
+        grant_type: 'password',
+        username:   creds.UserId,
+        password:   creds.Password,
+      })
+
+      const feTokenResp = await fetch('/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type':             'application/x-www-form-urlencoded',
+          'API':                      'ApiFEUrl',
+          'X-Skip-Error-Interceptor': 'true',
+        },
+        body: body.toString(),
+      })
+      if (!feTokenResp.ok) return
+      const feToken = await feTokenResp.json()
+
+      // 4. Guardar token FE en sessionStorage (mismo key que Angular legacy)
+      if (feToken?.access_token) {
+        sessionStorage.setItem('currentFEUser', JSON.stringify(feToken))
+      }
+    } catch {
+      // Token FE no crítico para cargar la empresa; se reintentará en el siguiente cambio
+    }
   }
 
   async #reloadPermissions(companyId) {

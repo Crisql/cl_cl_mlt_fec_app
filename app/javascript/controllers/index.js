@@ -20,6 +20,7 @@ import NumberingController        from 'controllers/numbering_controller'
 import RolesByUsersController     from 'controllers/roles_by_users_controller'
 import GroupController            from 'controllers/group_controller'
 import BranchesController         from 'controllers/branches_controller'
+import DocumentsIssuedController   from 'controllers/documents_issued_controller'
 
 application.register('login',             LoginController)
 application.register('auth-guard',        AuthGuardController)
@@ -38,3 +39,4 @@ application.register('numbering',         NumberingController)
 application.register('roles-by-users',    RolesByUsersController)
 application.register('group',             GroupController)
 application.register('branches',          BranchesController)
+application.register('documents-issued',  DocumentsIssuedController)

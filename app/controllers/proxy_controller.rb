@@ -3,10 +3,18 @@
 # ProxyController — reenvía todas las llamadas /api/* al backend externo.
 #
 # IMPORTANTE: Este proxy es 100% TRANSPARENTE.
-# - Solo cambia la base URL
 # - Reenvía TODOS los headers del browser tal como llegan
 # - La UI maneja autenticación (OAuth2 token)
 # - La UI incluye cl-company-id header
+#
+# ENRUTAMIENTO POR HEADER 'API':
+#   El Stimulus controller incluye el header 'API' en cada request para indicar
+#   a cuál backend debe enrutar el proxy. Replica el comportamiento del
+#   UrlInterceptor del Angular legacy.
+#
+#   API: ApiAppUrl  → api_fe_app_url  (usuarios, empresas, permisos, catálogos)
+#   API: ApiFEUrl   → api_fe_sync_url (emisión, documentos, Hacienda)
+#   (sin header)    → api_fe_app_url  (default)
 #
 # Nota de path para /api/token:
 #   UI llama: /api/token → API espera: /token  (nivel raíz, sin /api)
@@ -16,7 +24,16 @@ class ProxyController < ApplicationController
   skip_before_action :allow_browser, raise: false
 
   def forward
-    target_url = "#{api_base_url}#{request.fullpath}"
+    # El endpoint de token en el sync server vive en /token (sin prefijo /api).
+    # El browser llama /api/token → strippeamos /api para que llegue como /token.
+    # Solo aplica cuando el request va al sync server (API: ApiFEUrl).
+    path = if request.headers['HTTP_API'] == 'ApiFEUrl' && request.fullpath.start_with?('/api/token')
+             request.fullpath.sub('/api/token', '/token')
+           else
+             request.fullpath
+           end
+
+    target_url = "#{api_base_url}#{path}"
 
     Rails.logger.info  "[Proxy] #{request.method} #{target_url}"
     Rails.logger.info  "[Proxy] Content-Type: #{request.content_type}"
@@ -65,8 +82,20 @@ class ProxyController < ApplicationController
 
   private
 
+  # Selecciona el backend destino según el header 'API' enviado por el Stimulus controller.
+  # Replica exactamente el mapa de apiUrls del UrlInterceptor Angular legacy:
+  #
+  #   'ApiAppUrl'   → api_fe_app_url  (default cuando no viene header)
+  #   'ApiFEUrl'    → api_fe_sync_url
+  #   (sin header)  → api_fe_app_url  (mismo default que Angular)
+  API_URL_MAP = {
+    'ApiAppUrl' => :api_fe_app_url,
+    'ApiFEUrl'  => :api_fe_sync_url,
+  }.freeze
+
   def api_base_url
-    Rails.application.config.api_fe_app_url
+    config_key = API_URL_MAP.fetch(request.headers['HTTP_API'], :api_fe_app_url)
+    Rails.application.config.public_send(config_key)
   end
 
   def build_http_request(method, uri, headers)

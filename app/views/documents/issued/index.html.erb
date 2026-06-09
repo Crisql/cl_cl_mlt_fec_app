@@ -1,0 +1,451 @@
+<% content_for :title, "Documentos Emitidos" %>
+<% content_for :page_title, "Búsqueda de Documentos Emitidos" %>
+
+<div data-controller="documents-issued"
+     data-testid="documents-issued-page"
+     class="p-6 flex flex-col h-full gap-4">
+
+  <%# ---------------------------------------------------------------- %>
+  <%# FORMULARIO DE FILTROS %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+
+      <%# Fecha de Inicio %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Inicio</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-documents-issued-target="inputStartDate"
+                 data-testid="input-start-date"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->documents-issued#setTodayStartDate"
+                  data-testid="btn-today-start"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+      <%# Fecha Final %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha Final</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-documents-issued-target="inputEndDate"
+                 data-testid="input-end-date"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->documents-issued#setTodayEndDate"
+                  data-testid="btn-today-end"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+      <%# Consecutivo %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Consecutivo</label>
+        <input type="text"
+               data-documents-issued-target="inputConsecutivo"
+               data-testid="input-consecutivo"
+               placeholder="N° Referencia"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Estado %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+        <select data-documents-issued-target="selectStatus"
+                data-testid="select-status"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="1">Aceptado</option>
+          <option value="2">Procesando</option>
+          <option value="3">En Hacienda</option>
+          <option value="4">Rechazado</option>
+          <option value="5">Error</option>
+          <option value="99" selected>Todos</option>
+        </select>
+      </div>
+
+      <%# Cedula %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Cédula</label>
+        <input type="text"
+               data-documents-issued-target="inputCedula"
+               data-testid="input-cedula"
+               placeholder="Cédula del receptor"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Código de Moneda %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Código de Moneda</label>
+        <input type="text"
+               data-documents-issued-target="inputCodigoMoneda"
+               data-testid="input-codigo-moneda"
+               placeholder="Ej: CRC, USD"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Clave %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Clave</label>
+        <input type="text"
+               data-documents-issued-target="inputClave"
+               data-testid="input-clave"
+               placeholder="Clave del comprobante"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Receptor %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Receptor</label>
+        <input type="text"
+               data-documents-issued-target="inputReceptor"
+               data-testid="input-receptor"
+               placeholder="Nombre del receptor"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Consecutivo FE %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Consecutivo FE</label>
+        <input type="text"
+               data-documents-issued-target="inputConsecutivoFE"
+               data-testid="input-consecutivo-fe"
+               placeholder="N° Consecutivo FE"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Tipo de documento %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Documento</label>
+        <select data-documents-issued-target="selectDocType"
+                data-testid="select-doc-type"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="01" selected>FE</option>
+          <option value="02">ND</option>
+          <option value="03">NC</option>
+          <option value="04">TE</option>
+          <option value="08">FEC</option>
+          <option value="09">FEE</option>
+          <option value="10">REP</option>
+        </select>
+      </div>
+
+      <%# Botón Consultar %>
+      <div class="flex items-end">
+        <button type="button"
+                data-action="click->documents-issued#search"
+                data-testid="btn-search"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors w-full justify-center">
+          <span class="material-icons text-base">filter_alt</span>
+          Consultar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# TOOLBAR DE LA TABLA %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="flex-shrink-0 flex items-center justify-between gap-3">
+
+    <%# Contadores de estado %>
+    <div class="flex flex-wrap gap-2" data-documents-issued-target="statusCounters">
+    </div>
+
+    <%# Botones de acción %>
+    <div class="flex gap-2">
+      <button type="button"
+              data-documents-issued-target="btnChart"
+              data-action="click->documents-issued#openChartModal"
+              data-testid="btn-chart"
+              class="hidden inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <span class="material-icons text-base">query_stats</span>
+        Más Información
+      </button>
+
+      <button type="button"
+              data-documents-issued-target="btnBulkDownload"
+              data-action="click->documents-issued#bulkDownload"
+              data-testid="btn-bulk-download"
+              class="hidden inline-flex items-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
+        <span class="material-icons text-base">file_download</span>
+        Descarga Masiva
+      </button>
+    </div>
+
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# TABLA TABULATOR (full-height) %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div data-documents-issued-target="table" data-testid="documents-issued-table" class="h-full"></div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# PANEL LATERAL: Correos enviados %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-issued-target="emailPanelBackdrop"
+       data-action="click->documents-issued#closeEmailPanel"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-issued-target="emailModal"
+       data-testid="email-modal"
+       class="fixed top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Correos enviados</h3>
+      <button type="button"
+              data-action="click->documents-issued#closeEmailPanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 flex flex-col px-6 py-5 gap-4 min-h-0">
+
+      <%# Loader mientras el API responde %>
+      <div data-documents-issued-target="emailLoader"
+           class="hidden flex-1 flex items-center justify-center gap-3 text-sm text-gray-500">
+        <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+        Cargando correos...
+      </div>
+
+      <%# Tabla ocupa todo el espacio disponible; se reduce cuando aparece el form %>
+      <div data-documents-issued-target="emailTable" data-testid="email-table" class="flex-1 min-h-0"></div>
+
+      <%# Mensaje sin registros %>
+      <div data-documents-issued-target="emailEmpty"
+           class="hidden flex-1 flex flex-col items-center justify-center gap-2 text-center">
+        <span class="material-icons text-4xl text-gray-300">mail_outline</span>
+        <p class="text-sm text-gray-400">No hay correos para este documento</p>
+      </div>
+
+      <%# Form otros destinatarios — altura fija, empuja la tabla hacia arriba %>
+      <div data-documents-issued-target="otherEmailsForm" class="hidden flex-shrink-0 p-4 border border-gray-200 rounded-lg">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Para</label>
+            <input type="text"
+                   data-documents-issued-target="inputEmailTo"
+                   data-action="input->documents-issued#onEmailRecipientInput"
+                   data-testid="input-email-to"
+                   placeholder="correo@ejemplo.com"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <p data-documents-issued-target="errorEmailTo"
+               class="hidden mt-1 text-xs text-red-500">Ingrese un correo electrónico válido</p>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">CC</label>
+            <input type="text"
+                   data-documents-issued-target="inputEmailCC"
+                   data-action="input->documents-issued#onEmailRecipientInput"
+                   data-testid="input-email-cc"
+                   placeholder="correo1@ejemplo.com, correo2@ejemplo.com"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <p data-documents-issued-target="errorEmailCC"
+               class="hidden mt-1 text-xs text-red-500">Ingrese correos válidos separados por coma</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->documents-issued#toggleOtherEmails"
+              data-testid="btn-other-emails"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
+        <span class="material-icons text-base">email</span>
+        Otros destinatarios
+      </button>
+      <button type="button"
+              data-documents-issued-target="btnResend"
+              data-action="click->documents-issued#resendEmail"
+              data-testid="btn-resend-email"
+              disabled
+              class="inline-flex items-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent">
+        <span class="material-icons text-base">send</span>
+        Reenviar
+      </button>
+      <button type="button"
+              data-action="click->documents-issued#closeEmailPanel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">close</span>
+        Cerrar
+      </button>
+    </div>
+
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# PANEL LATERAL: Información del documento %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-issued-target="infoPanelBackdrop"
+       data-action="click->documents-issued#closeInfoPanel"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-issued-target="infoModal"
+       data-testid="info-modal"
+       class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Información del documento</h3>
+      <button type="button"
+              data-action="click->documents-issued#closeInfoPanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      <div>
+        <p class="text-xs font-medium text-gray-500 mb-0.5">Clave</p>
+        <div class="group relative flex items-start gap-1">
+          <p data-documents-issued-target="infoClave" data-testid="info-clave"
+             class="text-sm text-gray-800 break-all flex-1"></p>
+          <div class="relative flex-shrink-0">
+            <button type="button"
+                    data-action="click->documents-issued#copyClave"
+                    data-testid="btn-copy-clave"
+                    class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-gray-300 hover:text-gray-500 cursor-pointer">
+              <span class="material-icons text-base leading-none">content_copy</span>
+            </button>
+            <span data-documents-issued-target="copyTooltip"
+                  class="hidden absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-700 text-white text-xs rounded px-2 py-0.5 whitespace-nowrap pointer-events-none">
+              ¡Copiado!
+            </span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-gray-500 mb-0.5">Fecha de Emisión</p>
+        <p data-documents-issued-target="infoFechaEmision" data-testid="info-fecha-emision"
+           class="text-sm text-gray-800"></p>
+      </div>
+      <div data-documents-issued-target="infoErrorSection" class="hidden">
+        <p class="text-xs font-medium text-gray-500 mb-2">Error interno</p>
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+          <p data-documents-issued-target="infoError" data-testid="info-error"
+             class="text-sm text-red-800 leading-relaxed"></p>
+        </div>
+      </div>
+      <div data-documents-issued-target="infoErrorHaciendaSection" class="hidden">
+        <p class="text-xs font-medium text-gray-500 mb-2">Respuesta Hacienda</p>
+        <div data-documents-issued-target="infoErrorHacienda" data-testid="info-error-hacienda"></div>
+      </div>
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end flex-shrink-0">
+      <button type="button"
+              data-action="click->documents-issued#closeInfoPanel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">close</span>
+        Cerrar
+      </button>
+    </div>
+
+    </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL: Gráfico de documentos (Chart) %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-issued-target="chartModal"
+       data-testid="chart-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h4 class="text-base font-semibold text-gray-800">Distribución de Documentos</h4>
+        <button type="button"
+                data-action="click->documents-issued#closeChartModal"
+                class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+          <span class="material-icons text-xl">close</span>
+        </button>
+      </div>
+
+      <div class="p-6">
+        <canvas data-documents-issued-target="chartCanvas" data-testid="chart-canvas" height="300"></canvas>
+      </div>
+
+      <div class="px-6 pb-5 flex justify-end">
+        <button type="button"
+                data-action="click->documents-issued#closeChartModal"
+                class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          <span class="material-icons text-base">close</span>
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL: Confirmación (genérico) %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-issued-target="confirmModal"
+       data-testid="confirm-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span data-documents-issued-target="confirmIcon"
+              class="material-icons text-2xl">warning</span>
+        <h3 data-documents-issued-target="confirmTitle"
+            class="text-base font-semibold text-gray-800"></h3>
+      </div>
+      <p data-documents-issued-target="confirmSubtitle"
+         class="text-sm text-gray-600 mb-5"></p>
+      <div class="flex gap-3 justify-end">
+        <button type="button"
+                data-action="click->documents-issued#cancelConfirm"
+                data-testid="btn-cancel-confirm"
+                class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          Cancelar
+        </button>
+        <button type="button"
+                data-action="click->documents-issued#acceptConfirm"
+                data-testid="btn-accept-confirm"
+                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          Continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# MODAL DE ERROR %>
+  <%# ---------------------------------------------------------------- %>
+  <div data-documents-issued-target="errorModal"
+       data-testid="error-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="material-icons text-red-500 text-2xl">error</span>
+        <h3 data-documents-issued-target="errorTitle"
+            class="text-base font-semibold text-gray-800"></h3>
+      </div>
+      <p data-documents-issued-target="errorSubtitle"
+         class="text-sm text-gray-600 mb-5"></p>
+      <div class="flex justify-end">
+        <button type="button"
+                data-action="click->documents-issued#closeErrorModal"
+                class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

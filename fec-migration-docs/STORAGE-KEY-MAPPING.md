@@ -14,6 +14,7 @@
 | Key | Storage | Angular legacy | Rails (este proyecto) | Notas |
 |---|---|---|---|---|
 | **Token de sesión** | `localStorage` | `currentUser` | `Session` | Renombrado. Estructura diferente (ver abajo) |
+| **Token FE Sync** | `sessionStorage` | `currentFEUser` | `currentFEUser` | Igual. Token del servidor Sync/FE (ApiFEUrl) |
 | **Empresa seleccionada** | `sessionStorage` | `SelectedCompany` | `CurrentCompany` | Renombrado. Mismo contenido |
 | **Permisos del usuario** | `sessionStorage` | En memoria (`PermsService`) | `Permissions` | Nuevo: se persiste en sessionStorage |
 | **Banner por usuario** | `localStorage` | `BannerUser` | `BannerUser` | Igual |
@@ -36,6 +37,20 @@
 ```
 > Angular guardaba el objeto `Token` completo (`UserName`, `userId`, `companyId`, `ExpireTime`, etc.).
 > Rails guarda solo los campos necesarios para autenticación.
+
+### `sessionStorage.currentFEUser` (igual que Angular legacy)
+```json
+{
+  "access_token": "eyJ...",
+  "expires_in": 3600,
+  "token_type": "Bearer",
+  "ExpireTime": "2026-06-09T10:00:00"
+}
+```
+> Token del servidor FE Sync (`api_fe_sync_url`). Se obtiene haciendo POST `/token` al sync server
+> con las credenciales de `api/Credentials/GetFeCredentials?companyId={id}`.
+> Se renueva en cada cambio de empresa (`company_selector_controller.js`).
+> Se usa como `Authorization: Bearer {access_token}` en todos los requests con `API: ApiFEUrl`.
 
 ### `sessionStorage.CurrentCompany` (antes: `sessionStorage.SelectedCompany`)
 ```json

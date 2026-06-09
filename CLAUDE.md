@@ -209,8 +209,16 @@ El proxy Rails reenvía este header al browser (`proxy_controller.rb`).
 
 ```js
 async #apiFetch(url, options = {}) {
-  const session = Storage.get('Session') || {};
-  const token   = session.access_token;
+  const isFESync = (options.headers?.['API'] ?? 'ApiAppUrl') === 'ApiFEUrl';
+
+  // Token: FE Sync server usa su propio token (sessionStorage.currentFEUser)
+  //        App server usa el token principal de sesión (localStorage.Session)
+  const token = isFESync
+    ? (JSON.parse(sessionStorage.getItem('currentFEUser') || '{}')?.access_token ?? null)
+    : (Storage.get('Session') || {}).access_token;
+
+  const company   = SStore.get('CurrentCompany');
+  const companyId = company?.companyId ?? this.#companyId;
 
   const response = await fetch(url, {
     ...options,
@@ -218,7 +226,8 @@ async #apiFetch(url, options = {}) {
       'Content-Type':             'application/json',
       'API':                      'ApiAppUrl',
       'X-Skip-Error-Interceptor': 'true',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token     ? { Authorization:   `Bearer ${token}` } : {}),
+      ...(companyId ? { 'Cl-Company-Id': String(companyId) } : {}),
       ...(options.headers || {}),
     },
   });
@@ -244,11 +253,49 @@ async #apiFetch(url, options = {}) {
 }
 ```
 
+### Dos backends — el header `API` determina a cuál enruta el proxy
+
+Existen dos servidores backend distintos. El proxy Rails lee el header `API` para decidir el destino:
+
+| Header `API` | Backend | Config | Uso |
+|---|---|---|---|
+| `ApiAppUrl` (default) | App server | `api_fe_app_url` | Usuarios, empresas, permisos, catálogos, documentos GET/search |
+| `ApiFEUrl` | Sync/FE server | `api_fe_sync_url` | Emisión, Hacienda, reprocesar, anular, cambios de estado |
+
+Verificar qué header usa el servicio Angular legacy (`documents.service.ts`) antes de implementar cada llamada.
+Si una llamada usa `'API': 'ApiAppUrl'` en Angular → no se pasa nada extra (es el default de `#apiFetch`).
+Si usa `'API': 'ApiFEUrl'` → pasar `headers: { 'API': 'ApiFEUrl' }` en las options de `#apiFetch`.
+
+```js
+// Endpoint en App server (default — no se necesita header extra)
+await this.#apiFetch('/api/Rol/GetRoles?companyId=1')
+
+// Endpoint en Sync/FE server — requiere header explícito
+await this.#apiFetch('/api/Documents/123/Reprocess?...', {
+  method: 'PATCH',
+  body: JSON.stringify({}),
+  headers: { 'API': 'ApiFEUrl' },
+})
+```
+
+### ⚠️ Error: 404 en endpoints de emisión/Hacienda
+
+**Síntoma:** La llamada devuelve 404 aunque el path parece correcto.
+**Causa:** El endpoint vive en el servidor `ApiFEUrl` pero se envía sin el header → el proxy lo manda al server equivocado.
+**Verificación:** Buscar el método en `documents.service.ts` y confirmar qué valor tiene `'API'` en sus headers.
+
 ### Reglas
 
+- **SIEMPRE** enviar `Cl-Company-Id` — el proxy lo reenvía transparente al backend; sin él, la API no sabe a qué empresa corresponde la solicitud.
 - **NUNCA** ignorar `cl-message` — es donde vive el mensaje real de la API.
 - Para errores (non-2xx): usar `decodedMessage` como mensaje primario.
 - **NUNCA** llamar `.json()` sin verificar body — las escrituras frecuentemente devuelven `204`.
+
+### ⚠️ Error silencioso más frecuente
+
+**Síntoma:** La API devuelve 401/403 o datos vacíos aunque el usuario está autenticado.
+**Causa probable:** Falta el header `Cl-Company-Id`.
+**Verificación:** Abrir DevTools → Network → inspeccionar la request y confirmar que el header está presente.
 
 ---
 
@@ -389,6 +436,122 @@ toggleSeccion() {
 - `h-full` en el target sin `min-h-0` en el padre → scroll nunca aparece.
 - Inicializar Tabulator dentro de `hidden` → llamar `redraw(true)` al mostrar.
 - `import('tabulator-tables')` dinámico → usar siempre import estático.
+
+---
+
+## 13. Extensión de TabulatorController — métodos públicos obligatorios
+
+`TabulatorController` (base) llama internamente a `this.getColumns()` y `this.getTableConfig()`
+durante `connect()`. Estos métodos **deben ser públicos** en el controller hijo.
+
+### ⚠️ Error recurrente
+
+```
+Error: getColumns() must be implemented by child controller
+```
+
+**Causa:** declarar `getColumns` como método privado (`#getColumns`).
+**Fix:** siempre usar nombre público sin `#`.
+
+### Patrón correcto
+
+```js
+export default class extends TabulatorController {
+
+  // ✅ CORRECTO — público, base controller puede llamarlo
+  getTableConfig() {
+    return {
+      ...super.getTableConfig(),
+      height: '100%',
+      columns: this.getColumns(),   // ← llamada también pública
+      // ...resto de config
+    };
+  }
+
+  // ✅ CORRECTO — público
+  getColumns() {
+    return [
+      { title: 'Nombre', field: 'Name', widthGrow: 2 },
+      // ...
+    ];
+  }
+}
+```
+
+### ❌ Patrón incorrecto
+
+```js
+export default class extends TabulatorController {
+
+  // ❌ INCORRECTO — privado, el base NO puede llamarlo
+  #getColumns() { ... }
+
+  getTableConfig() {
+    return {
+      ...super.getTableConfig(),
+      columns: this.#getColumns(), // ← tampoco funciona desde super
+    };
+  }
+}
+```
+
+### Regla
+
+> `getColumns()` y `getTableConfig()` son el contrato entre el controller hijo y la base.
+> **Nunca** prefixar con `#`. Cualquier método llamado por la clase base debe ser público.
+
+---
+
+## 14. Layout `protected` — obligatorio en todo controller de páginas autenticadas
+
+Todo controller que sirve una página con menú lateral y toolbar **debe** declarar `layout 'protected'`.
+Sin esta línea, Rails usa el layout `application` (solo el HTML base sin menú, sin auth-guard, sin toolbar).
+
+### ⚠️ Síntoma
+
+Al navegar a la página: el menú lateral y el toolbar desaparecen completamente.
+La página carga pero parece "desnuda" — solo el contenido sin chrome.
+
+### Causa
+
+Rails hereda el layout desde `ApplicationController`, que usa `application.html.erb`.
+El layout con menú, toolbar y auth-guard es `protected.html.erb`.
+Si el controller no lo declara explícitamente, no lo obtiene.
+
+### Patrón obligatorio
+
+```ruby
+# ✅ CORRECTO — tiene menú y toolbar
+module Documents
+  class IssuedController < ApplicationController
+    layout 'protected'
+
+    def index; end
+  end
+end
+```
+
+```ruby
+# ❌ INCORRECTO — página sin menú ni toolbar
+module Documents
+  class IssuedController < ApplicationController
+    def index; end   # usa layout 'application' por defecto
+  end
+end
+```
+
+### Regla
+
+> **Cada** controller nuevo bajo `namespace :configurations`, `namespace :documents`,
+> o cualquier namespace de páginas autenticadas **DEBE** incluir `layout 'protected'`
+> como primera línea del cuerpo de la clase, antes de cualquier action.
+
+### Verificación rápida
+
+```bash
+grep -rn "layout 'protected'" app/controllers/
+# Debe aparecer en TODOS los controllers excepto sessions_controller y home_controller
+```
 
 ---
 
