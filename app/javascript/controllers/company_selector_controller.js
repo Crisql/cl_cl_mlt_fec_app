@@ -18,7 +18,8 @@ export default class extends Controller {
     'list',
     'loading',
     'cancelBtn',
-    'confirmBtn'
+    'confirmBtn',
+    'contextMenu'
   ]
 
   /** @type {Array} Lista completa de empresas cargadas */
@@ -26,6 +27,9 @@ export default class extends Controller {
 
   /** @type {object|null} Empresa seleccionada en el UI (pendiente de confirmar) */
   #pendingSelection = null
+
+  /** @type {Function|null} Handler de click global para cerrar el context menu */
+  #contextMenuDismissHandler = null
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -103,9 +107,43 @@ export default class extends Controller {
     this.#applyCompanyChange(this.#pendingSelection)
   }
 
+  /**
+   * Click derecho en el botón de compañía.
+   * Solo muestra el menú si el usuario tiene F_ModifyCompany.
+   */
+  onContextMenu(event) {
+    event.preventDefault()
+
+    const permissions = SStore.get('Permissions') ?? []
+    if (!permissions.includes('F_ModifyCompany')) return
+    if (!this.hasContextMenuTarget) return
+
+    this.contextMenuTarget.classList.remove('hidden')
+
+    // Cerrar al hacer click en cualquier otro lugar
+    this.#contextMenuDismissHandler = () => this.#closeContextMenu()
+    document.addEventListener('click', this.#contextMenuDismissHandler, { once: true })
+  }
+
+  navigateToCompanyEdit() {
+    this.#closeContextMenu()
+    const company = SStore.get('CurrentCompany')
+    if (!company?.companyId) return
+    window.location.href = `/configurations/companies/${company.companyId}/edit`
+  }
+
   // ---------------------------------------------------------------------------
   // Private
   // ---------------------------------------------------------------------------
+
+  #closeContextMenu() {
+    if (!this.hasContextMenuTarget) return
+    this.contextMenuTarget.classList.add('hidden')
+    if (this.#contextMenuDismissHandler) {
+      document.removeEventListener('click', this.#contextMenuDismissHandler)
+      this.#contextMenuDismissHandler = null
+    }
+  }
 
   #updateToolbarLabel() {
     if (!this.hasToolbarLabelTarget) return

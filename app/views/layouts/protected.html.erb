@@ -152,13 +152,26 @@
             <span class="text-sm text-gray-500">Compañía:</span>
 
             <%# Botón selección de empresa %>
-            <button data-action="click->company-selector#open"
-                    data-testid="company-button"
-                    class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors max-w-xs truncate"
-                    title="">
-              <span class="material-icons text-base">business</span>
-              <span data-company-selector-target="toolbarLabel" class="truncate">No seleccionada</span>
-            </button>
+            <div class="relative">
+              <button data-action="click->company-selector#open contextmenu->company-selector#onContextMenu"
+                      data-testid="company-button"
+                      class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors max-w-xs truncate"
+                      title="">
+                <span class="material-icons text-base">business</span>
+                <span data-company-selector-target="toolbarLabel" class="truncate">No seleccionada</span>
+              </button>
+
+              <%# Context menu — solo visible con F_ModifyCompany %>
+              <div data-company-selector-target="contextMenu"
+                   class="hidden absolute right-0 top-full mt-1 z-[9999] bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]">
+                <button type="button"
+                        data-action="click->company-selector#navigateToCompanyEdit"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                  <span class="material-icons text-base text-gray-500">info_outline</span>
+                  Ver información
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
