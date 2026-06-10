@@ -27,7 +27,11 @@ class ProxyController < ApplicationController
     # El endpoint de token en el sync server vive en /token (sin prefijo /api).
     # El browser llama /api/token → strippeamos /api para que llegue como /token.
     # Solo aplica cuando el request va al sync server (API: ApiFEUrl).
-    path = if request.headers['HTTP_API'] == 'ApiFEUrl' && request.fullpath.start_with?('/api/token')
+    path = if request.headers['HTTP_API'] == 'ApiCabysURL'
+             # CABYS (Hacienda) espera la query en la raiz: /fe/cabys/?codigo=... o ?q=...
+             # El base url ya termina en /fe/cabys/, asi que solo dejamos la query.
+             request.fullpath.sub(%r{\A/api/Cabys}, '')
+           elsif request.headers['HTTP_API'] == 'ApiFEUrl' && request.fullpath.start_with?('/api/token')
              request.fullpath.sub('/api/token', '/token')
            else
              request.fullpath
@@ -89,12 +93,17 @@ class ProxyController < ApplicationController
   #   'ApiFEUrl'    → api_fe_sync_url
   #   (sin header)  → api_fe_app_url  (mismo default que Angular)
   API_URL_MAP = {
-    'ApiAppUrl' => :api_fe_app_url,
-    'ApiFEUrl'  => :api_fe_sync_url,
+    'ApiAppUrl'   => :api_fe_app_url,
+    'ApiFEUrl'    => :api_fe_sync_url,
+    'ApiCabysURL' => :api_cabys_url,
   }.freeze
 
   def api_base_url
-    config_key = API_URL_MAP.fetch(request.headers['HTTP_API'], :api_fe_app_url)
+    api_header = request.headers['HTTP_API']
+    # CABYS: resolver via ENV directamente (no depende del initializer, evita reinicio del server)
+    return ENV.fetch('API_CABYS_URL', 'https://api.hacienda.go.cr/fe/cabys/') if api_header == 'ApiCabysURL'
+
+    config_key = API_URL_MAP.fetch(api_header, :api_fe_app_url)
     Rails.application.config.public_send(config_key)
   end
 

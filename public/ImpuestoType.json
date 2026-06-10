@@ -1,0 +1,59 @@
+﻿{
+  "ImpuestoType": [
+    {
+      "value": "",
+      "annotation": "-- Ningún Impuesto --",
+      "active": true
+    },
+    {
+      "value": "01",
+      "annotation": "Impuesto al Valor Agregado",
+      "active": true
+    },
+    {
+      "value": "02",
+      "annotation": "Impuesto Selectivo de Consumo",
+      "active": false
+    },
+    {
+      "value": "03",
+      "annotation": "Impuesto Único a los Combustibles",
+      "active": false
+    },
+    {
+      "value": "04",
+      "annotation": "Impuesto específico de Bebidas Alcohólicas",
+      "active": false
+    },
+    {
+      "value": "05",
+      "annotation": "Impuesto Específico sobre las bebidas envasadas sin contenido alcohólico y jabones de tocador",
+      "active": false
+    },
+    {
+      "value": "06",
+      "annotation": "Impuesto a los Productos de Tabaco",
+      "active": false
+    },
+    {
+      "value": "07",
+      "annotation": "IVA (cálculo especial)",
+      "active": false
+    },
+    {
+      "value": "08",
+      "annotation": "IVA Régimen de Bienes Usados (Factor)",
+      "active": false
+    },
+    {
+      "value": "12",
+      "annotation": "Impuesto Específico al Cemento",
+      "active": false
+    },
+    {
+      "value": "99",
+      "annotation": "Otros",
+      "active": true
+    }
+  ]
+}

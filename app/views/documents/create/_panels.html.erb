@@ -1,0 +1,456 @@
+<%# ════════════════ PANEL: BÚSQUEDA DE CLIENTE ════════════════ %>
+<div data-documents-create-target="customerBackdrop"
+     data-action="click->documents-create#closeCustomerModal"
+     class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+<div data-documents-create-target="customerPanel"
+     class="fixed top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl z-50
+            translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+    <h3 class="text-base font-semibold text-gray-800">Buscar cliente</h3>
+    <button type="button" data-action="click->documents-create#closeCustomerModal"
+            class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+      <span class="material-icons text-xl">close</span>
+    </button>
+  </div>
+  <div class="px-6 py-4 border-b border-gray-100 flex-shrink-0">
+    <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+      <input type="text" data-documents-create-target="customerSearchInput" data-testid="customer-search-input"
+             data-action="input->documents-create#onCustomerSearchInput"
+             placeholder="Nombre o identificación…"
+             class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+      <span class="px-2 text-gray-400"><span class="material-icons text-base">search</span></span>
+    </div>
+  </div>
+  <div class="flex-1 overflow-y-auto px-6 py-4">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-gray-600 sticky top-0">
+        <tr>
+          <th class="px-3 py-2 text-left text-xs font-semibold">Nombre</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold">Identificación</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold">Código de Actividad</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold" data-documents-create-target="customerCol8707">Reg. 8707</th>
+        </tr>
+      </thead>
+      <tbody data-documents-create-target="customerBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<%# ════════════════ PANEL: BÚSQUEDA DE PRODUCTO (z por encima del panel de ítem) ════════════════ %>
+<div data-documents-create-target="productBackdrop"
+     data-action="click->documents-create#closeProductSearch"
+     class="hidden fixed inset-0 z-[60] bg-black/40"></div>
+
+<div data-documents-create-target="productPanel"
+     class="fixed top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl z-[70]
+            translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+    <h3 class="text-base font-semibold text-gray-800">Buscar producto / servicio</h3>
+    <button type="button" data-action="click->documents-create#closeProductSearch"
+            class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+      <span class="material-icons text-xl">close</span>
+    </button>
+  </div>
+  <div class="px-6 py-4 border-b border-gray-100 flex-shrink-0">
+    <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+      <input type="text" data-documents-create-target="productSearchInput" data-testid="product-search-input"
+             data-action="input->documents-create#onProductSearchInput"
+             placeholder="Código o descripción del producto…"
+             class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+      <span class="px-2 text-gray-400"><span class="material-icons text-base">search</span></span>
+    </div>
+  </div>
+  <div class="flex-1 overflow-y-auto px-6 py-4">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-gray-600 sticky top-0">
+        <tr>
+          <th class="px-3 py-2 text-left text-xs font-semibold">Código</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold">Descripción</th>
+          <th class="px-3 py-2 text-right text-xs font-semibold">Precio</th>
+        </tr>
+      </thead>
+      <tbody data-documents-create-target="productBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<%# ════════════════ PANEL: AGREGAR / EDITAR ÍTEM ════════════════ %>
+<div data-documents-create-target="itemBackdrop"
+     data-action="click->documents-create#closeAddItem"
+     class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+<div data-documents-create-target="itemPanel"
+     class="fixed top-0 right-0 h-full w-full max-w-3xl bg-white shadow-2xl z-50
+            translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+    <h3 class="text-base font-semibold text-gray-800" data-documents-create-target="itemPanelTitle">Agregar Ítem</h3>
+    <button type="button" data-action="click->documents-create#closeAddItem"
+            class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+      <span class="material-icons text-xl">close</span>
+    </button>
+  </div>
+
+  <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+    <%# ── Datos básicos ── %>
+    <div>
+      <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos del ítem</h4>
+      <div class="mb-4">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Código CABYS <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+            <input type="text" data-documents-create-target="itemCabys" data-testid="item-cabys"
+                   data-action="input->documents-create#onCabysInput"
+                   placeholder="Buscar por código o descripción…"
+                   class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+            <span data-documents-create-target="itemCabysLoading" class="hidden px-2 text-gray-400">
+              <span class="material-icons text-base animate-spin">autorenew</span>
+            </span>
+          </div>
+          <div data-documents-create-target="cabysAutocomplete"
+               class="hidden absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Código de Producto/Servicio <span class="text-red-500">*</span></label>
+          <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+            <input type="text" data-documents-create-target="itemCode" data-testid="item-code"
+                   class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+            <button type="button" data-action="click->documents-create#openProductSearch" data-testid="item-search-product"
+                    class="self-stretch flex items-center px-2 border-l border-gray-200 text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0" title="Buscar producto">
+              <span class="material-icons text-base leading-none">search</span>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Producto <span class="text-red-500">*</span></label>
+          <select data-documents-create-target="itemProductType" data-testid="item-product-type"
+                  data-action="change->documents-create#onProductTypeChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Transacción</label>
+          <select data-documents-create-target="itemTipoTransaccion" data-testid="item-tipo-transaccion"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Descripción <span class="text-red-500">*</span></label>
+          <input type="text" data-documents-create-target="itemDescription" data-testid="item-description"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+    </div>
+
+    <%# ── Cantidad / precio / medidas ── %>
+    <div>
+      <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cantidad y precio</h4>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1" data-documents-create-target="itemPriceLabel">Precio <span class="text-red-500">*</span></label>
+          <input type="number" min="0" step="0.00001" data-documents-create-target="itemPrice" data-testid="item-price"
+                 data-action="input->documents-create#recalcItem"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad <span class="text-red-500">*</span></label>
+          <input type="number" min="0" step="0.001" data-documents-create-target="itemQuantity" data-testid="item-quantity"
+                 data-action="input->documents-create#recalcItem"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">% Descuento</label>
+          <input type="number" min="0" max="100" step="0.01" value="0" data-documents-create-target="itemDiscount" data-testid="item-discount"
+                 data-action="input->documents-create#recalcItem"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Unidad de Medida <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <input type="text" data-documents-create-target="itemUnit" data-testid="item-unit"
+                   data-action="input->documents-create#onUnitInput focus->documents-create#onUnitFocus"
+                   placeholder="Buscar unidad…" autocomplete="off"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div data-documents-create-target="unitAutocomplete"
+                 class="hidden absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg"></div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Unidad de Medida Comercial</label>
+          <input type="text" data-documents-create-target="itemCommercialUnit" data-testid="item-commercial-unit"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Código de Descuento</label>
+          <select data-documents-create-target="itemDiscountCode" data-testid="item-discount-code"
+                  data-action="change->documents-create#onDiscountCodeChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div data-documents-create-target="itemDiscountCodeOtroWrap" class="hidden sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Descuento en caso de seleccionar 'Otros'</label>
+          <input type="text" maxlength="100" data-documents-create-target="itemDiscountCodeOtro" data-testid="item-discount-code-otro"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+    </div>
+
+    <%# ── Datos adicionales de producto ── %>
+    <div data-documents-create-target="itemProductExtraWrap">
+      <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos adicionales del producto</h4>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Registro Medicamento</label>
+          <input type="text" maxlength="100" data-documents-create-target="itemRegistroMedicamento" data-testid="item-registro-medicamento"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Forma Farmacéutica</label>
+          <select data-documents-create-target="itemFormaFarmaceutica" data-testid="item-forma-farmaceutica"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Número VIN o Serie</label>
+          <input type="text" data-documents-create-target="itemVin" data-testid="item-vin"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+    </div>
+
+    <%# ── Impuesto ── %>
+    <div>
+      <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Impuesto</h4>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Impuesto <span class="text-red-500">*</span></label>
+          <select data-documents-create-target="itemTaxType" data-testid="item-tax-type"
+                  data-action="change->documents-create#onTaxTypeChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div data-documents-create-target="itemTaxOtroWrap" class="hidden">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Impuesto en caso de seleccionar 'Otros'</label>
+          <input type="text" maxlength="100" data-documents-create-target="itemTaxOtro" data-testid="item-tax-otro"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div data-documents-create-target="itemBebidaJabonWrap" class="hidden">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo producto</label>
+          <select data-documents-create-target="itemBebidaJabon" data-testid="item-bebida-jabon"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">-- Seleccione --</option>
+            <option value="01">Bebida envasada sin contenido alcohólico</option>
+            <option value="02">Jabón de tocador</option>
+          </select>
+        </div>
+        <div data-documents-create-target="itemCodigoTarifaWrap">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Código Tarifa</label>
+          <select data-documents-create-target="itemCodigoTarifa" data-testid="item-codigo-tarifa"
+                  data-action="change->documents-create#onCodigoTarifaChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">% Impuesto</label>
+          <input type="number" min="0" max="100" step="0.01" value="0" data-documents-create-target="itemTaxRate" data-testid="item-tax-rate"
+                 data-action="input->documents-create#recalcItem"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div data-documents-create-target="itemIvaFabricaWrap" class="hidden">
+          <label class="block text-xs font-medium text-gray-600 mb-1">IVA cobrado a nivel de fábrica</label>
+          <select data-documents-create-target="itemIvaFabrica" data-testid="item-iva-fabrica"
+                  data-action="change->documents-create#onTaxTypeChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">-- Ninguno --</option>
+            <option value="01">Venta de bienes con IVA según el sistema especial de determinación de IVA a nivel de fábrica</option>
+          </select>
+        </div>
+        <div data-documents-create-target="itemImpAsumidoWrap" class="hidden">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Impuestos Asumidos por el Emisor / Fábrica</label>
+          <input type="number" readonly disabled data-documents-create-target="itemImpAsumido" data-testid="item-imp-asumido"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 cursor-default focus:outline-none">
+        </div>
+        <div data-documents-create-target="itemBaseImponibleWrap" class="hidden">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Base Imponible</label>
+          <input type="number" min="0" step="0.01" data-documents-create-target="itemBaseImponible" data-testid="item-base-imponible"
+                 data-action="input->documents-create#recalcItem"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div data-documents-create-target="itemCantidadUnidadWrap" class="hidden">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad Unidad Medida</label>
+          <input type="number" min="0" step="0.01" data-documents-create-target="itemCantidadUnidad" data-testid="item-cantidad-unidad"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div data-documents-create-target="itemVolumenUnidadWrap" class="hidden">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Volumen Unidad Consumo</label>
+          <input type="number" min="0" step="0.01" data-documents-create-target="itemVolumenUnidad" data-testid="item-volumen-unidad"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+    </div>
+
+    <%# ── Regalía ── %>
+    <label class="flex items-center gap-2 text-sm text-gray-700">
+      <input type="checkbox" data-documents-create-target="itemRegalia"
+             data-action="change->documents-create#onRegaliaChange"
+             class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+      Es una regalía
+    </label>
+
+    <%# ── Surtido ── %>
+    <div data-documents-create-target="surtidoSection">
+      <button type="button" data-action="click->documents-create#toggleSurtido"
+              class="flex items-center gap-1 text-xs font-semibold text-blue-600 mb-3">
+        <span class="material-icons text-base" data-documents-create-target="surtidoIcon">expand_more</span>
+        Surtido (ítem compuesto)
+      </button>
+      <div data-documents-create-target="surtidoBody" class="hidden space-y-3">
+        <p class="text-xs text-gray-500">Si agrega surtidos, el precio e impuesto del ítem se calculan a partir de ellos.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border border-gray-200 rounded-lg p-3">
+          <div class="lg:col-span-3">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Código CABYS</label>
+            <input type="text" data-documents-create-target="surtidoCabys" data-testid="surtido-cabys"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+            <select data-documents-create-target="surtidoTipo" data-testid="surtido-tipo"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Código</label>
+            <input type="text" data-documents-create-target="surtidoCodigo" data-testid="surtido-codigo"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Unidad de Medida</label>
+            <input type="text" data-documents-create-target="surtidoUnidad" data-testid="surtido-unidad"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div class="lg:col-span-3">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
+            <input type="text" data-documents-create-target="surtidoDescripcion" data-testid="surtido-descripcion"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad</label>
+            <input type="number" min="0" step="0.001" value="1" data-documents-create-target="surtidoCantidad" data-testid="surtido-cantidad"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Precio Unitario</label>
+            <input type="number" min="0" step="0.00001" data-documents-create-target="surtidoPrecio" data-testid="surtido-precio"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">% Impuesto</label>
+            <input type="number" min="0" max="100" step="0.01" value="13" data-documents-create-target="surtidoTarifa" data-testid="surtido-tarifa"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div class="lg:col-span-3 flex justify-end">
+            <button type="button" data-action="click->documents-create#addSurtido" data-testid="surtido-add"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-300 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-50 transition-colors">
+              <span class="material-icons text-sm">add</span> Agregar surtido
+            </button>
+          </div>
+        </div>
+        <div class="overflow-x-auto border border-gray-100 rounded-lg">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-gray-600">
+              <tr>
+                <th class="px-3 py-2 text-left text-xs font-semibold">CABYS</th>
+                <th class="px-3 py-2 text-left text-xs font-semibold">Descripción</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold">Cantidad</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold">Precio</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold">Imp %</th>
+                <th class="px-3 py-2 text-center text-xs font-semibold">Acción</th>
+              </tr>
+            </thead>
+            <tbody data-documents-create-target="surtidoBodyTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <%# ── Exoneración ── %>
+    <div>
+      <button type="button" data-action="click->documents-create#toggleExoneracion"
+              class="flex items-center gap-1 text-xs font-semibold text-blue-600 mb-3">
+        <span class="material-icons text-base" data-documents-create-target="exoneracionIcon">expand_more</span>
+        Exoneración
+      </button>
+      <div data-documents-create-target="exoneracionBody" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo Documento Exoneración</label>
+          <select data-documents-create-target="exoTipoDoc" data-testid="exo-tipo-doc"
+                  data-action="change->documents-create#onExoTipoDocChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div data-documents-create-target="exoTipoDocOtroWrap" class="hidden sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de documento Exoneración en caso de seleccionar 'Otros'</label>
+          <input type="text" maxlength="100" data-documents-create-target="exoTipoDocOtro" data-testid="exo-tipo-doc-otro"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Núm. Doc. Exoneración</label>
+          <input type="text" data-documents-create-target="exoNumeroDoc" data-testid="exo-numero-doc"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Emisión</label>
+          <input type="date" data-documents-create-target="exoFecha"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Artículo</label>
+          <input type="number" min="0" data-documents-create-target="exoArticulo"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Inciso</label>
+          <input type="number" min="0" data-documents-create-target="exoInciso"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Nombre Institución Exoneración</label>
+          <select data-documents-create-target="exoInstitucion" data-testid="exo-institucion"
+                  data-action="change->documents-create#onExoInstitucionChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div data-documents-create-target="exoInstitucionOtroWrap" class="hidden sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Nombre Institución Exoneración en caso de seleccionar 'Otros'</label>
+          <input type="text" data-documents-create-target="exoInstitucionOtro" data-testid="exo-institucion-otro"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">% Exoneración</label>
+          <input type="number" min="0" max="100" step="0.01" value="0" data-documents-create-target="exoTarifa"
+                 data-action="input->documents-create#recalcItem"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Monto Exoneración</label>
+          <input type="text" readonly data-documents-create-target="exoMonto"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 cursor-default focus:outline-none">
+        </div>
+      </div>
+    </div>
+
+    <%# ── Resumen ── %>
+    <div class="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+      <div class="flex justify-between"><span class="text-gray-500">SubTotal:</span><span class="font-medium" data-documents-create-target="itemSubTotal">0,00</span></div>
+      <div class="flex justify-between"><span class="text-gray-500">Impuesto:</span><span class="font-medium" data-documents-create-target="itemTaxAmount">0,00</span></div>
+      <div class="flex justify-between"><span class="text-gray-500">Impuesto Neto:</span><span class="font-medium" data-documents-create-target="itemTaxNeto">0,00</span></div>
+      <div class="flex justify-between"><span class="text-gray-500">Total línea:</span><span class="font-semibold text-blue-700" data-documents-create-target="itemLineTotal">0,00</span></div>
+    </div>
+  </div>
+
+  <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+    <button type="button" data-action="click->documents-create#closeAddItem"
+            class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+      <span class="material-icons text-base">cancel</span>Cancelar
+    </button>
+    <button type="button" data-action="click->documents-create#saveItem" data-testid="item-save"
+            class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+      <span class="material-icons text-base">check</span>Guardar
+    </button>
+  </div>
+</div>

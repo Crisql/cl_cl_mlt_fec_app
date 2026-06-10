@@ -43,6 +43,11 @@ Rails.application.routes.draw do
     get 'issued',                 to: 'issued#index',      as: :issued
     get 'receptions',             to: 'receptions#index',  as: :receptions
     get 'receptions/:id/create',  to: 'receptions#create', as: :create_reception
+
+    # Creacion de documentos electronicos (FE 01, ND 02, NC 03, FEC 08, REP 10)
+    # Reemplaza la ruta Angular /createDocument/:docType
+    get ':type/create', to: 'create#index', as: :create_document,
+        constraints: { type: /01|02|03|08|10/ }
   end
 
   get 'documents-reports',   to: 'documents/reports#index',              as: :documents_reports

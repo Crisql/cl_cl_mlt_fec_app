@@ -1,0 +1,18 @@
+<%# Panel de acordeón reutilizable.
+    Locals: key, title, open (default false), title_target (opcional) %>
+<% open = local_assigns.fetch(:open, false) %>
+<% title_target = local_assigns.fetch(:title_target, nil) %>
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+     data-documents-create-target="accordionPanel" data-section="<%= key %>"
+     data-testid="section-<%= key %>">
+  <button type="button"
+          data-action="click->documents-create#toggleSection"
+          class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors">
+    <span class="text-sm font-semibold text-gray-800"<% if title_target %> data-documents-create-target="<%= title_target %>"<% end %>><%= title %></span>
+    <span class="material-icons text-gray-500 transition-transform duration-200" data-accordion-icon
+          style="<%= 'transform: rotate(180deg);' if open %>">expand_more</span>
+  </button>
+  <div class="px-5 pb-5 <%= 'hidden' unless open %>" data-accordion-body>
+    <%= yield %>
+  </div>
+</div>

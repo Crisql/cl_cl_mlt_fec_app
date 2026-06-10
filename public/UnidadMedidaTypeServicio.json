@@ -1,0 +1,36 @@
+﻿{
+  "UnidadMedidaType": [
+    {
+      "value": "Al",
+      "annotation": "Alquiler de uso habitacional"
+    },
+    {
+      "value": "Alc",
+      "annotation": "Alquiler de uso comercial"
+    },
+    {
+      "value": "Cm",
+      "annotation": "Comisiones"
+    },
+    {
+      "value": "I",
+      "annotation": "Intereses"
+    },
+    {
+      "value": "Os",
+      "annotation": "Otro tipo de servicio"
+    },
+    {
+      "value": "Sp",
+      "annotation": "Servicios Profesionales"
+    },
+    {
+      "value": "Spe",
+      "annotation": "Servicios personales"
+    },
+    {
+      "value": "St",
+      "annotation": "Servicios técnicos"
+    }
+  ]
+}

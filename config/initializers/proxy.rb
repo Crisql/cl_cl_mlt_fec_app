@@ -12,3 +12,8 @@ Rails.application.config.api_fe_sync_url = ENV.fetch('API_FE_SYNC_URL', 'https:/
 # API de la aplicación FEC — usuarios, empresas, permisos, catálogos
 # Dev: https://clfecrbyappapidev.clavisco.com
 Rails.application.config.api_fe_app_url = ENV.fetch('API_FE_APP_URL', 'https://clfecrbyappapidev.clavisco.com')
+
+# API publica de Hacienda para busqueda de codigos CABYS.
+# El proxy enruta aqui las llamadas con header API: ApiCabysURL (ver proxy_controller.rb).
+# El frontend llama /api/Cabys?codigo=... o /api/Cabys?q=...
+Rails.application.config.api_cabys_url = ENV.fetch('API_CABYS_URL', 'https://api.hacienda.go.cr/fe/cabys/')

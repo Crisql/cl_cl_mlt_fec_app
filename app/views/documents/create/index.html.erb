@@ -1,0 +1,295 @@
+<% content_for :title, "Creación de Documento" %>
+<% content_for :page_title, "Creación de Documento Electrónico" %>
+
+<div data-controller="documents-create"
+     data-documents-create-doc-type-value="<%= @doc_type %>"
+     data-testid="create-document-page"
+     class="p-6 flex flex-col h-full gap-4">
+
+  <%# ─────────────────────────────────────────── %>
+  <%# TOOLBAR %>
+  <%# ─────────────────────────────────────────── %>
+  <div class="flex-shrink-0 flex items-center justify-between">
+    <h2 data-documents-create-target="title" data-testid="page-title"
+        class="text-lg font-semibold text-gray-800">Factura Electrónica</h2>
+
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <span class="material-icons text-base text-gray-500">point_of_sale</span>
+        <select data-documents-create-target="termSucSelect" data-testid="term-suc-select"
+                data-action="change->documents-create#onTermSucChange"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[16rem]">
+          <option value="">Terminal / Sucursal…</option>
+        </select>
+      </div>
+
+      <button type="button"
+              data-action="click->documents-create#submitDocument"
+              data-documents-create-target="btnSubmit"
+              data-testid="btn-submit"
+              data-tooltip="Crear"
+              class="inline-flex items-center justify-center gap-1 px-10 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base">save</span>
+        <span data-documents-create-target="btnSubmitLabel">Crear</span>
+      </button>
+    </div>
+  </div>
+
+  <%# ─────────────────────────────────────────── %>
+  <%# CUERPO — ACORDEÓN %>
+  <%# ─────────────────────────────────────────── %>
+  <div class="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+
+    <%# === 1. DATOS GENERALES === %>
+    <%= render 'section', key: 'general', title: 'Datos Generales', open: true do %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+          <input type="date" readonly data-documents-create-target="fechaFact"
+                 data-testid="field-fecha"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 cursor-default focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Documento</label>
+          <select disabled data-documents-create-target="docTypeSelect" data-testid="field-doctype"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 cursor-default focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Condición de Venta <span class="text-red-500">*</span></label>
+          <select data-documents-create-target="condicionVenta" data-testid="field-condicion-venta"
+                  data-action="change->documents-create#onConditionSaleChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div data-documents-create-target="condicionVentaOtrosWrap">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Detalle de Condición de la Venta</label>
+          <input type="text" maxlength="100" data-documents-create-target="condicionVentaOtros" data-testid="field-condicion-otros"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Moneda <span class="text-red-500">*</span></label>
+          <select data-documents-create-target="currency" data-testid="field-currency"
+                  data-action="change->documents-create#onCurrencyChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Cambio <span class="text-red-500">*</span></label>
+          <input type="number" step="0.0001" min="0" data-documents-create-target="exchangeRate" data-testid="field-exchange-rate"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div data-documents-create-target="plazoCreditoWrap">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Plazo del Crédito</label>
+          <input type="number" min="0" max="99999" value="0" data-documents-create-target="plazoCredito" data-testid="field-plazo-credito"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="lg:col-span-2" data-documents-create-target="actividadEmisorWrap">
+          <label class="block text-xs font-medium text-gray-600 mb-1">
+            Código de la Actividad Económica del <span data-documents-create-target="labelCodigoActividad">Emisor</span>
+          </label>
+          <div class="relative">
+            <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+              <input type="text" data-documents-create-target="codigoActividadInterno" data-testid="field-actividad-interno"
+                     data-action="input->documents-create#onActivityCodeInput focus->documents-create#onActivityCodeFocus"
+                     placeholder="Buscar actividad económica…"
+                     class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+              <button type="button" data-action="click->documents-create#clearActiveCode"
+                      class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                      title="Limpiar">
+                <span class="material-icons text-base leading-none">close</span>
+              </button>
+            </div>
+            <div data-documents-create-target="activityAutocomplete"
+                 class="hidden absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg"></div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%# === 2. DATOS DEL CLIENTE / EMISOR === %>
+    <%= render 'section', key: 'cliente', title: 'Datos del Cliente', open: true, title_target: 'titleAccDatosCliente' do %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Cliente <span class="text-red-500">*</span></label>
+          <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+            <input type="text" data-documents-create-target="rcprNombre" data-testid="field-cliente"
+                   data-action="keydown->documents-create#onCustomerSearchKeydown"
+                   class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+            <button type="button" data-action="click->documents-create#openCustomerModal"
+                    data-testid="btn-search-customer"
+                    class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+                    title="Buscar cliente">
+              <span class="material-icons text-base leading-none">search</span>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Identificación</label>
+          <select data-documents-create-target="rcprIdeTipo" data-testid="field-id-tipo"
+                  data-action="change->documents-create#onIdentificationTypeChange"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Identificación</label>
+          <input type="text" inputmode="numeric" data-documents-create-target="rcprIdeNumero" data-testid="field-id-numero"
+                 data-action="input->documents-create#onlyDigits"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div data-documents-create-target="actividadReceptorWrap">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Código de Actividad Económica</label>
+          <input type="text" inputmode="numeric" maxlength="6" data-documents-create-target="codigoActividadExterno" data-testid="field-actividad-externo"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div data-documents-create-target="registroFiscalWrap" class="hidden">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Registro Fiscal 8707</label>
+          <input type="text" maxlength="12" data-documents-create-target="registroFiscal8707" data-testid="field-registro-8707"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="lg:col-span-2" data-documents-create-target="otrasSenasExtranjeroWrap">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Otras Señas Extranjero</label>
+          <input type="text" maxlength="300" disabled data-documents-create-target="otrasSenasExtranjero" data-testid="field-senas-extranjero"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+    <% end %>
+
+    <%# === 3. DATOS DE UBICACIÓN (no REP) === %>
+    <div data-documents-create-target="ubicacionSection">
+      <%= render 'section', key: 'ubicacion', title: 'Datos de Ubicación' do %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Provincia</label>
+            <select data-documents-create-target="provincia" data-testid="field-provincia"
+                    data-action="change->documents-create#onProvinciaChange"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Cantón</label>
+            <select data-documents-create-target="canton" data-testid="field-canton"
+                    data-action="change->documents-create#onCantonChange"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Distrito</label>
+            <select data-documents-create-target="distrito" data-testid="field-distrito"
+                    data-action="change->documents-create#onDistritoChange"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Barrio</label>
+            <select data-documents-create-target="barrio" data-testid="field-barrio"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+          </div>
+          <div class="lg:col-span-2">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Dirección</label>
+            <input type="text" data-documents-create-target="otrasSenas" data-testid="field-direccion"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <%# === 4. DATOS DE CONTACTO === %>
+    <%= render 'section', key: 'contacto', title: 'Datos de Contacto' do %>
+      <%# Email simple (no FEC) %>
+      <div data-documents-create-target="emailSimpleWrap" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail</label>
+          <input type="email" maxlength="450" data-documents-create-target="email" data-testid="field-email"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div data-documents-create-target="telefonoWrap">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Teléfono</label>
+          <input type="number" data-documents-create-target="telefono" data-testid="field-telefono"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div data-documents-create-target="emailCCWrap">
+          <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail de Copia</label>
+          <input type="text" data-documents-create-target="emailCC" data-testid="field-email-cc"
+                 placeholder="Separar con ; para varios"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+
+      <%# Email múltiple (FEC) %>
+      <div data-documents-create-target="emailMultiWrap" class="hidden space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-medium text-gray-600">Correos electrónicos (máx. 4)</label>
+          <button type="button" data-action="click->documents-create#addEmail"
+                  data-documents-create-target="btnAddEmail" data-testid="btn-add-email"
+                  class="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-300 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50">
+            <span class="material-icons text-sm">add</span> Agregar correo
+          </button>
+        </div>
+        <div data-documents-create-target="emailList" class="space-y-2"></div>
+      </div>
+    <% end %>
+
+    <%# === 5. DATOS DE REFERENCIA === %>
+    <%= render 'section', key: 'referencia', title: 'Datos de Referencia' do %>
+      <div class="flex justify-end mb-3">
+        <button type="button" data-action="click->documents-create#addReference"
+                data-documents-create-target="btnAddReference" data-testid="btn-add-reference"
+                class="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-300 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50">
+          <span class="material-icons text-sm">add</span> Agregar referencia
+        </button>
+      </div>
+      <div data-documents-create-target="referenceList" class="space-y-4"></div>
+    <% end %>
+
+    <%# === 6. DATOS DE ÍTEMS / INFORMACIÓN DE PAGO === %>
+    <%= render 'section', key: 'items', title: 'Datos de Ítems', open: true, title_target: 'titleAccItems' do %>
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs text-gray-500">* Es una regalía</p>
+        <button type="button" data-action="click->documents-create#openAddItem"
+                data-documents-create-target="btnAddItem" data-testid="btn-add-item"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-base">add</span>
+          <span data-documents-create-target="btnAddItemLabel">Agregar Ítems</span>
+        </button>
+      </div>
+      <div class="overflow-x-auto border border-gray-100 rounded-lg">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="px-3 py-2 text-left text-xs font-semibold">Código</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold">Descripción</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold">Cantidad</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold">Precio</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold">Descuento</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold">Impuesto</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold">Total</th>
+              <th class="px-3 py-2 text-center text-xs font-semibold">Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-documents-create-target="itemsBody" data-testid="items-body"></tbody>
+        </table>
+      </div>
+    <% end %>
+
+    <%# === 7. DATOS DE PAGO === %>
+    <%= render 'section', key: 'pago', title: 'Datos de Pago', open: true do %>
+      <div class="flex justify-end mb-3">
+        <button type="button" data-action="click->documents-create#addMedioPago"
+                data-documents-create-target="btnAddMedioPago" data-testid="btn-add-medio-pago"
+                class="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-300 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50">
+          <span class="material-icons text-sm">add</span> Agregar Medio de Pago
+        </button>
+      </div>
+      <div data-documents-create-target="medioPagoList" class="space-y-3"></div>
+    <% end %>
+  </div>
+
+  <%# ─────────────────────────────────────────── %>
+  <%# PIE — TOTALES %>
+  <%# ─────────────────────────────────────────── %>
+  <div class="flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-3">
+    <div class="flex flex-wrap items-center justify-end gap-x-8 gap-y-1 text-sm">
+      <div><span class="text-gray-500">SubTotal:</span> <span class="font-semibold text-gray-800" data-documents-create-target="totalSubtotal">₡ 0,00</span></div>
+      <div><span class="text-gray-500">Impuestos:</span> <span class="font-semibold text-gray-800" data-documents-create-target="totalImpuestos">₡ 0,00</span></div>
+      <div><span class="text-gray-500">Descuento:</span> <span class="font-semibold text-gray-800" data-documents-create-target="totalDescuento">₡ 0,00</span></div>
+      <div><span class="text-gray-500">Total:</span> <span class="font-bold text-blue-700 text-base" data-documents-create-target="totalTotal">₡ 0,00</span></div>
+    </div>
+  </div>
+
+  <%= render 'panels' %>
+  <%= render 'modals' %>
+</div>

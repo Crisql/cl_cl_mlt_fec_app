@@ -1,0 +1,372 @@
+﻿{
+  "UnidadMedidaType": [
+    {
+      "value": "1",
+      "annotation": "uno (indice de refracción)"
+    },
+    {
+      "value": "´",
+      "annotation": "minuto"
+    },
+    {
+      "value": "´´",
+      "annotation": "segundo"
+    },
+    {
+      "value": "°C",
+      "annotation": "grado Celsius"
+    },
+    {
+      "value": "1/m",
+      "annotation": "1 por metro"
+    },
+    {
+      "value": "A",
+      "annotation": "Ampere"
+    },
+    {
+      "value": "A/m",
+      "annotation": "ampere por metro"
+    },
+    {
+      "value": "A/m²",
+      "annotation": "ampere por metro cuadrado"
+    },
+    {
+      "value": "Acv",
+      "annotation": "Activo virtual"
+    },
+    {
+      "value": "B",
+      "annotation": "bel"
+    },
+    {
+      "value": "Bq",
+      "annotation": "Becquerel"
+    },
+    {
+      "value": "C",
+      "annotation": "coulomb"
+    },
+    {
+      "value": "C/kg",
+      "annotation": "coulomb por kilogramo"
+    },
+    {
+      "value": "C/m²",
+      "annotation": "coulomb por metro cuadrado"
+    },
+    {
+      "value": "C/m³",
+      "annotation": "coulomb por metro cúbico"
+    },
+    {
+      "value": "Cc",
+      "annotation": "Cajuela de café"
+    },
+    {
+      "value": "cd",
+      "annotation": "Candela"
+    },
+    {
+      "value": "cd/m²",
+      "annotation": "candela por metro cuadrado"
+    },
+    {
+      "value": "cm",
+      "annotation": "centímetro"
+    },
+    {
+      "value": "Cu",
+      "annotation": "Cuartillos de café"
+    },
+    {
+      "value": "d",
+      "annotation": "día"
+    },
+    {
+      "value": "eV",
+      "annotation": "electronvolt"
+    },
+    {
+      "value": "F",
+      "annotation": "farad"
+    },
+    {
+      "value": "F/m",
+      "annotation": "farad por metro"
+    },
+    {
+      "value": "Fa",
+      "annotation": "Fanega de café"
+    },
+    {
+      "value": "g",
+      "annotation": "Gramo"
+    },
+    {
+      "value": "Gal",
+      "annotation": "Galón"
+    },
+    {
+      "value": "Gy",
+      "annotation": "gray"
+    },
+    {
+      "value": "Gy/s",
+      "annotation": "gray por segundo"
+    },
+    {
+      "value": "H",
+      "annotation": "henry"
+    },
+    {
+      "value": "h",
+      "annotation": "hora"
+    },
+    {
+      "value": "H/m",
+      "annotation": "henry por metro"
+    },
+    {
+      "value": "Hz",
+      "annotation": "hertz"
+    },
+    {
+      "value": "J",
+      "annotation": "Joule"
+    },
+    {
+      "value": "J/(kg·K)",
+      "annotation": "joule por kilogramo kelvin"
+    },
+    {
+      "value": "J/(mol·K",
+      "annotation": "joule por mol kelvin"
+    },
+    {
+      "value": "J/K",
+      "annotation": "joule por kelvin"
+    },
+    {
+      "value": "J/kg",
+      "annotation": "joule por kilogramo"
+    },
+    {
+      "value": "J/m³",
+      "annotation": "joule por metro cúbico"
+    },
+    {
+      "value": "J/mol",
+      "annotation": "joule por mol"
+    },
+    {
+      "value": "K",
+      "annotation": "Kelvin"
+    },
+    {
+      "value": "kat",
+      "annotation": "katal"
+    },
+    {
+      "value": "kat/m³",
+      "annotation": "katal por metro cúbico"
+    },
+    {
+      "value": "kg",
+      "annotation": "Kilogramo"
+    },
+    {
+      "value": "kg/m³",
+      "annotation": "kilogramo por metro cúbico"
+    },
+    {
+      "value": "Km",
+      "annotation": "kilometro"
+    },
+    {
+      "value": "Kw",
+      "annotation": "kilovatios"
+    },
+    {
+      "value": "L",
+      "annotation": "litro"
+    },
+    {
+      "value": "lm",
+      "annotation": "lumen"
+    },
+    {
+      "value": "ln",
+      "annotation": "pulgada"
+    },
+    {
+      "value": "lx",
+      "annotation": "lux"
+    },
+    {
+      "value": "m",
+      "annotation": "Metro"
+    },
+    {
+      "value": "m/s",
+      "annotation": "metro por segundo"
+    },
+    {
+      "value": "m/s²",
+      "annotation": "metro por segundo cuadrado"
+    },
+    {
+      "value": "m²",
+      "annotation": "metro cuadrado"
+    },
+    {
+      "value": "m³",
+      "annotation": "metro cúbico"
+    },
+    {
+      "value": "min",
+      "annotation": "minuto"
+    },
+    {
+      "value": "mL",
+      "annotation": "mililitro"
+    },
+    {
+      "value": "mm",
+      "annotation": "Milímetro"
+    },
+    {
+      "value": "mol",
+      "annotation": "Mol"
+    },
+    {
+      "value": "mol/m³",
+      "annotation": "mol por metro cúbico"
+    },
+    {
+      "value": "N",
+      "annotation": "newton"
+    },
+    {
+      "value": "N/m",
+      "annotation": "newton por metro"
+    },
+    {
+      "value": "N·m",
+      "annotation": "newton metro"
+    },
+    {
+      "value": "Np",
+      "annotation": "neper"
+    },
+    {
+      "value": "º",
+      "annotation": "grado"
+    },
+    {
+      "value": "Oz",
+      "annotation": "onzas"
+    },
+    {
+      "value": "Pa",
+      "annotation": "pascal"
+    },
+    {
+      "value": "Pa·s",
+      "annotation": "pascal segundo"
+    },
+    {
+      "value": "Qq",
+      "annotation": "Quintal"
+    },
+    {
+      "value": "rad",
+      "annotation": "radián"
+    },
+    {
+      "value": "rad/s",
+      "annotation": "radián  por segundo"
+    },
+    {
+      "value": "rad/s²",
+      "annotation": "radián  por segundo cuadrado"
+    },
+    {
+      "value": "s",
+      "annotation": "Segundo"
+    },
+    {
+      "value": "S",
+      "annotation": "siemens"
+    },
+    {
+      "value": "sr",
+      "annotation": "estereorradián"
+    },
+    {
+      "value": "Sv",
+      "annotation": "sievert"
+    },
+    {
+      "value": "T",
+      "annotation": "tesla"
+    },
+    {
+      "value": "t",
+      "annotation": "tonelada"
+    },
+    {
+      "value": "u",
+      "annotation": "unidad de masa atómica unificada"
+    },
+    {
+      "value": "ua",
+      "annotation": "unidad astronómica"
+    },
+    {
+      "value": "Unid",
+      "annotation": "Unidad"
+    },
+    {
+      "value": "V",
+      "annotation": "volt"
+    },
+    {
+      "value": "V/m",
+      "annotation": "volt por metro"
+    },
+    {
+      "value": "W",
+      "annotation": "Watt"
+    },
+    {
+      "value": "W/(m·K)",
+      "annotation": "watt por metro kevin"
+    },
+    {
+      "value": "W/(m²·sr)",
+      "annotation": "watt por metro cuadrado estereorradián"
+    },
+    {
+      "value": "W/m²",
+      "annotation": "watt por metro cuadrado"
+    },
+    {
+      "value": "W/sr",
+      "annotation": "watt por estereorradián"
+    },
+    {
+      "value": "Wb",
+      "annotation": "weber"
+    },
+    {
+      "value": "Ω",
+      "annotation": "ohm"
+    },
+    {
+      "value": "Otros",
+      "annotation": "Se debe indicar la descripción de la medida a utilizar"
+    }
+  ]
+}
