@@ -1066,8 +1066,12 @@ export default class extends TabulatorController {
     const bracketStart = text.indexOf('[');
     const bracketEnd   = text.lastIndexOf(']');
 
+    // Sin estructura de array → card rojo simple
     if (bracketStart === -1) {
-      return `<p class="text-sm text-gray-700 break-all">${this.#escapeHtml(text)}</p>`;
+      return `
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+          <p class="text-sm text-red-800 leading-relaxed break-all">${this.#escapeHtml(text)}</p>
+        </div>`;
     }
 
     const preamble     = text.substring(0, bracketStart).trim();
@@ -1083,7 +1087,7 @@ export default class extends TabulatorController {
     let html = '';
 
     if (preamble) {
-      html += `<p class="text-sm text-gray-600 mb-3 leading-relaxed">${this.#escapeHtml(preamble)}</p>`;
+      html += `<p class="text-sm text-gray-600 mb-3 leading-relaxed break-all">${this.#escapeHtml(preamble)}</p>`;
     }
 
     if (entries.length > 0) {
@@ -1094,12 +1098,15 @@ export default class extends TabulatorController {
             <span class="inline-block text-xs font-semibold text-red-700 bg-red-100 px-2 py-0.5 rounded-full mb-1.5">
               Código ${this.#escapeHtml(e.code)}
             </span>
-            <p class="text-sm text-red-800 leading-relaxed">${this.#escapeHtml(e.message)}</p>
+            <p class="text-sm text-red-800 leading-relaxed break-all">${this.#escapeHtml(e.message)}</p>
           </div>`;
       }
       html += '</div>';
     } else if (arrayContent) {
-      html += `<p class="text-sm text-red-600 break-all">${this.#escapeHtml(arrayContent)}</p>`;
+      html += `
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+          <p class="text-sm text-red-800 leading-relaxed break-all">${this.#escapeHtml(arrayContent)}</p>
+        </div>`;
     }
 
     return html;
