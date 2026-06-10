@@ -30,6 +30,13 @@ Rails.application.routes.draw do
     get 'connections',          to: 'connections#index', as: :connections
     get 'connections/new',      to: 'connections#new',   as: :new_connection
     get 'connections/:id/edit', to: 'connections#edit',  as: :edit_connection
+
+    # Mail Parser (procesadores de correo entrante)
+    get 'mail-parser', to: 'mail_parser#index', as: :mail_parser
+
+    # Email Senders (bandejas de envío + asignación a compañías)
+    # Reemplaza la ruta Angular /emailInbox
+    get 'email-senders', to: 'email_senders#index', as: :email_senders
   end
 
   namespace :documents do

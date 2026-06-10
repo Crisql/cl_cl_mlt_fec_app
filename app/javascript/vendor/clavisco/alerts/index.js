@@ -71,13 +71,13 @@ class AlertsService {
     const toast = document.createElement('div');
     toast.className = [
       'pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg',
-      'text-sm text-white max-w-sm transition-all duration-300',
+      'text-sm text-white max-w-lg transition-all duration-300',
       config.bg,
     ].join(' ');
     toast.setAttribute('role', 'alert');
     toast.innerHTML = `
       <span class="material-icons text-base mt-0.5 flex-shrink-0">${config.icon}</span>
-      <span class="flex-1">${escapedMsg}</span>
+      <span class="flex-1 break-words min-w-0">${escapedMsg}</span>
       <button type="button" class="flex-shrink-0 hover:opacity-75 ml-1" onclick="this.closest('[role=alert]').remove()">
         <span class="material-icons text-sm">close</span>
       </button>

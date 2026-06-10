@@ -1,0 +1,469 @@
+<% content_for :title, "Procesador de Correo" %>
+<% content_for :page_title, "Procesador de Correo" %>
+
+<div data-controller="mail-parser"
+     data-testid="mail-parser-page"
+     class="p-6 flex flex-col h-full">
+
+  <%# ── Filtros ─────────────────────────────────────────────────────────── %>
+  <div class="mb-4 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+
+      <div class="lg:col-span-1">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Correo</label>
+        <input type="text"
+               data-mail-parser-target="filterEmail"
+               data-testid="filter-email"
+               placeholder="Correo"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <div class="lg:col-span-1">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del servidor</label>
+        <input type="text"
+               data-mail-parser-target="filterServer"
+               data-testid="filter-server"
+               placeholder="Servidor"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <div class="lg:col-span-1">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Compañía</label>
+        <input type="text"
+               data-mail-parser-target="filterCompany"
+               data-testid="filter-company"
+               placeholder="Compañía"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+        <select data-mail-parser-target="filterStatus"
+                data-testid="filter-status"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="2">Ambos</option>
+          <option value="1">Activo</option>
+          <option value="0">Inactivo</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Usa Token</label>
+        <select data-mail-parser-target="filterUseToken"
+                data-testid="filter-use-token"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="2">Ambos</option>
+          <option value="1">Sí</option>
+          <option value="0">No</option>
+        </select>
+      </div>
+
+      <div class="flex items-end gap-2">
+        <button type="button"
+                data-action="click->mail-parser#search"
+                data-testid="btn-search"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-base">filter_alt</span>
+          Consultar
+        </button>
+        <button type="button"
+                data-action="click->mail-parser#openCreatePanel"
+                data-testid="btn-new"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+          <span class="material-icons text-base">add</span>
+          Crear Nuevo
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <%# ── Área principal: tabla + panel compañías ─────────────────────────── %>
+  <div class="flex flex-1 min-h-0 gap-4">
+
+    <%# Tabla %>
+    <div data-mail-parser-target="tableWrapper"
+         class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-300">
+      <div data-mail-parser-target="table"
+           data-testid="mail-parser-table"
+           class="h-full">
+      </div>
+    </div>
+
+    <%# Panel de Compañías Emisoras (lado derecho, colapsable) %>
+    <div data-mail-parser-target="tenantsPanel"
+         data-testid="tenants-panel"
+         class="hidden w-80 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+
+      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+        <div class="flex flex-col gap-0.5 min-w-0">
+          <div class="flex items-center gap-1">
+            <span class="text-sm font-semibold text-gray-800">Compañías Emisoras</span>
+            <span class="material-icons text-gray-400 text-base cursor-help"
+                  title="Compañías que actualmente envían documentos a esta bandeja para ser procesados">
+              help_outline
+            </span>
+          </div>
+          <p data-mail-parser-target="tenantsInboxEmail"
+             class="text-xs text-gray-500 truncate"></p>
+        </div>
+        <button type="button"
+                data-action="click->mail-parser#closeTenantsPanel"
+                data-testid="btn-close-tenants"
+                class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+          <span class="material-icons text-base">close</span>
+        </button>
+      </div>
+
+      <%# Búsqueda en panel %>
+      <div class="px-4 py-3 border-b border-gray-100 flex-shrink-0">
+        <input type="text"
+               data-mail-parser-target="tenantsSearch"
+               data-action="input->mail-parser#filterTenants"
+               data-testid="tenants-search"
+               placeholder="Buscar por cédula, ID o nombre"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Loading %>
+      <div data-mail-parser-target="tenantsLoading"
+           data-testid="tenants-loading"
+           class="hidden flex-shrink-0 flex items-center gap-2 px-4 py-3 text-sm text-gray-500">
+        <svg class="animate-spin h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Cargando compañías...
+      </div>
+
+      <%# Lista de tenants %>
+      <div data-mail-parser-target="tenantsList"
+           data-testid="tenants-list"
+           class="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+      </div>
+
+    </div>
+
+  </div>
+
+  <%# ── Modal de confirmación ──────────────────────────────────────────── %>
+  <div data-mail-parser-target="confirmModal"
+       data-testid="confirm-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+      <div class="flex items-start gap-3 mb-4">
+        <span class="material-icons text-yellow-500 text-2xl flex-shrink-0">help_outline</span>
+        <div>
+          <h3 data-mail-parser-target="confirmTitle"
+              class="text-base font-semibold text-gray-800"></h3>
+          <p data-mail-parser-target="confirmMessage"
+             class="mt-1 text-sm text-gray-600"></p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button type="button"
+                data-action="click->mail-parser#rejectConfirm"
+                class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          Cancelar
+        </button>
+        <button type="button"
+                data-action="click->mail-parser#acceptConfirm"
+                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Modal de error ─────────────────────────────────────────────────── %>
+  <div data-mail-parser-target="errorModal"
+       data-testid="error-modal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+      <div class="flex items-start gap-3 mb-4">
+        <span class="material-icons text-red-500 text-2xl flex-shrink-0">error_outline</span>
+        <div class="min-w-0 flex-1">
+          <h3 data-mail-parser-target="errorTitle"
+              class="text-base font-semibold text-gray-800 break-words"></h3>
+          <p data-mail-parser-target="errorSubtitle"
+             class="mt-1 text-sm text-gray-600 break-words"></p>
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <button type="button"
+                data-action="click->mail-parser#closeErrorModal"
+                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Backdrop panel lateral ──────────────────────────────────────────── %>
+  <div data-mail-parser-target="panelBackdrop"
+       data-action="click->mail-parser#closePanel"
+       data-testid="panel-backdrop"
+       class="hidden fixed inset-0 z-40 bg-black/40">
+  </div>
+
+  <%# ── Panel lateral crear/editar ─────────────────────────────────────── %>
+  <div data-mail-parser-target="panel"
+       data-testid="mail-parser-panel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <%# Header %>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 data-mail-parser-target="panelTitle"
+          data-testid="panel-title"
+          class="text-base font-semibold text-gray-800">Nueva Configuración</h3>
+      <button type="button"
+              data-action="click->mail-parser#closePanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <%# Cuerpo scrolleable %>
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+      <%# Dirección del servidor %>
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+          Dirección del servidor <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               data-mail-parser-target="inputServer"
+               data-action="input->mail-parser#onCredentialChange"
+               data-testid="input-server"
+               placeholder="Dirección del servidor"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-mail-parser-target="errorServer"
+           class="hidden mt-1 text-xs text-red-500">La dirección del servidor es requerida.</p>
+      </div>
+
+      <%# Correo %>
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+          Correo <span class="text-red-500">*</span>
+        </label>
+        <input type="email"
+               data-mail-parser-target="inputEmail"
+               data-action="input->mail-parser#onCredentialChange"
+               data-testid="input-email-panel"
+               placeholder="correo@ejemplo.com"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-mail-parser-target="errorEmail"
+           class="hidden mt-1 text-xs text-red-500">El correo es requerido.</p>
+        <p data-mail-parser-target="errorEmailPattern"
+           class="hidden mt-1 text-xs text-red-500">Formato de correo inválido.</p>
+      </div>
+
+      <%# Compañía (autocomplete) %>
+      <div class="relative">
+        <label class="block text-xs font-medium text-gray-700 mb-1">Compañía</label>
+        <input type="text"
+               data-mail-parser-target="inputCompany"
+               data-action="input->mail-parser#filterCompanies focus->mail-parser#showCompanyDropdown blur->mail-parser#closeCompanyDropdown"
+               data-testid="input-company-panel"
+               placeholder="Buscar compañía..."
+               autocomplete="off"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <ul data-mail-parser-target="companyDropdown"
+            class="hidden absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto text-sm">
+        </ul>
+      </div>
+
+      <%# Contraseña (oculta si UseToken=true) %>
+      <div data-mail-parser-target="passwordField">
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+          Contraseña <span class="text-red-500" data-mail-parser-target="passwordRequired">*</span>
+        </label>
+        <div class="relative">
+          <input type="password"
+                 data-mail-parser-target="inputPassword"
+                 data-action="input->mail-parser#onCredentialChange"
+                 data-testid="input-password"
+                 placeholder="Contraseña"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button"
+                  data-action="click->mail-parser#togglePassword"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700">
+            <span data-mail-parser-target="passwordEyeIcon" class="material-icons text-base">visibility_off</span>
+          </button>
+        </div>
+        <p data-mail-parser-target="errorPassword"
+           class="hidden mt-1 text-xs text-red-500">La contraseña es requerida.</p>
+      </div>
+
+      <%# Puerto %>
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+          Puerto <span class="text-red-500">*</span>
+        </label>
+        <input type="number"
+               data-mail-parser-target="inputPort"
+               data-action="input->mail-parser#onCredentialChange"
+               data-testid="input-port"
+               placeholder="Puerto"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-mail-parser-target="errorPort"
+           class="hidden mt-1 text-xs text-red-500">El puerto es requerido.</p>
+      </div>
+
+      <%# Campos de Token (condicionales — visibles solo si UseToken=true) %>
+      <div data-mail-parser-target="tokenFields" class="hidden space-y-4">
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Tenant Id <span class="text-red-500">*</span>
+          </label>
+          <input type="text"
+                 data-mail-parser-target="inputTenantId"
+                 data-action="input->mail-parser#onCredentialChange"
+                 data-testid="input-tenant-id"
+                 placeholder="Tenant Id"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p data-mail-parser-target="errorTenantId"
+             class="hidden mt-1 text-xs text-red-500">El Tenant Id es requerido.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            URL <span class="text-red-500">*</span>
+          </label>
+          <input type="text"
+                 data-mail-parser-target="inputUrl"
+                 data-action="input->mail-parser#onCredentialChange"
+                 data-testid="input-url"
+                 placeholder="URL"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p data-mail-parser-target="errorUrl"
+             class="hidden mt-1 text-xs text-red-500">La URL es requerida.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            GrantType <span class="text-red-500">*</span>
+          </label>
+          <input type="text"
+                 data-mail-parser-target="inputGrantType"
+                 data-action="input->mail-parser#onCredentialChange"
+                 data-testid="input-grant-type"
+                 placeholder="GrantType"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p data-mail-parser-target="errorGrantType"
+             class="hidden mt-1 text-xs text-red-500">El GrantType es requerido.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Scope <span class="text-red-500">*</span>
+          </label>
+          <input type="text"
+                 data-mail-parser-target="inputScope"
+                 data-action="input->mail-parser#onCredentialChange"
+                 data-testid="input-scope"
+                 placeholder="Scope"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p data-mail-parser-target="errorScope"
+             class="hidden mt-1 text-xs text-red-500">El Scope es requerido.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            ClientSecret <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <input type="password"
+                   data-mail-parser-target="inputClientSecret"
+                   data-action="input->mail-parser#onCredentialChange"
+                   data-testid="input-client-secret"
+                   placeholder="ClientSecret"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button type="button"
+                    data-action="click->mail-parser#toggleClientSecret"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700">
+              <span data-mail-parser-target="clientSecretEyeIcon" class="material-icons text-base">visibility_off</span>
+            </button>
+          </div>
+          <p data-mail-parser-target="errorClientSecret"
+             class="hidden mt-1 text-xs text-red-500">El ClientSecret es requerido.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            ClientId <span class="text-red-500">*</span>
+          </label>
+          <input type="text"
+                 data-mail-parser-target="inputClientId"
+                 data-action="input->mail-parser#onCredentialChange"
+                 data-testid="input-client-id"
+                 placeholder="ClientId"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p data-mail-parser-target="errorClientId"
+             class="hidden mt-1 text-xs text-red-500">El ClientId es requerido.</p>
+        </div>
+
+      </div>
+
+      <%# Checkboxes %>
+      <div class="space-y-3">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox"
+                 data-mail-parser-target="inputStatus"
+                 data-testid="input-status"
+                 checked
+                 class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <span class="text-sm text-gray-700">Activo</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox"
+                 data-mail-parser-target="inputIsAutomatic"
+                 data-testid="input-is-automatic"
+                 class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <span class="text-sm text-gray-700">Automático</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox"
+                 data-mail-parser-target="inputUseToken"
+                 data-action="change->mail-parser#onUseTokenChange"
+                 data-testid="input-use-token"
+                 class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <span class="text-sm text-gray-700">Usa token</span>
+        </label>
+      </div>
+
+    </div><%# /cuerpo %>
+
+    <%# Footer %>
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->mail-parser#closePanel"
+              data-testid="btn-cancel-panel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>
+        Cancelar
+      </button>
+      <button type="button"
+              data-action="click->mail-parser#validateCredentials"
+              data-mail-parser-target="btnValidate"
+              data-testid="btn-validate"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span data-mail-parser-target="validateIcon" class="material-icons text-base">wifi_tethering</span>
+        <span data-mail-parser-target="validateLabel">Probar credenciales</span>
+      </button>
+      <button type="button"
+              data-action="click->mail-parser#save"
+              data-mail-parser-target="saveBtn"
+              data-testid="btn-save"
+              disabled
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base">save</span>
+        Guardar
+      </button>
+    </div>
+
+  </div><%# /panel %>
+
+</div><%# /page %>
