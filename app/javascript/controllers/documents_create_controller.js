@@ -1132,7 +1132,8 @@ export default class extends Controller {
     const correos = isFEC ? this.#emails.filter(e => EMAIL_RE.test(e)).join(';') : this.emailTarget.value
     const idTipo = this.rcprIdeTipoTarget.value
     const actExterno = this.codigoActividadExternoTarget.value
-    const actInterno = (this.codigoActividadInternoTarget.dataset.code || this.codigoActividadInternoTarget.value || '').trim()
+    const actInternoRaw = (this.codigoActividadInternoTarget.dataset.code || this.codigoActividadInternoTarget.value || '').trim()
+    const actInterno = actInternoRaw.includes(' - ') ? actInternoRaw.split(' - ')[0].trim() : actInternoRaw
     const totals = this.#computeDocTotals()
 
     // Ubicación del emisor (solo aplica a FEC; en el resto va '0'/null)
@@ -1156,8 +1157,8 @@ export default class extends Controller {
       FechaFact: this.#nowIso(),
       ErrDetails: '',
       CompanyId: parseInt(this.#companyId),
-      Sucursal: this.#sucursal,
-      Terminal: this.#terminal,
+      Sucursal: Number(this.#sucursal),
+      Terminal: Number(this.#terminal),
       DocType: this.#docType,
       ConsecutivoId: '0',
       Consecutivo: '0',
@@ -1188,13 +1189,13 @@ export default class extends Controller {
       RcprCorreoElectronico: !isFEC ? (correos?.trim() ? correos : null) : null,
       RcprCorreoElectronicoCC: !isFEC ? (this.emailCCTarget.value?.trim() ? this.emailCCTarget.value : null) : null,
       CodigoMoneda: this.currencyTarget.value,
-      TipoCambio: Number(this.exchangeRateTarget.value) || 1,
+      TipoCambio: String(Number(this.exchangeRateTarget.value) || 1),
       ...totals,
       OtroTexto: '', OtTipoDocumento: '', OtNumeroIdentidadTercero: '', OtNombreTercero: '',
       OtDetalle: '', OtPorcentaje: 0, OtMontoCargo: 0,
       V_LineaDetalle: this.#items.map((i, idx) => this.#mapItemForApi(i, idx)),
       V_MedioPago: this.#mediosPago.map(m => ({
-        TipoMedioPago: m.tipo, MedioPagoOtros: m.otros?.trim() ? m.otros : null, TotalMedioPago: Number(m.monto) || 0,
+        TipoMedioPago: m.tipo, MedioPagoOtros: m.otros?.trim() ? m.otros : '', TotalMedioPago: Number(m.monto) || 0,
       })),
       V_InfReferencia: this.#mapReferences(),
     }
@@ -1275,11 +1276,12 @@ export default class extends Controller {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(Math.floor(d.getMilliseconds() / 10))}`
   }
 
-  // Construye un ILineaDetalle fiel al modelo del backend.
+  // Construye un ILineaDetalle fiel al modelo del backend (validado contra legacy Angular).
   #mapItemForApi(i, idx) {
     const exo = i.Exoneracion || {}
     const tieneExo = exo.ETipoDocumento && exo.ETipoDocumento !== '00'
     return {
+      Id: 0,
       NumeroLinea: idx + 1,
       Cantidad: i.Cantidad,
       UnidadMedida: i.UnidadMedida,
@@ -1288,10 +1290,10 @@ export default class extends Controller {
       PrecioUnitario: i.PrecioUnitario,
       MontoTotal: i.MontoTotal,
       MontoDescuento: i.MontoDescuento,
-      NaturalezaDescuento: i.CodigoDescuentoOtro || '',
+      // Legacy siempre envía 'N/A', no string vacío
+      NaturalezaDescuento: 'N/A',
       SubTotal: i.SubTotal,
       MontoTotalLinea: i.MontoTotalLinea,
-      Id: 0,
       PartidaArancelaria: '',
       Codigo: i.Cabys,
       CodTipo: '04',
@@ -1302,31 +1304,71 @@ export default class extends Controller {
       ImpMonto: i.ImpMonto ?? null,
       ImpCodigoTarifa: i.CodigoTarifa || null,
       ImpFactorIVA: null,
+      // Siempre presente, fijo en 0 (no aplica en CR)
+      ImpMontoExportacion: 0,
       ImpuestoNeto: i.ImpuestoNeto ?? null,
       ETipoDocumento: tieneExo ? exo.ETipoDocumento : '',
-      ETipoDocumentoOtro: tieneExo ? (exo.ETipoDocumentoOTRO || null) : null,
+      // Legacy envía string vacío cuando no hay exoneración, no null
+      ETipoDocumentoOtro: tieneExo ? (exo.ETipoDocumentoOTRO || '') : '',
       EFechaEmision: tieneExo && exo.EFechaEmision ? new Date(exo.EFechaEmision).toISOString() : '',
       ENumeroDocumento: tieneExo ? (exo.ENumeroDocumento || '') : '',
       ENombreInstitucion: tieneExo ? (exo.ENombreInstitucion || '') : '',
-      ENombreInstitucionOtros: tieneExo ? (exo.ENombreInstitucionOtros || null) : null,
+      // Legacy envía string vacío cuando no hay exoneración, no null
+      ENombreInstitucionOtros: tieneExo ? (exo.ENombreInstitucionOtros || '') : '',
       ETarifaExonerada: tieneExo ? (exo.ETarifaExonerada ?? null) : null,
       EMontoExoneracion: tieneExo ? (exo.EMontoExoneracion ?? null) : null,
-      EArticulo: tieneExo ? (exo.EArticulo || null) : null,
-      EInciso: tieneExo ? (exo.EInciso || null) : null,
+      // Legacy envía 0 cuando no hay exoneración, no null
+      EArticulo: tieneExo ? (Number(exo.EArticulo) || 0) : 0,
+      EInciso: tieneExo ? (Number(exo.EInciso) || 0) : 0,
       Descuento: i.DescuentoPct || 0,
       regalia: !!i.Regalia,
-      RegistroMedicamento: i.RegistroMedicamento || '',
-      FormaFarmaceutica: i.FormaFarmaceutica || '',
+      // Legacy envía null cuando vacío, no string vacío
+      RegistroMedicamento: i.RegistroMedicamento?.trim() ? i.RegistroMedicamento : null,
+      FormaFarmaceutica: i.FormaFarmaceutica?.trim() ? i.FormaFarmaceutica : null,
       TipoTransaccion: i.TipoTransaccion || '01',
       IVACobradoFabrica: i.IVACobradoFabrica || null,
       NumeroVINoSerie: i.NumeroVINoSerie || '',
-      ImpCodigoImpuestoOTRO: i.ImpTipoOtro || null,
+      // Legacy envía string vacío cuando no aplica, no null
+      ImpCodigoImpuestoOTRO: i.ImpTipoOtro || '',
       DCodigoDescuento: i.CodigoDescuento || null,
       DCodigoDescuentoOTRO: i.CodigoDescuentoOtro || null,
-      ImpuestoAsumidoEmisorFabrica: i.ImpuestoAsumidoEmisorFabrica ?? null,
-      ImpCantidadUnidadMedida: i.ImpCantidadUnidadMedida ?? null,
-      ImpVolumenUnidadConsumo: i.ImpVolumenUnidadConsumo ?? null,
-      ImpPorcentaje: null, ImpProporcion: null, ImpImpuestoUnidad: null,
+      // Legacy envía null cuando es 0 (no cuando el campo es 0)
+      ImpuestoAsumidoEmisorFabrica: i.ImpuestoAsumidoEmisorFabrica || null,
+      ImpCantidadUnidadMedida: i.ImpCantidadUnidadMedida || null,
+      ImpPorcentaje: null,
+      ImpProporcion: null,
+      ImpVolumenUnidadConsumo: i.ImpVolumenUnidadConsumo || null,
+      ImpImpuestoUnidad: null,
+      // Legacy siempre envía el array (vacío si no hay surtidos)
+      OldPrice: i.PrecioDigitado ?? null,
+      DetalleSurtido: (i.Surtidos ?? []).map((s, si) => ({
+        Id: si + 1,
+        CodigoCABYSSurtido: s.Cabys || '',
+        CodTipoSurtido: s.Tipo || '01',
+        CodCodigoSurtido: s.Codigo || '',
+        CantidadSurtido: s.Cantidad || 0,
+        UnidadMedidaSurtido: s.Unidad || '',
+        UnidadMedidaComercialSurtido: '',
+        Detalle: s.Descripcion || '',
+        PrecioUnitarioSurtido: s.Precio || 0,
+        MontoTotalSurtido: (s.Precio || 0) * (s.Cantidad || 0),
+        SubTotalSurtido: (s.Precio || 0) * (s.Cantidad || 0),
+        MontoDescuentoSurtido: 0,
+        CodigoDescuentoSurtido: '',
+        DescuentoSurtidoOtros: '',
+        BaseImponibleSurtido: null,
+        IVACobradoFabricaSurtido: null,
+        ImpCodigoImpuestoSurtido: null,
+        ImpCodigoImpuestoOTROSurtido: null,
+        ImpTarifaIVASurtido: null,
+        ImpTarifaSurtido: s.Tarifa ?? null,
+        ImpMontoSurtido: null,
+        ImpCantidadUnidadMedidaSurtido: null,
+        ImpPorcentajeSurtido: null,
+        ImpProporcionSurtido: null,
+        ImpVolumenUnidadConsumoSurtido: null,
+        ImpImpuestoUnidadSurtido: null,
+      })),
     }
   }
 
@@ -1366,7 +1408,10 @@ export default class extends Controller {
     items.forEach(it => { const sel = String(it[idKey]) === String(selected) ? ' selected' : ''; html += `<option value="${it[idKey]}"${sel}>${it[labelKey]}</option>` })
     return html
   }
-  #unitCode() { return (this.itemUnitTarget.dataset.code || this.itemUnitTarget.value || '').trim() }
+  #unitCode() {
+    const raw = (this.itemUnitTarget.dataset.code || this.itemUnitTarget.value || '').trim()
+    return raw.includes(' - ') ? raw.split(' - ')[0].trim() : raw
+  }
   #unitLabel(code) {
     const u = [...this.#unitProducto, ...this.#unitServicio].find(x => String(x.value) === String(code))
     return u ? `${u.value} - ${u.annotation}` : (code || '')
