@@ -153,15 +153,27 @@ class OverlayService {
     if (!loader) {
       loader = document.createElement('div')
       loader.id = 'cl-global-loader'
-      loader.className = 'fixed inset-0 z-[9999] flex items-center justify-center'
-      loader.style.backgroundColor = 'rgba(255,255,255,0.45)'
+      loader.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/40'
       loader.innerHTML = `
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+        <div class="bg-white rounded-xl shadow-xl px-6 py-5 flex items-center gap-3">
+          <svg class="animate-spin h-6 w-6 text-blue-600 flex-shrink-0"
+               xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+               role="status" aria-label="Cargando">
+            <circle class="opacity-25" cx="12" cy="12" r="10"
+                    stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          <p id="cl-global-loader-msg" class="text-sm text-gray-700"></p>
+        </div>
       `
       document.body.appendChild(loader)
     } else {
       loader.classList.remove('hidden')
     }
+
+    const msgEl = loader.querySelector('#cl-global-loader-msg')
+    if (msgEl) msgEl.textContent = message
 
     document.body.classList.add('overflow-hidden')
   }

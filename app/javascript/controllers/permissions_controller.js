@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
 import { showToast } from 'vendor/clavisco/alerts'
+import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
 
 /**
  * PermissionsController — Gestión de permisos (By-Role y Global).
@@ -1051,27 +1052,8 @@ export default class extends Controller {
   // ----------------------------------------------------------------
   // Helpers: Overlay y Toast
   // ----------------------------------------------------------------
-  #showOverlay(message) {
-    let overlay = document.getElementById('stimulus-overlay')
-    if (!overlay) {
-      overlay = document.createElement('div')
-      overlay.id = 'stimulus-overlay'
-      overlay.className = 'fixed inset-0 bg-black/30 flex items-center justify-center z-50'
-      overlay.innerHTML = `
-        <div class="bg-white rounded-xl px-8 py-5 flex items-center gap-4 shadow-xl">
-          <span class="material-icons animate-spin text-blue-600">autorenew</span>
-          <span id="stimulus-overlay-msg" class="text-sm text-gray-700"></span>
-        </div>`
-      document.body.appendChild(overlay)
-    }
-    document.getElementById('stimulus-overlay-msg').textContent = message
-    overlay.classList.remove('hidden')
-  }
-
-  #hideOverlay() {
-    const overlay = document.getElementById('stimulus-overlay')
-    if (overlay) overlay.classList.add('hidden')
-  }
+  #showOverlay(message) { showLoading(message) }
+  #hideOverlay()        { hideLoading() }
 
   #escapeHtml(str) {
     const div = document.createElement('div')

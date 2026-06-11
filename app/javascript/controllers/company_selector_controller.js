@@ -2,17 +2,19 @@ import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore, getApiHeaders } from 'vendor/clavisco/core'
 
 /**
- * CompanySelectorController — Modal de selección de empresa.
+ * CompanySelectorController — Panel lateral de selección de empresa.
  *
  * Responsabilidades:
  *  - Mostrar nombre de empresa seleccionada en el toolbar
- *  - Abrir modal con lista filtrable de empresas
+ *  - Abrir panel lateral con lista filtrable de empresas
  *  - Al cambiar empresa: guardar en localStorage, recargar permisos, reload
  *  - Abrir automáticamente si no hay empresa seleccionada al cargar
  */
 export default class extends Controller {
   static targets = [
-    'modal',
+    'panel',
+    'panelBackdrop',
+    'pageLoader',
     'toolbarLabel',
     'searchInput',
     'list',
@@ -168,13 +170,17 @@ export default class extends Controller {
   }
 
   #showModal() {
-    if (!this.hasModalTarget) return
-    this.modalTarget.classList.remove('hidden')
+    if (!this.hasPanelTarget) return
+    this.panelBackdropTarget.classList.remove('hidden')
+    this.panelTarget.classList.remove('translate-x-full')
+    document.body.style.overflow = 'hidden'
   }
 
   #hideModal() {
-    if (!this.hasModalTarget) return
-    this.modalTarget.classList.add('hidden')
+    if (!this.hasPanelTarget) return
+    this.panelTarget.classList.add('translate-x-full')
+    this.panelBackdropTarget.classList.add('hidden')
+    document.body.style.overflow = ''
   }
 
   #resetInput() {
@@ -247,6 +253,8 @@ export default class extends Controller {
 
   async #applyCompanyChange(company) {
     this.#setConfirmDisabled(true)
+    this.#hideModal()
+    if (this.hasPageLoaderTarget) this.pageLoaderTarget.classList.remove('hidden')
 
     // 1. Guardar empresa en localStorage
     SStore.set('CurrentCompany', {

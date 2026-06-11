@@ -1,0 +1,35 @@
+<%#
+  Overlay loader estándar.
+  Locals: ctrl (requerido), target, msg_target, message, z_class
+%>
+<%
+  ctrl       = local_assigns.fetch(:ctrl)
+  target     = local_assigns.fetch(:target,     'loadingOverlay')
+  msg_target = local_assigns.fetch(:msg_target, 'loadingMessage')
+  message    = local_assigns.fetch(:message,    'Cargando...')
+  z_class    = local_assigns.fetch(:z_class,    'z-50')
+%>
+<div data-<%= ctrl %>-target="<%= target %>"
+     class="hidden fixed inset-0 <%= z_class %> flex items-center justify-center bg-black/40">
+  <div class="bg-white rounded-xl shadow-xl px-6 py-5 flex items-center gap-3">
+
+    <%# Spinner SVG estándar %>
+    <svg class="animate-spin h-6 w-6 text-blue-600 flex-shrink-0"
+         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+         role="status" aria-label="Cargando">
+      <circle class="opacity-25" cx="12" cy="12" r="10"
+              stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+    </svg>
+
+    <%# Mensaje %>
+    <% if msg_target %>
+      <p data-<%= ctrl %>-target="<%= msg_target %>"
+         class="text-sm text-gray-700"><%= message %></p>
+    <% else %>
+      <p class="text-sm text-gray-700"><%= message %></p>
+    <% end %>
+
+  </div>
+</div>

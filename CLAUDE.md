@@ -596,3 +596,79 @@ El botón **Cancelar** usa siempre tono **gris neutro**. El rojo implica acción
 ```
 
 El rojo se reserva para acciones **destructivas e irreversibles** (eliminar, anular).
+
+---
+
+## 15. Loaders — tres tipos estándar
+
+Existen exactamente tres tipos de loader en la app. No inventar variantes nuevas.
+
+### Tipo A — Overlay bloqueante (partial ERB)
+
+Para operaciones que bloquean la interacción con la página (guardar, procesar, cambiar empresa).
+Se renderiza con el partial `shared/overlay_loader`:
+
+```erb
+<%= render 'shared/overlay_loader',
+      ctrl:       'documents-create',   # controller en kebab-case
+      message:    'Guardando...' %>     # texto visible
+```
+
+Locals completos:
+
+| Local | Default | Descripción |
+|---|---|---|
+| `ctrl` | — (requerido) | Nombre del controller en kebab-case |
+| `target` | `loadingOverlay` | Nombre del Stimulus target |
+| `msg_target` | `loadingMessage` | Target del `<p>` del mensaje. `nil` = mensaje fijo sin target |
+| `message` | `Cargando...` | Texto visible |
+| `z_class` | `z-50` | Clase z-index. Usar `z-[60]`, `z-[9999]` cuando sea necesario |
+
+El controller lo muestra/oculta con:
+
+```js
+this.loadingOverlayTarget.classList.remove('hidden')  // mostrar
+this.loadingOverlayTarget.classList.add('hidden')     // ocultar
+
+// Si tiene msg_target, actualizar el mensaje antes de mostrar:
+this.loadingMessageTarget.textContent = 'Procesando...'
+this.loadingOverlayTarget.classList.remove('hidden')
+```
+
+### Tipo B — Overlay global vía JS (overlay service)
+
+Para controllers JS que no tienen una vista ERB propia o necesitan mostrar el loader
+desde múltiples puntos de código (ej. `general_configs`, `permissions`).
+Usa `showLoading` / `hideLoading` del overlay service:
+
+```js
+import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
+
+showLoading('Guardando permisos, espere por favor...')
+// ... operación async ...
+hideLoading()
+```
+
+El overlay global se crea en `document.body` con id `cl-global-loader` y mismo estilo que el partial.
+
+### Tipo C — Table loader (Tabulator)
+
+Para el estado de carga de tablas Tabulator. Usar `TABULATOR_LOADING_HTML` de `tabulator_locale`:
+
+```js
+import { TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale'
+
+this.table?.alert(TABULATOR_LOADING_HTML)  // mostrar
+this.table?.clearAlert()                   // ocultar
+```
+
+### Regla de selección
+
+| Situación | Tipo |
+|---|---|
+| Operación bloqueante en una vista ERB | **A — partial** |
+| Operación bloqueante en controller JS sin vista propia | **B — overlay service** |
+| Carga de datos en una tabla Tabulator | **C — TABULATOR_LOADING_HTML** |
+
+**No usar** `animate-spin material-icons autorenew`, `border-b-2 border-blue-600`,
+ni `border-4 border-t-transparent` — son patrones legacy ya eliminados.

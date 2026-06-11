@@ -113,14 +113,9 @@
   <%# ──────────────────────────────────────────────────── %>
   <%# OVERLAY DE CARGA %>
   <%# ──────────────────────────────────────────────────── %>
-  <div data-documents-reception-create-target="loadingOverlay"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl px-8 py-6 shadow-xl flex items-center gap-4">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-      <p data-documents-reception-create-target="loadingMessage"
-         class="text-sm text-gray-700">Cargando...</p>
-    </div>
-  </div>
+  <%= render 'shared/overlay_loader',
+        ctrl:    'documents-reception-create',
+        message: 'Cargando...' %>
 
   <%# ──────────────────────────────────────────────────── %>
   <%# TABS %>

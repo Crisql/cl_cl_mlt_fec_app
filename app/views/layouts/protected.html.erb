@@ -182,24 +182,44 @@
       </div>
 
       <%# ============================================================= %>
-      <%# MODAL — Company Selector %>
+      <%# PANEL LATERAL — Company Selector %>
       <%# ============================================================= %>
-      <div data-company-selector-target="modal"
-         data-testid="company-selector-modal"
-         class="fixed inset-0 z-50 hidden">
 
-      <%# Overlay %>
-      <div data-action="click->company-selector#overlayClick"
-           class="absolute inset-0 bg-black/50"></div>
+      <%# Page loader — visible mientras se aplica el cambio de empresa %>
+      <%= render 'shared/overlay_loader',
+            ctrl:       'company-selector',
+            target:     'pageLoader',
+            msg_target: nil,
+            message:    'Cargando compañía...',
+            z_class:    'z-[9999]' %>
 
-      <%# Dialog %>
-      <div class="relative z-10 flex items-center justify-center h-full px-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+      <%# Backdrop %>
+      <div data-company-selector-target="panelBackdrop"
+           data-action="click->company-selector#overlayClick"
+           class="hidden fixed inset-0 z-40 bg-black/40"></div>
 
-          <h2 class="text-lg font-semibold text-gray-800 mb-5">Seleccione una compañía</h2>
+      <%# Panel %>
+      <div data-company-selector-target="panel"
+           data-testid="company-selector-modal"
+           class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50
+                  translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+        <%# Header %>
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <h3 class="text-base font-semibold text-gray-800">Seleccione una compañía</h3>
+          <button data-company-selector-target="cancelBtn"
+                  data-action="click->company-selector#close"
+                  data-testid="company-cancel-btn"
+                  class="hidden p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+            <span class="material-icons text-xl">close</span>
+          </button>
+        </div>
+
+        <%# Body %>
+        <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
 
           <%# Input de búsqueda %>
-          <div class="relative mb-4">
+          <div class="relative">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-gray-400 text-xl">search</span>
             <input type="text"
                    data-company-selector-target="searchInput"
@@ -209,39 +229,32 @@
                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           </div>
 
-          <%# Lista de opciones %>
-          <ul data-company-selector-target="list"
-              class="max-h-56 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100 mb-5">
-            <%# Renderizado dinámico por company_selector_controller.js %>
-          </ul>
-
           <%# Loading state %>
           <p data-company-selector-target="loading"
              class="text-center text-sm text-gray-500 py-4 hidden">
             Cargando compañías...
           </p>
 
-          <%# Acciones %>
-          <div class="flex justify-end gap-3">
-            <button data-company-selector-target="cancelBtn"
-                    data-action="click->company-selector#close"
-                    data-testid="company-cancel-btn"
-                    class="hidden px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              <span class="material-icons text-base align-middle mr-1">cancel</span>
-              Cancelar
-            </button>
-
-            <button data-company-selector-target="confirmBtn"
-                    data-action="click->company-selector#confirm"
-                    data-testid="company-confirm-btn"
-                    disabled
-                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-              <span class="material-icons text-base align-middle mr-1">check</span>
-              Continuar
-            </button>
-          </div>
+          <%# Lista de opciones %>
+          <ul data-company-selector-target="list"
+              class="border border-gray-200 rounded-lg divide-y divide-gray-100">
+            <%# Renderizado dinámico por company_selector_controller.js %>
+          </ul>
 
         </div>
+
+        <%# Footer %>
+        <div class="px-6 py-4 border-t border-gray-100 flex justify-end flex-shrink-0">
+          <button data-company-selector-target="confirmBtn"
+                  data-action="click->company-selector#confirm"
+                  data-testid="company-confirm-btn"
+                  disabled
+                  class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            <span class="material-icons text-base">check</span>
+            Continuar
+          </button>
+        </div>
+
       </div>
 
     </div><%# /controller wrapper %>

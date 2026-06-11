@@ -96,13 +96,11 @@
   </div>
 
   <%# ── Overlay de carga ── %>
-  <div data-documents-reports-target="overlay"
-       class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-    <div class="bg-white rounded-xl shadow-xl px-8 py-6 flex flex-col items-center gap-4">
-      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-      <p class="text-sm text-gray-600 font-medium">Generando reporte, espere por favor...</p>
-    </div>
-  </div>
+  <%= render 'shared/overlay_loader',
+        ctrl:       'documents-reports',
+        target:     'overlay',
+        msg_target: nil,
+        message:    'Generando reporte, espere por favor...' %>
 
   <%# ── Modal de validación ── %>
   <div data-documents-reports-target="validationModal"
