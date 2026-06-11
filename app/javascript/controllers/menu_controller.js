@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore, getApiHeaders } from 'vendor/clavisco/core'
+import { confirm } from 'vendor/clavisco/alerts'
 
 /**
  * MenuController — Sidebar + Toolbar del layout protegido.
@@ -324,18 +325,22 @@ export default class extends Controller {
     }
   }
 
-  #logout() {
+  async #logout() {
+    const confirmed = await confirm('¿Está seguro de que desea cerrar sesión?', 'Cerrar sesión')
+    if (!confirmed) return
+
     // localStorage — datos persistentes entre pestañas
     const lsKeys = [
       'Session', 'UserAssign', 'DocumentInMemories', 'CurrentSession',
       'Ports', 'Menu', 'LocalPrinter', 'ReportManager', 'UserInfo',
-      'Companies', 'menuState', 'BannerUser'
+      'Companies', 'menuState', 'BannerUser', 'FavoriteCompany'
     ]
     lsKeys.forEach(k => localStorage.removeItem(k))
 
     // sessionStorage — datos por pestaña (empresa + permisos)
     sessionStorage.removeItem('CurrentCompany')
     sessionStorage.removeItem('Permissions')
+    sessionStorage.removeItem('currentFEUser')
 
     window.location.href = '/login'
   }

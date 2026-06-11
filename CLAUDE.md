@@ -599,6 +599,42 @@ El rojo se reserva para acciones **destructivas e irreversibles** (eliminar, anu
 
 ---
 
+## 16. Diálogos de confirmación — NUNCA alertas nativas del navegador
+
+**Regla:** Está **prohibido** usar `window.confirm()`, `window.alert()` o `window.prompt()` en cualquier parte de la app.
+Estas APIs bloquean el hilo principal, no respetan el diseño del sistema y su aspecto varía por OS/browser.
+
+### Patrón obligatorio — `confirm()` del alerts service
+
+```js
+import { confirm } from 'vendor/clavisco/alerts'
+
+async #miAccionDestructiva() {
+  const confirmed = await confirm('¿Está seguro de que desea eliminar este registro?', 'Eliminar registro')
+  if (!confirmed) return
+
+  // ... continuar con la acción
+}
+```
+
+`confirm(message, title?)` retorna `Promise<boolean>` — usa `await` siempre.
+Internamente llama a `showAlert({ type: 'warning', showCancel: true, ... })`.
+
+### Para alertas simples (sin cancelar)
+
+```js
+import { showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts'
+
+await showAlert({ type: ALERT_TYPES.ERROR, title: 'Error', message: 'Descripción del error.' })
+```
+
+### ⚠️ Errores comunes
+
+- Usar `window.confirm()` por conveniencia → **reemplazar siempre** con `confirm()` del service.
+- Olvidar `await` → el código continúa sin esperar la respuesta del usuario.
+
+---
+
 ## 15. Loaders — tres tipos estándar
 
 Existen exactamente tres tipos de loader en la app. No inventar variantes nuevas.

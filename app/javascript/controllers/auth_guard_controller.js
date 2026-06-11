@@ -53,13 +53,15 @@ export default class extends Controller {
     const lsKeys = [
       this.sessionNameValue,
       'UserAssign', 'DocumentInMemories', 'CurrentSession', 'Ports',
-      'Menu', 'LocalPrinter', 'ReportManager', 'UserInfo', 'Companies'
+      'Menu', 'LocalPrinter', 'ReportManager', 'UserInfo', 'Companies',
+      'FavoriteCompany'
     ]
     lsKeys.forEach(key => localStorage.removeItem(key))
 
     // sessionStorage — datos por pestaña
     sessionStorage.removeItem('CurrentCompany')
     sessionStorage.removeItem('Permissions')
+    sessionStorage.removeItem('currentFEUser')
   }
 
   #redirectToLogin() {

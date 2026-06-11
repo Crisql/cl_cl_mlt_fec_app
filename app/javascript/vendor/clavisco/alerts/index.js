@@ -108,36 +108,39 @@ class AlertsService {
         showCancel = false
       } = options
 
-      const colors = {
-        [ALERT_TYPES.SUCCESS]: 'text-green-600',
-        [ALERT_TYPES.ERROR]: 'text-red-600',
-        [ALERT_TYPES.WARNING]: 'text-yellow-600',
-        [ALERT_TYPES.INFO]: 'text-blue-600'
-      }
-
-      const icons = {
-        [ALERT_TYPES.SUCCESS]: 'check_circle',
-        [ALERT_TYPES.ERROR]: 'error',
-        [ALERT_TYPES.WARNING]: 'warning',
-        [ALERT_TYPES.INFO]: 'info'
-      }
+      const config = {
+        [ALERT_TYPES.SUCCESS]: { iconColor: '#16a34a', iconBg: '#f0fdf4', icon: 'check_circle', confirmBg: '#16a34a', confirmHover: '#15803d' },
+        [ALERT_TYPES.ERROR]:   { iconColor: '#dc2626', iconBg: '#fef2f2', icon: 'error',       confirmBg: '#dc2626', confirmHover: '#b91c1c' },
+        [ALERT_TYPES.WARNING]: { iconColor: '#d97706', iconBg: '#fffbeb', icon: 'warning',     confirmBg: '#d97706', confirmHover: '#b45309' },
+        [ALERT_TYPES.INFO]:    { iconColor: '#2563eb', iconBg: '#eff6ff', icon: 'info',        confirmBg: '#2563eb', confirmHover: '#1d4ed8' },
+      }[type] ?? { iconColor: '#6b7280', iconBg: '#f9fafb', icon: 'info', confirmBg: '#2563eb', confirmHover: '#1d4ed8' }
 
       const modal = document.createElement('div')
-      modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50'
+      modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center'
+      modal.style.backgroundColor = 'rgba(0,0,0,0.4)'
       modal.innerHTML = `
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-          <div class="p-6 text-center">
-            <span class="material-icons text-5xl ${colors[type]} mb-4">${icons[type]}</span>
-            ${title ? `<h3 class="text-lg font-semibold text-gray-900 mb-2">${title}</h3>` : ''}
-            <p class="text-gray-600">${message}</p>
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4">
+          <div class="px-6 pt-6 pb-5 text-center">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4" style="background-color:${config.iconBg}">
+              <span class="material-icons text-3xl" style="color:${config.iconColor}">${config.icon}</span>
+            </div>
+            ${title ? `<h3 class="text-base font-semibold text-gray-900 mb-1">${title}</h3>` : ''}
+            <p class="text-sm text-gray-500">${message}</p>
           </div>
-          <div class="flex ${showCancel ? 'justify-between' : 'justify-center'} gap-3 p-4 border-t">
+          <div class="flex justify-around gap-2 px-6 pb-5">
             ${showCancel ? `
-              <button type="button" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50" data-action="cancel">
+              <button type="button"
+                      class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      data-action="cancel">
                 ${cancelText}
               </button>
             ` : ''}
-            <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" data-action="confirm">
+            <button type="button"
+                    class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
+                    style="background-color:${config.confirmBg}"
+                    onmouseover="this.style.backgroundColor='${config.confirmHover}'"
+                    onmouseout="this.style.backgroundColor='${config.confirmBg}'"
+                    data-action="confirm">
               ${confirmText}
             </button>
           </div>
