@@ -28,6 +28,7 @@ import DocumentsReceptionCreateController from 'controllers/documents_reception_
 import DocumentsCreateController          from 'controllers/documents_create_controller'
 import MailParserController               from 'controllers/mail_parser_controller'
 import EmailSendersController             from 'controllers/email_senders_controller'
+import SessionSyncController             from 'controllers/session_sync_controller'
 
 application.register('login',             LoginController)
 application.register('auth-guard',        AuthGuardController)
@@ -54,3 +55,4 @@ application.register('documents-reception-create', DocumentsReceptionCreateContr
 application.register('documents-create',           DocumentsCreateController)
 application.register('mail-parser',     MailParserController)
 application.register('email-senders',   EmailSendersController)
+application.register('session-sync',    SessionSyncController)

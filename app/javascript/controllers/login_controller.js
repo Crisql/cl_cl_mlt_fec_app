@@ -2,6 +2,7 @@ import { Controller } from '@hotwired/stimulus'
 import { login, checkAuth } from 'vendor/clavisco/login'
 import { Storage } from 'vendor/clavisco/core'
 import { showToast } from 'vendor/clavisco/alerts'
+import { notifySessionOpened } from 'vendor/clavisco/session-sync'
 
 // Stimulus controller para /login
 // Vendor: vendor/clavisco/login maneja OAuth2 y storage
@@ -75,6 +76,8 @@ export default class extends Controller {
             SendReceptAndApInv: result.response.SendReceptAndApInv
           });
         }
+        // Notificar a otras pestañas que se inició sesión (flujo D del análisis)
+        notifySessionOpened()
         window.location.href = this.redirectPathValue
       } else {
         showToast(result.error || 'Error de autenticación', 'error')

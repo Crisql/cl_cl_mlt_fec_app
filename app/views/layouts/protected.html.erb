@@ -21,7 +21,7 @@
     <%# ---------------------------------------------------------------- %>
     <%# Shell protegida — auth-guard + menu + company-selector %>
     <%# ---------------------------------------------------------------- %>
-    <div data-controller="auth-guard menu company-selector"
+    <div data-controller="auth-guard menu company-selector session-sync"
          data-menu-page-title-value="<%= content_for?(:page_title) ? yield(:page_title) : '' %>"
          class="flex h-screen overflow-hidden">
 

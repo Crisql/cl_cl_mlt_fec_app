@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore, getApiHeaders } from 'vendor/clavisco/core'
 import { confirm } from 'vendor/clavisco/alerts'
+import { notifySessionClosed, thereAreMultipleContexts, clearSession } from 'vendor/clavisco/session-sync'
 
 /**
  * MenuController — Sidebar + Toolbar del layout protegido.
@@ -326,22 +327,20 @@ export default class extends Controller {
   }
 
   async #logout() {
-    const confirmed = await confirm('¿Está seguro de que desea cerrar sesión?', 'Cerrar sesión')
+    const multiple = await thereAreMultipleContexts()
+
+    const message = multiple
+      ? 'Se han detectado múltiples pestañas abiertas. Al continuar se cerrará la sesión en todas ellas.'
+      : '¿Está seguro de que desea cerrar sesión?'
+    const title = multiple ? 'Múltiples pestañas abiertas' : 'Cerrar sesión'
+
+    const confirmed = await confirm(message, title)
     if (!confirmed) return
 
-    // localStorage — datos persistentes entre pestañas
-    const lsKeys = [
-      'Session', 'UserAssign', 'DocumentInMemories', 'CurrentSession',
-      'Ports', 'Menu', 'LocalPrinter', 'ReportManager', 'UserInfo',
-      'Companies', 'menuState', 'BannerUser', 'FavoriteCompany'
-    ]
-    lsKeys.forEach(k => localStorage.removeItem(k))
+    // Notificar a las demás pestañas antes de limpiar (flujo B del análisis)
+    if (multiple) notifySessionClosed()
 
-    // sessionStorage — datos por pestaña (empresa + permisos)
-    sessionStorage.removeItem('CurrentCompany')
-    sessionStorage.removeItem('Permissions')
-    sessionStorage.removeItem('currentFEUser')
-
+    clearSession()
     window.location.href = '/login'
   }
 }
