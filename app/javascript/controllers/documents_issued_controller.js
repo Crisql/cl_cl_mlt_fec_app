@@ -1,6 +1,6 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
@@ -49,10 +49,8 @@ export default class extends TabulatorController {
     'chartModal', 'chartCanvas',
 
     // Modal confirmación
-    'confirmModal', 'confirmIcon', 'confirmTitle', 'confirmSubtitle',
 
     // Modal error
-    'errorModal', 'errorTitle', 'errorSubtitle',
   ];
 
   static values = { ...TabulatorController.values };
@@ -83,8 +81,6 @@ export default class extends TabulatorController {
   /** Gráfico (Chart.js) */
   #chart = null;
 
-  /** Callback de confirmación pendiente */
-  #confirmCallback = null;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -237,7 +233,7 @@ export default class extends TabulatorController {
     const json = await this.#apiFetch(`/api/documents?${queryParams}`);
 
     if (!json.Data) {
-      this.#showErrorModal('Se produjo un error al obtener los documentos', json.Message || 'Error desconocido');
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener los documentos', message: json.Message || 'Error desconocido' });
       // Retornar formato válido para que Tabulator no quede en estado roto
       return { data: [], last_page: 1 };
     }
@@ -491,45 +487,37 @@ export default class extends TabulatorController {
   }
 
   async #skipValidations(docId) {
-    this.#openConfirm(
-      'Esta acción omitirá las validaciones y enviará el documento a Hacienda con errores bajo su propia responsabilidad',
-      '¿Está seguro que desea continuar?',
-      async () => {
-        try {
-          const session = Storage.get('Session') || {};
-          await this.#apiFetch('/api/Documents', {
-            method: 'PATCH',
-            body: JSON.stringify({ docId, feToken: '' }),
-          });
-          showToast('Estado cambiado con éxito', 'success');
-          this.table?.replaceData();
-        } catch (err) {
-          this.#showErrorModal('Error al omitir validaciones', err.message);
-        }
-      }
-    );
+    const confirmed = await confirm('¿Está seguro que desea continuar?', 'Esta acción omitirá las validaciones y enviará el documento a Hacienda con errores bajo su propia responsabilidad');
+    if (!confirmed) return;
+    try {
+      const session = Storage.get('Session') || {};
+      await this.#apiFetch('/api/Documents', {
+        method: 'PATCH',
+        body: JSON.stringify({ docId, feToken: '' }),
+      });
+      showToast('Estado cambiado con éxito', 'success');
+      this.table?.replaceData();
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al omitir validaciones', message: err.message });
+    }
   }
 
   async #internalCancel(row) {
     const statusLabels = { 1: 'Aceptado', 2: 'Procesando', 3: 'En Hacienda', 4: 'Rechazado', 5: 'Error', 7: 'Anulada Interna' };
     const statusText = statusLabels[row.Status] || 'Desconocido';
 
-    this.#openConfirm(
-      `Esta acción anulará de manera interna la FEC bajo su propia responsabilidad, la cuál se encuentra en estado: ${statusText}`,
-      '¿Está seguro que desea continuar?',
-      async () => {
-        try {
-          await this.#apiFetch('/api/Documents/SetDocStatusInternalCancelled', {
-            method: 'PATCH',
-            body: JSON.stringify({ docId: row.Id, feToken: '' }),
-          });
-          showToast('Documento anulado con éxito', 'success');
-          this.table?.replaceData();
-        } catch (err) {
-          this.#showErrorModal('Error al anular el documento', err.message);
-        }
-      }
-    );
+    const confirmed = await confirm('¿Está seguro que desea continuar?', `Esta acción anulará de manera interna la FEC bajo su propia responsabilidad, la cuál se encuentra en estado: ${statusText}`);
+    if (!confirmed) return;
+    try {
+      await this.#apiFetch('/api/Documents/SetDocStatusInternalCancelled', {
+        method: 'PATCH',
+        body: JSON.stringify({ docId: row.Id, feToken: '' }),
+      });
+      showToast('Documento anulado con éxito', 'success');
+      this.table?.replaceData();
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al anular el documento', message: err.message });
+    }
   }
 
   async #reprocess(docId) {
@@ -762,7 +750,7 @@ export default class extends TabulatorController {
       this.inputEmailCCTarget.value = '';
       await this.#refreshEmailTable();
     } catch (err) {
-      this.#showErrorModal('Error al reenviar correo', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al reenviar correo', message: err.message });
     }
   }
 
@@ -908,11 +896,10 @@ export default class extends TabulatorController {
 
   // ── Descarga Masiva ────────────────────────────────────────────────────────
 
-  bulkDownload() {
-    this.#openConfirm(
-      'Descarga masiva de documentos',
-      'Se creará una solicitud de descarga masiva según los filtros aplicados. Los archivos serán enviados al correo del usuario que ejecuta la acción.',
-      async () => {
+  async bulkDownload() {
+    const confirmed = await confirm('Se creará una solicitud de descarga masiva según los filtros aplicados. Los archivos serán enviados al correo del usuario que ejecuta la acción.', 'Descarga masiva de documentos', ALERT_TYPES.INFO);
+    if (!confirmed) return;
+    {
 
         try {
           const today = new Date().toISOString().split('T')[0];
@@ -937,11 +924,9 @@ export default class extends TabulatorController {
           });
           showToast('Solicitud creada con éxito!!!', 'success');
         } catch (err) {
-          this.#showErrorModal('Error al crear solicitud de descarga masiva', err.message);
+          showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al crear solicitud de descarga masiva', message: err.message });
         }
-      },
-      'info'
-    );
+    }
   }
 
   // ── Formulario handlers ────────────────────────────────────────────────────
@@ -961,48 +946,6 @@ export default class extends TabulatorController {
   }
 
   // ── Modal Confirmación ────────────────────────────────────────────────────
-
-  #openConfirm(title, subtitle, callback, type = 'warning') {
-    this.confirmTitleTarget.textContent    = title;
-    this.confirmSubtitleTarget.textContent = subtitle;
-    this.#confirmCallback = callback;
-
-    const iconMap = {
-      warning: { icon: 'warning',     color: 'text-amber-500' },
-      info:    { icon: 'info',         color: 'text-blue-500'  },
-      danger:  { icon: 'error',        color: 'text-red-500'   },
-    };
-    const { icon, color } = iconMap[type] ?? iconMap.warning;
-    this.confirmIconTarget.textContent = icon;
-    this.confirmIconTarget.className   = `material-icons text-2xl ${color}`;
-
-    this.confirmModalTarget.classList.remove('hidden');
-  }
-
-  acceptConfirm() {
-    this.confirmModalTarget.classList.add('hidden');
-    if (this.#confirmCallback) {
-      this.#confirmCallback();
-      this.#confirmCallback = null;
-    }
-  }
-
-  cancelConfirm() {
-    this.confirmModalTarget.classList.add('hidden');
-    this.#confirmCallback = null;
-  }
-
-  // ── Modal Error ───────────────────────────────────────────────────────────
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title;
-    this.errorSubtitleTarget.textContent = subtitle;
-    this.errorModalTarget.classList.remove('hidden');
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
-  }
 
   // ── Contadores de estado ──────────────────────────────────────────────────
 

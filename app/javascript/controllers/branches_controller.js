@@ -1,6 +1,6 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
@@ -47,8 +47,6 @@ export default class extends TabulatorController {
     'inputAlias',       'errorAlias',
     'inputActive',
 
-    // Modal error
-    'errorModal', 'errorTitle', 'errorSubtitle',
   ];
 
   static values = { ...TabulatorController.values };
@@ -400,7 +398,7 @@ export default class extends TabulatorController {
       this.closePanel();
       await this.#loadInitialData();
     } catch (err) {
-      this.#showErrorModal(msgErr, err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: msgErr, message: err.message });
     } finally {
       this.#setLoading(false);
     }
@@ -466,18 +464,6 @@ export default class extends TabulatorController {
       'errorEmail', 'errorEmailPattern',
       'errorAlias',
     ].forEach(t => this[`${t}Target`]?.classList.add('hidden'));
-  }
-
-  // ── Modal de error ─────────────────────────────────────────────────────────
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title;
-    this.errorSubtitleTarget.textContent = subtitle || '';
-    this.errorModalTarget.classList.remove('hidden');
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
   }
 
   // ── Helpers de ubicación ──────────────────────────────────────────────────

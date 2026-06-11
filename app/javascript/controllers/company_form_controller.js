@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts';
 
 /**
  * CompanyFormController — Crear / Editar compañía.
@@ -86,9 +86,7 @@ export default class extends Controller {
     // Botón registrar
     'btnRegisterContainer', 'btnRegister',
 
-    // Modales y toast
-    'errorModal', 'errorIcon', 'errorTitle', 'errorSubtitle',
-    'confirmModal', 'confirmTitle', 'confirmSubtitle',
+    // Panel lateral — confirmación de reset (no hay modales custom)
 
     // Panel lateral — crear conexión SAP
     'connPanel', 'connPanelBackdrop',
@@ -124,7 +122,6 @@ export default class extends Controller {
   #companyData            = null;
   #permissions            = [];   // string[]
   #selectedCompany        = null;
-  #confirmCallback        = null;
 
   #ideRules = {
     '01': { min: 9,  max: 9  },
@@ -210,7 +207,7 @@ export default class extends Controller {
 
       this.#validateForm();
     } catch (err) {
-      this.#showErrorModal('Se produjo un error al obtener la información', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener la información', message: err.message });
     }
   }
 
@@ -254,7 +251,7 @@ export default class extends Controller {
         this.#fillForms(this.#companyData);
       } else {
         const msg = companyResp.reason?.message || companyResp.value?.Message || 'Error desconocido';
-        this.#showErrorModal('Se produjo un error al obtener la información de la compañía', msg);
+        showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener la información de la compañía', message: msg });
       }
       if (currencyMapResp.status === 'fulfilled' && currencyMapResp.value?.Data?.length) {
         this.#currencyMappings = currencyMapResp.value.Data;
@@ -266,7 +263,7 @@ export default class extends Controller {
       }
       this.#renderActivityCodes();
     } catch (err) {
-      this.#showErrorModal('Se produjo un error al obtener la información', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener la información', message: err.message });
     }
   }
 
@@ -492,8 +489,7 @@ export default class extends Controller {
     this.certPathTextTarget.value = file.name;
 
     if (!this.certPinTarget.value) {
-      this.#showErrorModal('Pin requerido',
-        'Para obtener la fecha de expiración del certificado debe colocar el PIN.');
+      showAlert({ type: ALERT_TYPES.WARNING, title: 'Pin requerido', message: 'Para obtener la fecha de expiración del certificado debe colocar el PIN.' });
       return;
     }
     this.#getCertExpireDate();
@@ -520,11 +516,11 @@ export default class extends Controller {
         : '';
 
       if (!json.Data?.CertExpireDate) {
-        this.#showErrorModal('Certificado', json.Message || 'No se pudo obtener la fecha de expiración.');
+        showAlert({ type: ALERT_TYPES.WARNING, title: 'Certificado', message: json.Message || 'No se pudo obtener la fecha de expiración.' });
       }
     } catch (err) {
       this.certExpireDateTarget.value = '';
-      this.#showErrorModal('Error de certificado', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error de certificado', message: err.message });
     }
   }
 
@@ -582,22 +578,21 @@ export default class extends Controller {
     );
   }
 
-  resetPrintFormat() {
-    this.#showConfirmModal(
-      'Restablecer formato',
+  async resetPrintFormat() {
+    const confirmed = await confirm(
       'Esta acción restablecerá el formato de impresión de la compañía al por defecto. ¿Desea continuar?',
-      async () => {
-        try {
-          await this.#apiFetch(
-            `/api/Companies/ResetCompanyPrintFormat?companyId=${this.companyIdValue}`,
-            { method: 'PATCH' }
-          );
-          showToast('Formato de impresión restablecido con éxito', 'success');
-        } catch (err) {
-          this.#showErrorModal('Error al restablecer formato', err.message);
-        }
-      }
+      'Restablecer formato'
     );
+    if (!confirmed) return;
+    try {
+      await this.#apiFetch(
+        `/api/Companies/ResetCompanyPrintFormat?companyId=${this.companyIdValue}`,
+        { method: 'PATCH' }
+      );
+      showToast('Formato de impresión restablecido con éxito', 'success');
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al restablecer formato', message: err.message });
+    }
   }
 
   // ── EmailCC dinámico ───────────────────────────────────────────────────────
@@ -610,7 +605,7 @@ export default class extends Controller {
   removeEmail(event) {
     const idx = parseInt(event.currentTarget.dataset.index);
     if (this.#emailCcItems.length === 1) {
-      this.#showErrorModal('', 'No se puede eliminar el último registro del correo copia');
+      showAlert({ type: ALERT_TYPES.WARNING, message: 'No se puede eliminar el último registro del correo copia' });
       return;
     }
     this.#emailCcItems.splice(idx, 1);
@@ -709,7 +704,7 @@ export default class extends Controller {
       });
       showToast('Códigos de actividad actualizados con éxito.', 'success');
     } catch (err) {
-      this.#showErrorModal('Error al actualizar códigos de actividad', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al actualizar códigos de actividad', message: err.message });
     }
   }
 
@@ -861,14 +856,14 @@ export default class extends Controller {
     try {
       await this.#sendEditRequest(1);
       showToast('Datos generales actualizados con éxito.', 'success');
-    } catch (err) { this.#showErrorModal('Error al guardar datos generales', err.message); }
+    } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar datos generales', message: err.message }); }
   }
 
   async saveAdditionalData() {
     try {
       await this.#sendEditRequest(5);
       showToast('Información adicional actualizada con éxito.', 'success');
-    } catch (err) { this.#showErrorModal('Error al guardar información adicional', err.message); }
+    } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar información adicional', message: err.message }); }
   }
 
   async saveAtvData() {
@@ -887,14 +882,14 @@ export default class extends Controller {
     try {
       await this.#sendEditRequest(2);
       showToast('Datos de Hacienda actualizados con éxito.', 'success');
-    } catch (err) { this.#showErrorModal('Error al guardar datos de Hacienda', err.message); }
+    } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar datos de Hacienda', message: err.message }); }
   }
 
   async saveAttData() {
     try {
       await this.#sendEditRequest(3);
       showToast('Adjuntos actualizados con éxito.', 'success');
-    } catch (err) { this.#showErrorModal('Error al guardar adjuntos', err.message); }
+    } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar adjuntos', message: err.message }); }
   }
 
   async saveSapData() {
@@ -909,7 +904,7 @@ export default class extends Controller {
         body:   JSON.stringify(this.#currencyMappings),
       });
       showToast('Datos de factura proveedor actualizados con éxito.', 'success');
-    } catch (err) { this.#showErrorModal('Error al guardar datos de factura proveedor', err.message); }
+    } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar datos de factura proveedor', message: err.message }); }
   }
 
   // ── Crear compañía ─────────────────────────────────────────────────────────
@@ -958,7 +953,7 @@ export default class extends Controller {
       showToast('Compañía registrada exitosamente.', 'success');
       setTimeout(() => { window.location.href = '/configurations/companies'; }, 1200);
     } catch (err) {
-      this.#showErrorModal('Error al registrar compañía', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al registrar compañía', message: err.message });
     }
   }
 
@@ -1061,33 +1056,6 @@ export default class extends Controller {
     if (this.hasBtnRegisterTarget) {
       this.btnRegisterTarget.disabled = !this.#validateGeneralForm();
     }
-  }
-
-  // ── Modales ────────────────────────────────────────────────────────────────
-
-  closeErrorModal() { this.errorModalTarget.classList.add('hidden'); }
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title;
-    this.errorSubtitleTarget.textContent = subtitle;
-    this.errorModalTarget.classList.remove('hidden');
-  }
-
-  #showConfirmModal(title, subtitle, callback) {
-    this.confirmTitleTarget.textContent    = title;
-    this.confirmSubtitleTarget.textContent = subtitle;
-    this.#confirmCallback = callback;
-    this.confirmModalTarget.classList.remove('hidden');
-  }
-
-  cancelConfirm() {
-    this.#confirmCallback = null;
-    this.confirmModalTarget.classList.add('hidden');
-  }
-
-  doConfirm() {
-    this.confirmModalTarget.classList.add('hidden');
-    if (this.#confirmCallback) { this.#confirmCallback(); this.#confirmCallback = null; }
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1209,7 +1177,7 @@ export default class extends Controller {
       });
 
       if (!json.Data) {
-        this.#showErrorModal('Error al crear la conexión', json.Message || 'Error desconocido');
+        showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al crear la conexión', message: json.Message || 'Error desconocido' });
         return;
       }
 
@@ -1228,7 +1196,7 @@ export default class extends Controller {
       this.closeConnectionPanel();
       showToast('Conexión creada con éxito.', 'success');
     } catch (err) {
-      this.#showErrorModal('Error al crear la conexión', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al crear la conexión', message: err.message });
     } finally {
       this.connSaveBtnTarget.disabled = false;
     }

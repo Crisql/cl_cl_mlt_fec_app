@@ -1,6 +1,6 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
@@ -63,9 +63,6 @@ export default class extends TabulatorController {
     'inputPort', 'errorPort',
     'inputSsl',
     'inputTestEmail',
-
-    // Modal de error
-    'errorModal', 'errorTitle', 'errorSubtitle',
 
     // TAB 2: Asignación
     'assignCompanyInput', 'assignCompanyDropdown',
@@ -280,7 +277,7 @@ export default class extends TabulatorController {
       this.#isCredentialsValidated = false;
       this.#updateValidateButton(false, false);
       this.saveBtnTarget.disabled = true;
-      this.#showErrorModal('Error al validar', displayMessage);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al validar', message: displayMessage });
     } finally {
       this.#isValidating = false;
     }
@@ -315,7 +312,7 @@ export default class extends TabulatorController {
       this.#closePanel();
       this.table?.setData();
     } catch (err) {
-      this.#showErrorModal('Error al guardar', err.message || 'No se pudo guardar la bandeja.');
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar', message: err.message || 'No se pudo guardar la bandeja.' });
     }
   }
 
@@ -344,10 +341,6 @@ export default class extends TabulatorController {
       port:     this.inputPortTarget.value,
       ssl:      this.inputSslTarget.checked,
     };
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
   }
 
   // ── Asignación de compañías ───────────────────────────────────────────────
@@ -424,7 +417,7 @@ export default class extends TabulatorController {
       });
       showToast('Bandejas asignadas exitosamente.', 'success');
     } catch (err) {
-      this.#showErrorModal('Error al guardar', err.message || 'No se pudieron guardar las asignaciones.');
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar', message: err.message || 'No se pudieron guardar las asignaciones.' });
     }
   }
 

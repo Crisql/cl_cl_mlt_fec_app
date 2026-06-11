@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
-import { showToast } from 'vendor/clavisco/alerts'
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts'
 import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
 
 // ── Constantes de dominio ──────────────────────────────────
@@ -51,8 +51,6 @@ export default class extends Controller {
     'toleranceModal', 'toleranceDocCurrency', 'toleranceSelect',
     'confirmRefreshModal',
     'successModal', 'successModalMessage',
-    'warningModal', 'warningModalMessage',
-    'errorModal', 'errorModalMessage',
     // Preview panel
     'previewBackdrop', 'previewPanel', 'previewBody',
     // Item selection panel
@@ -148,7 +146,7 @@ export default class extends Controller {
   // ── Carga inicial paralela ─────────────────────────────
   async #loadAll() {
     if (!this.#companyId) {
-      this.#openWarning('No tiene una compañía seleccionada. Seleccione una antes de continuar.')
+      showToast('No tiene una compañía seleccionada. Seleccione una antes de continuar.', 'warning')
       return
     }
     if (this.#docTypeXML === null) {
@@ -190,7 +188,7 @@ export default class extends Controller {
       if (currenciesRes?.Data)           this.#companyCurrencies = currenciesRes.Data ?? []
     } catch (err) {
       this.#hideLoading()
-      this.#openError(`Error al cargar datos: ${err.message}`)
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al cargar datos', message: err.message })
       return
     }
 
@@ -385,7 +383,7 @@ export default class extends Controller {
       this.#updateDocDueDate()
       this.#updateHeaderFormValidity()
     } else if (this.#xmlDoc.LicTradNum) {
-      this.#openWarning(`El proveedor ${this.#xmlDoc.CardName} con la cédula ${this.#xmlDoc.LicTradNum} no existe en SAP`)
+      showToast(`El proveedor ${this.#xmlDoc.CardName} con la cédula ${this.#xmlDoc.LicTradNum} no existe en SAP`, 'warning')
     }
   }
 
@@ -452,7 +450,7 @@ export default class extends Controller {
   // ── Previsualización (acordeón) ────────────────────────
   async previewReceptDoc() {
     if (!this.#previewDocument) {
-      this.#openWarning('No hay documento para previsualizar. Cargue un documento primero.')
+      showToast('No hay documento para previsualizar. Cargue un documento primero.', 'warning')
       return
     }
     this.#fillPreviewPanel(this.#previewDocument)
@@ -1116,7 +1114,7 @@ export default class extends Controller {
     const receptAndCreate = this.#sendReceptAndApInv && this.#shouldRecept
     if (receptAndCreate && !this.#errorOnCreate) {
       if (!this.#validateReceptForm()) {
-        this.#openWarning('Verificar la información de la recepción, existen datos pendientes')
+        showToast('Verificar la información de la recepción, existen datos pendientes', 'warning')
         return
       }
     }
@@ -1133,7 +1131,7 @@ export default class extends Controller {
       }
     } catch (err) {
       this.#hideLoading()
-      this.#openError(err.message || 'Error al crear la factura')
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al crear la factura', message: err.message || 'Error al crear la factura' })
     }
   }
 
@@ -1150,7 +1148,7 @@ export default class extends Controller {
         : `Documento número ${response.Data.DocNum} creado correctamente`
       this.#showSuccess(msg)
     } else {
-      this.#openWarning(`Ocurrió un error: ${response?.Message ?? 'Error desconocido'}`)
+      showAlert({ type: ALERT_TYPES.WARNING, title: 'Aviso', message: response?.Message ?? 'Error desconocido' })
     }
   }
 
@@ -1344,23 +1342,7 @@ export default class extends Controller {
     window.location.href = this.#getReturnUrl()
   }
 
-  #openWarning(message) {
-    this.warningModalMessageTarget.textContent = message
-    this.warningModalTarget.classList.remove('hidden')
-  }
 
-  closeWarningModal() {
-    this.warningModalTarget.classList.add('hidden')
-  }
-
-  #openError(message) {
-    this.errorModalMessageTarget.textContent = message
-    this.errorModalTarget.classList.remove('hidden')
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden')
-  }
 
   // ── Preview panel ──────────────────────────────────────
   #openPreview() {

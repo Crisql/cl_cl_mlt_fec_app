@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
 
 /**
  * ConnectionFormController — Crear / Editar una conexión SAP.
@@ -38,7 +38,6 @@ export default class extends Controller {
     'useTrusted',
     'togglePassIcon',
     'submitBtn', 'submitIcon', 'submitLabel',
-    'errorModal', 'errorIcon', 'errorTitle', 'errorSubtitle',
   ];
 
   // ── Estado interno ─────────────────────────────────────────────────────────
@@ -68,9 +67,10 @@ export default class extends Controller {
     }
   }
 
-  #initCreateMode() {
+  async #initCreateMode() {
     if (!this.#hasPerm('Configurations_Connections_Create')) {
-      this.#showAccessDeniedAndRedirect('No cuenta con permisos para crear conexiones.');
+      await showAlert({ type: ALERT_TYPES.WARNING, title: 'Acceso Denegado', message: 'No cuenta con permisos para crear conexiones.' });
+      window.location.href = '/configurations/connections';
       return;
     }
 
@@ -79,9 +79,10 @@ export default class extends Controller {
     this.dbPassRequiredTarget.classList.remove('hidden');
   }
 
-  #initEditMode() {
+  async #initEditMode() {
     if (!this.#hasPerm('Configurations_Connections_Update')) {
-      this.#showAccessDeniedAndRedirect('No cuenta con permisos para actualizar conexiones.');
+      await showAlert({ type: ALERT_TYPES.WARNING, title: 'Acceso Denegado', message: 'No cuenta con permisos para actualizar conexiones.' });
+      window.location.href = '/configurations/connections';
       return;
     }
 
@@ -148,7 +149,7 @@ export default class extends Controller {
 
       if (!json.Data) {
         const action = isCreate ? 'crear' : 'actualizar';
-        this.#showErrorModal(`Error al ${action} conexión`, json.Message || 'Error desconocido');
+        showAlert({ type: ALERT_TYPES.ERROR, title: `Error al ${action} conexión`, message: json.Message || 'Error desconocido' });
         return;
       }
 
@@ -157,19 +158,12 @@ export default class extends Controller {
 
       setTimeout(() => { window.location.href = '/configurations/connections'; }, 1500);
     } catch (err) {
-      this.#showErrorModal('Error', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error', message: err.message });
     }
   }
 
   cancel() {
     window.location.href = '/configurations/connections';
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
-    if (this._redirectAfterClose) {
-      window.location.href = this._redirectAfterClose;
-    }
   }
 
   // ── Validación ────────────────────────────────────────────────────────────
@@ -217,29 +211,6 @@ export default class extends Controller {
       DST:           this.dstTarget.value.trim(),
       UseTrusted:    this.useTrustedTarget.checked,
     };
-  }
-
-  // ── Helpers de UI ─────────────────────────────────────────────────────────
-
-  #showAccessDeniedAndRedirect(message) {
-    this._redirectAfterClose = '/configurations/connections';
-    this.errorIconTarget.textContent    = 'warning';
-    this.errorIconTarget.className      = 'material-icons text-yellow-500 text-2xl';
-    this.errorTitleTarget.textContent   = 'Acceso Denegado';
-    this.errorSubtitleTarget.textContent = message;
-    this.errorModalTarget.classList.remove('hidden');
-  }
-
-  #redirectAfterModalClose(url) {
-    this._redirectAfterClose = url;
-  }
-
-  #showErrorModal(title, subtitle) {
-    this.errorIconTarget.textContent      = 'error';
-    this.errorIconTarget.className        = 'material-icons text-red-500 text-2xl';
-    this.errorTitleTarget.textContent     = title;
-    this.errorSubtitleTarget.textContent  = subtitle;
-    this.errorModalTarget.classList.remove('hidden');
   }
 
   // ── Helpers generales ─────────────────────────────────────────────────────

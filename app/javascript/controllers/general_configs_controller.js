@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
-import { showToast } from 'vendor/clavisco/alerts'
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts'
 import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
 
 /**
@@ -27,7 +27,6 @@ export default class extends Controller {
     'updateFormatWrapper',
     'btnUpdateFormat',
     'cedulaInput',
-    'errorModal', 'errorTitle', 'errorSubtitle',
   ]
 
   // ----------------------------------------------------------------
@@ -178,7 +177,7 @@ export default class extends Controller {
       // Recargar para mostrar el nombre actualizado
       await this.#loadGeneralConfigs()
     } catch (err) {
-      this.#showErrorModal('Error al actualizar formato de impresión', err.message || 'Error desconocido')
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al actualizar formato de impresión', message: err.message || 'Error desconocido' })
     } finally {
       this.#hideOverlay()
     }
@@ -250,7 +249,7 @@ export default class extends Controller {
       showToast('Cédula proveedor sistemas actualizada con éxito!!!', 'success')
       await this.#loadSettings()
     } catch (err) {
-      this.#showErrorModal('Error al actualizar cédula', err.message || 'Error desconocido')
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al actualizar cédula', message: err.message || 'Error desconocido' })
     } finally {
       this.#hideOverlay()
     }
@@ -299,13 +298,4 @@ export default class extends Controller {
   #showOverlay(message) { showLoading(message) }
   #hideOverlay()        { hideLoading() }
 
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title
-    this.errorSubtitleTarget.textContent = subtitle
-    this.errorModalTarget.classList.remove('hidden')
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden')
-  }
 }

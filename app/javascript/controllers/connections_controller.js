@@ -28,9 +28,6 @@ export default class extends TabulatorController {
     'inputServer',
     'inputApiUrl',
     'btnCreate',
-    'errorModal',
-    'errorTitle',
-    'errorSubtitle',
   ];
 
   static values = { ...TabulatorController.values };
@@ -166,10 +163,6 @@ export default class extends TabulatorController {
       return;
     }
     window.location.href = `/configurations/connections/${conn.Id}/edit`;
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
   }
 
   // ── Render helpers ───────────────────────────────────────────────────────────

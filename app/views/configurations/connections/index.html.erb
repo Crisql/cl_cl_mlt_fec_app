@@ -60,27 +60,5 @@
     <div data-connections-target="table" data-testid="connections-table" class="h-full"></div>
   </div>
 
-  <%# ---------------------------------------------------------------- %>
-  <%# MODAL DE ERROR %>
-  <%# ---------------------------------------------------------------- %>
-  <div data-connections-target="errorModal"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-      <div class="flex items-center gap-3 mb-4">
-        <span class="material-icons text-red-500 text-2xl">error_outline</span>
-        <h3 data-connections-target="errorTitle"
-            class="text-base font-semibold text-gray-800"></h3>
-      </div>
-      <p data-connections-target="errorSubtitle"
-         class="text-sm text-gray-600 mb-6 break-words"></p>
-      <div class="flex justify-end">
-        <button type="button"
-                data-action="click->connections#closeErrorModal"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-          Aceptar
-        </button>
-      </div>
-    </div>
-  </div>
 
 </div>

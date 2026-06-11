@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus'
 import { TabulatorFull as Tabulator } from 'tabulator-tables'
 import { Storage, SStore } from 'vendor/clavisco/core'
-import { showToast } from 'vendor/clavisco/alerts'
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts'
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale'
 import {
   DOC_TYPE, DocTypes, IdentificationType, ForeignNonResidentIdentification,
@@ -63,10 +63,9 @@ export default class extends Controller {
     'exoNumeroDoc', 'exoFecha', 'exoArticulo', 'exoInciso',
     'exoInstitucion', 'exoInstitucionOtroWrap', 'exoInstitucionOtro', 'exoTarifa', 'exoMonto',
     'itemSubTotal', 'itemTaxAmount', 'itemTaxNeto', 'itemLineTotal',
-    'termSucSelect', 'confirmModal', 'confirmMessage',
+    'termSucSelect',
     'successModal', 'successTitle', 'successSubtitle',
-    'warningModal', 'warningTitle', 'warningSubtitle',
-    'errorModal', 'errorMessage', 'loadingOverlay', 'loadingMessage',
+    'loadingOverlay', 'loadingMessage',
   ]
 
   #docType = ''
@@ -116,7 +115,6 @@ export default class extends Controller {
   #custTimer = null
   #prodTimer = null
   #unitTimer = null
-  #pendingConfirm = null
   #docClickHandler = null
   #cabysTooltipEl = null
 
@@ -147,7 +145,7 @@ export default class extends Controller {
     document.body.appendChild(this.#cabysTooltipEl)
 
     if (!this.#companyId) {
-      this.#openWarning('Sin compañía seleccionada', 'Seleccione una compañía antes de crear un documento.')
+      showToast('Seleccione una compañía antes de crear un documento.', 'warning')
       return
     }
     this.#loadInitialData()
@@ -195,7 +193,7 @@ export default class extends Controller {
       this.#unitServicio = unitS?.UnidadMedidaType ?? []
     } catch (err) {
       this.#hideLoading()
-      this.#openError(`Error al cargar datos: ${err.message}`)
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al cargar datos', message: err.message })
       return
     }
     this.#hideLoading()
@@ -550,14 +548,13 @@ export default class extends Controller {
   // ── Referencias ───────────────────────────────────────────
   #newReference() { return { id: ++this.#idItemSeq, tipoDoc: '', tipoDocOtro: '', numero: '', codigo: '', fechaEmision: this.#today(), codigoOtro: '', razon: '' } }
   addReference() { if (this.#references.length < MAX_REFERENCES) { this.#references.push(this.#newReference()); this.#renderReferences() } }
-  removeReference(event) {
+  async removeReference(event) {
     const id = Number(event.currentTarget.dataset.id)
     if (this.#references.length <= 1) return
     const ref = this.#references.find(r => r.id === id)
     if (ref && ref.tipoDoc) {
-      this.#pendingConfirm = () => { this.#references = this.#references.filter(r => r.id !== id); this.#renderReferences() }
-      this.confirmMessageTarget.textContent = '¿Está seguro de eliminar esta referencia?'
-      this.confirmModalTarget.classList.remove('hidden')
+      const ok = await confirm('¿Está seguro de eliminar esta referencia?', 'Eliminar referencia')
+      if (ok) { this.#references = this.#references.filter(r => r.id !== id); this.#renderReferences() }
     } else { this.#references = this.#references.filter(r => r.id !== id); this.#renderReferences() }
   }
   setReferenceToday(event) { const ref = this.#references.find(r => r.id === Number(event.currentTarget.dataset.id)); if (ref) { ref.fechaEmision = this.#today(); this.#renderReferences() } }
@@ -1194,7 +1191,7 @@ export default class extends Controller {
       return
     }
     if (!this.#terminalSucList.length) {
-      this.#openWarning('Sin terminales', 'No hay terminales/sucursales configuradas. Configure la numeración.')
+      showToast('No hay terminales/sucursales configuradas. Configure la numeración.', 'warning')
       setTimeout(() => { window.location.href = '/configurations/numbering' }, 1500)
       return
     }
@@ -1236,7 +1233,7 @@ export default class extends Controller {
       const resp = await this.#apiFetch('/api/Documents/CreateDocumentManual', { method: 'POST', body: JSON.stringify(this.#buildPayload()), headers: { 'API': 'ApiFEUrl' } })
       this.#hideLoading()
       this.#handleCreateResponse(resp)
-    } catch (err) { this.#hideLoading(); this.#openError(err.message || 'Error al crear el documento') }
+    } catch (err) { this.#hideLoading(); showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al crear el documento', message: err.message || 'Error al crear el documento' }) }
   }
 
   #validateDocument() {
@@ -1512,19 +1509,13 @@ export default class extends Controller {
       this.successSubtitleTarget.textContent = `Estado: ${resp.HaciendaInfo.Estado ?? ''} | Clave: ${resp.HaciendaInfo.Clave ?? ''}`
       this.successModalTarget.classList.remove('hidden'); this.#docId = 0; this.btnSubmitLabelTarget.textContent = 'Crear'
     } else if (resp?.result === true && resp?.HaciendaInfo == null) {
-      this.warningTitleTarget.textContent = 'Documento creado con errores'
-      this.warningSubtitleTarget.textContent = resp?.errorInfo?.Message ?? resp?.Message ?? ''
-      this.warningModalTarget.classList.remove('hidden'); this.#docId = resp.DocId ?? 0; this.btnSubmitLabelTarget.textContent = 'Reenviar'
+      this.#docId = resp.DocId ?? 0
+      this.btnSubmitLabelTarget.textContent = 'Reenviar'
+      showAlert({ type: ALERT_TYPES.WARNING, title: 'Documento creado con errores', message: resp?.errorInfo?.Message ?? resp?.Message ?? '' })
     } else { showToast(resp?.errorInfo?.Message ?? resp?.Message ?? 'Error al crear el documento', 'error') }
   }
 
   closeSuccessModal() { this.successModalTarget.classList.add('hidden'); window.location.reload() }
-  closeWarningModal() { this.warningModalTarget.classList.add('hidden') }
-  closeErrorModal() { this.errorModalTarget.classList.add('hidden') }
-  #openWarning(title, subtitle = '') { this.warningTitleTarget.textContent = title; this.warningSubtitleTarget.textContent = subtitle; this.warningModalTarget.classList.remove('hidden') }
-  #openError(message) { this.errorMessageTarget.textContent = message; this.errorModalTarget.classList.remove('hidden') }
-  closeConfirmModal() { this.confirmModalTarget.classList.add('hidden'); this.#pendingConfirm = null }
-  confirmAction() { this.confirmModalTarget.classList.add('hidden'); if (this.#pendingConfirm) { this.#pendingConfirm(); this.#pendingConfirm = null } }
 
   #openPanel(panel, backdrop) { backdrop.classList.remove('hidden'); panel.classList.remove('translate-x-full'); document.body.style.overflow = 'hidden' }
   #closePanel(panel, backdrop) { panel.classList.add('translate-x-full'); backdrop.classList.add('hidden'); document.body.style.overflow = '' }

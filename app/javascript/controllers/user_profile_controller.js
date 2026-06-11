@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
 
 // Compañías con campo OCTypeControl habilitado (CompanyWhitOC enum del legacy Angular)
 const COMPANIES_WITH_OC = [186, 1206];
@@ -31,9 +31,6 @@ export default class extends Controller {
     'testCredentialsIcon',
     'testCredentialsLabel',
     'btnUpdate',
-    'errorModal',
-    'modalTitle',
-    'modalSubtitle',
   ];
 
   // ── Estado interno ─────────────────────────────────────────────────────────
@@ -94,7 +91,7 @@ export default class extends Controller {
 
       // groupsRes.Data disponible para uso futuro
     } catch (err) {
-      this.#showModal('Se produjo un error al obtener la información', this.#extractError(err));
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener la información', message: this.#extractError(err) });
     }
   }
 
@@ -230,11 +227,11 @@ export default class extends Controller {
       } else {
         this.#credentialsValidated = false;
         const message = data?.Message || 'No se pudo conectar a SAP Service Layer.';
-        this.#showModal('Credenciales inválidas', message);
+        showAlert({ type: ALERT_TYPES.ERROR, title: 'Credenciales inválidas', message });
       }
     } catch (err) {
       this.#credentialsValidated = false;
-      this.#showModal('Error al validar credenciales', this.#extractError(err));
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al validar credenciales', message: this.#extractError(err) });
     } finally {
       this.#isValidating = false;
       this.#syncButtonStates();
@@ -268,14 +265,10 @@ export default class extends Controller {
       showToast('Información actualizada con éxito!!!', 'success');
       this.#onLoad();
     } catch (err) {
-      this.#showModal('Error al actualizar perfil', this.#extractError(err));
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al actualizar perfil', message: this.#extractError(err) });
     } finally {
       this.btnUpdateTarget.disabled = false;
     }
-  }
-
-  closeModal() {
-    this.errorModalTarget.classList.add('hidden');
   }
 
   // ── Estado de botones ─────────────────────────────────────────────────────
@@ -335,14 +328,6 @@ export default class extends Controller {
     }
     this.sapUserErrorTarget.classList.add('hidden');
     return true;
-  }
-
-  // ── UI helpers ────────────────────────────────────────────────────────────
-
-  #showModal(title, subtitle) {
-    this.modalTitleTarget.textContent   = title;
-    this.modalSubtitleTarget.textContent = subtitle;
-    this.errorModalTarget.classList.remove('hidden');
   }
 
   // ── API helpers ───────────────────────────────────────────────────────────

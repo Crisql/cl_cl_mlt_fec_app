@@ -146,59 +146,6 @@
 
   </div>
 
-  <%# ── Modal de confirmación ──────────────────────────────────────────── %>
-  <div data-mail-parser-target="confirmModal"
-       data-testid="confirm-modal"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
-      <div class="flex items-start gap-3 mb-4">
-        <span class="material-icons text-yellow-500 text-2xl flex-shrink-0">help_outline</span>
-        <div>
-          <h3 data-mail-parser-target="confirmTitle"
-              class="text-base font-semibold text-gray-800"></h3>
-          <p data-mail-parser-target="confirmMessage"
-             class="mt-1 text-sm text-gray-600"></p>
-        </div>
-      </div>
-      <div class="flex justify-end gap-3">
-        <button type="button"
-                data-action="click->mail-parser#rejectConfirm"
-                class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-          Cancelar
-        </button>
-        <button type="button"
-                data-action="click->mail-parser#acceptConfirm"
-                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-          Aceptar
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <%# ── Modal de error ─────────────────────────────────────────────────── %>
-  <div data-mail-parser-target="errorModal"
-       data-testid="error-modal"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
-      <div class="flex items-start gap-3 mb-4">
-        <span class="material-icons text-red-500 text-2xl flex-shrink-0">error_outline</span>
-        <div class="min-w-0 flex-1">
-          <h3 data-mail-parser-target="errorTitle"
-              class="text-base font-semibold text-gray-800 break-words"></h3>
-          <p data-mail-parser-target="errorSubtitle"
-             class="mt-1 text-sm text-gray-600 break-words"></p>
-        </div>
-      </div>
-      <div class="flex justify-end">
-        <button type="button"
-                data-action="click->mail-parser#closeErrorModal"
-                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-          Aceptar
-        </button>
-      </div>
-    </div>
-  </div>
-
   <%# ── Backdrop panel lateral ──────────────────────────────────────────── %>
   <div data-mail-parser-target="panelBackdrop"
        data-action="click->mail-parser#closePanel"

@@ -24,29 +24,6 @@
     </div>
   </div>
 
-  <%# ── Modal de error ─────────────────────────────────────────────── %>
-  <div data-branches-target="errorModal"
-       data-testid="error-modal"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
-      <div class="flex items-start gap-3 mb-4">
-        <span class="material-icons text-red-500 text-2xl flex-shrink-0">error_outline</span>
-        <div>
-          <h3 data-branches-target="errorTitle"
-              class="text-base font-semibold text-gray-800"></h3>
-          <p data-branches-target="errorSubtitle"
-             class="mt-1 text-sm text-gray-600"></p>
-        </div>
-      </div>
-      <div class="flex justify-end">
-        <button type="button"
-                data-action="click->branches#closeErrorModal"
-                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-          Aceptar
-        </button>
-      </div>
-    </div>
-  </div>
 
   <%# ── Backdrop panel ─────────────────────────────────────────────── %>
   <div data-branches-target="panelBackdrop"

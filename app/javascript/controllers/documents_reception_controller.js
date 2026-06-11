@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
-import { showToast } from 'vendor/clavisco/alerts'
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts'
 import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
 
 // Constantes de dominio — mismas que Angular legacy
@@ -36,10 +36,6 @@ export default class extends Controller {
     'previewRcprNombre', 'previewRcprNombreComercial',
     'previewRcprNumero', 'previewRcprCorreo', 'previewRcprTelefono',
     'previewDetalleBody', 'previewCargosBody', 'previewTotalesBody',
-    // Error modal
-    'errorModal', 'errorModalMessage',
-    // Warning modal
-    'warningModal', 'warningModalMessage',
   ]
 
   #selectedFile = null
@@ -179,12 +175,12 @@ export default class extends Controller {
 
   async onSubmit() {
     if (!this.#companyId || parseInt(this.#companyId) === 0) {
-      this.#openWarning('No posee seleccionada una compañía. Verifique seleccionar o crear una antes de continuar.')
+      showToast('No posee seleccionada una compañía. Verifique seleccionar o crear una antes de continuar.', 'warning')
       return
     }
 
     if (!this.#selectedFile) {
-      this.#openWarning('Actualmente no es posible enviar el documento. Por favor, proceda a cargar un documento antes de intentar acceder a esta información.')
+      showToast('Actualmente no es posible enviar el documento. Por favor, proceda a cargar un documento antes de intentar acceder a esta información.', 'warning')
       return
     }
 
@@ -229,7 +225,7 @@ export default class extends Controller {
       }
     } catch (err) {
       hideLoading()
-      this.#openError(err.message || 'Error al enviar el documento')
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al enviar el documento', message: err.message || 'Error al enviar el documento' })
     }
   }
 
@@ -239,7 +235,7 @@ export default class extends Controller {
 
   async getPreview() {
     if (!this.#selectedFile) {
-      this.#openWarning('Actualmente no es posible visualizar los datos. Por favor, proceda a cargar un documento antes de intentar acceder a esta información.')
+      showToast('Actualmente no es posible visualizar los datos. Por favor, proceda a cargar un documento antes de intentar acceder a esta información.', 'warning')
       return
     }
 
@@ -265,7 +261,7 @@ export default class extends Controller {
       }
     } catch (err) {
       hideLoading()
-      this.#openError(err.message || 'Error al obtener la previsualización')
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al obtener la previsualización', message: err.message || 'Error al obtener la previsualización' })
     }
   }
 
@@ -389,27 +385,6 @@ export default class extends Controller {
     document.body.style.overflow = ''
   }
 
-  #openError(message) {
-    this.errorModalMessageTarget.textContent = message
-    this.errorModalTarget.classList.remove('hidden')
-    document.body.style.overflow = 'hidden'
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden')
-    document.body.style.overflow = ''
-  }
-
-  #openWarning(message) {
-    this.warningModalMessageTarget.textContent = message
-    this.warningModalTarget.classList.remove('hidden')
-    document.body.style.overflow = 'hidden'
-  }
-
-  closeWarningModal() {
-    this.warningModalTarget.classList.add('hidden')
-    document.body.style.overflow = ''
-  }
 
   // ──────────────────────────────────────────────
   // API FETCH — patrón estándar del proyecto

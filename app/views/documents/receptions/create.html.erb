@@ -643,38 +643,6 @@
   <%# ──────────────────────────────────────────────────── %>
   <%# MODAL: Advertencia / Error %>
   <%# ──────────────────────────────────────────────────── %>
-  <div data-documents-reception-create-target="warningModal"
-       data-testid="warning-modal"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
-      <span class="material-icons text-5xl text-amber-500 mb-3">warning</span>
-      <p data-documents-reception-create-target="warningModalMessage"
-         class="text-sm text-gray-700 mb-6"></p>
-      <button type="button"
-              data-action="click->documents-reception-create#closeWarningModal"
-              class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-        Continuar
-      </button>
-    </div>
-  </div>
-
-  <%# MODAL: Error %>
-  <div data-documents-reception-create-target="errorModal"
-       data-testid="error-modal"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
-      <span class="material-icons text-5xl text-red-500 mb-3">error</span>
-      <p data-documents-reception-create-target="errorModalMessage"
-         class="text-sm text-gray-700 mb-6"></p>
-      <button type="button"
-              data-action="click->documents-reception-create#closeErrorModal"
-              class="px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
-        Cerrar
-      </button>
-    </div>
-  </div>
-
-  <%# ──────────────────────────────────────────────────── %>
   <%# PANEL: Previsualización del documento de recepción %>
   <%# ──────────────────────────────────────────────────── %>
   <div data-documents-reception-create-target="previewBackdrop"

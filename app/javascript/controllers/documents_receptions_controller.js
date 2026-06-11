@@ -1,6 +1,6 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 import { showLoading, hideLoading } from 'vendor/clavisco/overlay';
 
@@ -64,15 +64,13 @@ export default class extends TabulatorController {
 
     // Panel lateral Consultar Información (igual que documents-issued)
     'infoPanelBackdrop', 'infoPanel',
-    'infoFechaEmision',
+    'infoFechaEmision', 'infoDetalleMensaje', 'infoDetalleMensajeSection',
     'infoErrorSection', 'infoError',
     'infoErrorHaciendaSection', 'infoErrorHacienda',
 
     // Modal confirmación
-    'confirmModal', 'confirmTitle', 'confirmSubtitle', 'confirmBtn',
 
     // Modal error
-    'errorModal', 'errorTitle', 'errorSubtitle',
   ];
 
   static values = { ...TabulatorController.values };
@@ -90,7 +88,6 @@ export default class extends TabulatorController {
   #companyInfo = null;   // { DefaultTaxForXML, SendReceptAndApInv, UseFactProv }
   #activeReceptDoc = null;
   #formChanged = false;
-  #confirmCallback = null;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -185,11 +182,6 @@ export default class extends TabulatorController {
         width: 165,
       },
       {
-        title: 'Tipo de Documento',
-        field: 'DocTypes',
-        width: 130,
-      },
-      {
         title: 'Nombre Emisor',
         field: 'NombreEmisor',
         widthGrow: 2,
@@ -254,8 +246,6 @@ export default class extends TabulatorController {
           const row = cell.getRow().getData();
           if (e.target.closest('[data-action-type="options"]')) {
             this.#showRowDropdown(e, row);
-          } else if (e.target.closest('[data-action-type="detail"]')) {
-            this.#showDetalleMensaje(row);
           }
         },
       },
@@ -303,7 +293,7 @@ export default class extends TabulatorController {
       const json = await this.#apiFetch(`/api/Documents/SearchDocumentsAccepted?${queryParams}`);
 
       if (!json.Data) {
-        this.#showErrorModal('Error al obtener documentos', json.Message || 'Error desconocido');
+        showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al obtener documentos', message: json.Message || 'Error desconocido' });
         return { data: [], last_page: 1 };
       }
 
@@ -326,7 +316,7 @@ export default class extends TabulatorController {
 
       return { data: docs, last_page: lastPage };
     } catch (err) {
-      this.#showErrorModal('Error al obtener documentos', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al obtener documentos', message: err.message });
       return { data: [], last_page: 1 };
     }
   }
@@ -356,16 +346,10 @@ export default class extends TabulatorController {
 
   #actionButtons() {
     return `
-      <div class="flex items-center gap-1">
-        <button type="button" data-action-type="options" data-tooltip="Opciones"
-                class="p-1.5 text-gray-600 rounded hover:bg-gray-100 transition-colors cursor-pointer">
-          <span class="material-icons text-base pointer-events-none">more_vert</span>
-        </button>
-        <button type="button" data-action-type="detail" data-tooltip="Detalle del Mensaje"
-                class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-          <span class="material-icons text-base pointer-events-none">chat_bubble_outline</span>
-        </button>
-      </div>`;
+      <button type="button" data-action-type="options" data-tooltip="Opciones"
+              class="p-1.5 text-gray-600 rounded hover:bg-gray-100 transition-colors cursor-pointer">
+        <span class="material-icons text-base pointer-events-none">more_vert</span>
+      </button>`;
   }
 
   // ── Dropdown de opciones por fila ─────────────────────────────────────────
@@ -646,6 +630,10 @@ export default class extends TabulatorController {
       ? row.FechaEmisionXML.substring(0, 10)
       : '';
 
+    const detalle = row.DetalleMensaje || '';
+    this.infoDetalleMensajeTarget.textContent = detalle;
+    this.infoDetalleMensajeSectionTarget.classList.toggle('hidden', !detalle);
+
     if (row.ErrDetails) {
       this.infoErrorTarget.textContent = row.ErrDetails;
       this.infoErrorSectionTarget.classList.remove('hidden');
@@ -729,11 +717,6 @@ export default class extends TabulatorController {
     });
   }
 
-  #showDetalleMensaje(row) {
-    this.infoTitleTarget.textContent = 'Detalle del Mensaje';
-    this.infoBodyTarget.textContent  = row.DetalleMensaje || '';
-    this.infoModalTarget.classList.remove('hidden');
-  }
 
   #sendToSAP(row) {
     if (row.Status !== 1) {
@@ -778,58 +761,42 @@ export default class extends TabulatorController {
 
   // ── Descarga Masiva ────────────────────────────────────────────────────────
 
-  bulkDownload() {
-    this.confirmTitleTarget.textContent    = 'Descarga Masiva';
-    this.confirmSubtitleTarget.textContent = 'Se creará una solicitud de descarga masiva según los filtros aplicados. Los archivos serán enviados al correo del usuario.';
-    this.#confirmCallback = async () => {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        await this.#apiFetch('/api/Report/BulkDownloadOfDocuments/', {
-          method: 'POST',
-          body: JSON.stringify({
-            Id:             0,
-            CreationDate:   today,
-            UserId:         '',
-            StartDate:      this.inputStartDateTarget.value,
-            EndDate:        this.inputEndDateTarget.value,
-            CompanyId:      this.#companyId,
-            DocType:        2,
-            Status:         0,
-            AttemptsToSend: 0,
-            LastAttempt:    null,
-            UseXMLDate:     false,
-            KindOfDocuments:'01',
-            ToEmail:        '',
-            CCEmail:        '',
-          }),
-        });
-        showToast('Solicitud de descarga masiva creada con éxito', 'success');
-      } catch (err) {
-        this.#showErrorModal('Error en descarga masiva', err.message);
-      }
-    };
-    this.confirmModalTarget.classList.remove('hidden');
-  }
-
-  acceptConfirm() {
-    this.confirmModalTarget.classList.add('hidden');
-    if (this.#confirmCallback) {
-      this.#confirmCallback();
-      this.#confirmCallback = null;
+  async bulkDownload() {
+    const confirmed = await confirm(
+      'Se creará una solicitud de descarga masiva según los filtros aplicados. Los archivos serán enviados al correo del usuario.',
+      'Descarga Masiva',
+      ALERT_TYPES.INFO
+    );
+    if (!confirmed) return;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await this.#apiFetch('/api/Report/BulkDownloadOfDocuments/', {
+        method: 'POST',
+        body: JSON.stringify({
+          Id:             0,
+          CreationDate:   today,
+          UserId:         '',
+          StartDate:      this.inputStartDateTarget.value,
+          EndDate:        this.inputEndDateTarget.value,
+          CompanyId:      this.#companyId,
+          DocType:        2,
+          Status:         0,
+          AttemptsToSend: 0,
+          LastAttempt:    null,
+          UseXMLDate:     false,
+          KindOfDocuments:'01',
+          ToEmail:        '',
+          CCEmail:        '',
+        }),
+      });
+      showToast('Solicitud de descarga masiva creada con éxito', 'success');
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error en descarga masiva', message: err.message });
     }
-  }
-
-  cancelConfirm() {
-    this.confirmModalTarget.classList.add('hidden');
-    this.#confirmCallback = null;
   }
 
   closeInfoModal() {
     this.infoModalTarget.classList.add('hidden');
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
   }
 
   // ── Formulario handlers ────────────────────────────────────────────────────
@@ -956,14 +923,6 @@ export default class extends TabulatorController {
     } catch {
       // Cargar sin datos dinámicos — no es fatal
     }
-  }
-
-  // ── Modal Error ───────────────────────────────────────────────────────────
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title;
-    this.errorSubtitleTarget.textContent = subtitle;
-    this.errorModalTarget.classList.remove('hidden');
   }
 
   // ── Tooltip dropdown ─────────────────────────────────────────────────────

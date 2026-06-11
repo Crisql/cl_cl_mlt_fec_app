@@ -684,50 +684,6 @@
 <%# MODALES Y TOAST COMPARTIDOS %>
 <%# ============================================================ %>
 
-<%# Modal error/info genérico %>
-<div data-company-form-target="errorModal"
-     data-testid="error-modal"
-     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-    <div class="flex items-center gap-3 mb-4">
-      <span data-company-form-target="errorIcon" class="material-icons text-2xl text-red-500">error_outline</span>
-      <h3 data-company-form-target="errorTitle"
-          class="text-base font-semibold text-gray-800"></h3>
-    </div>
-    <p data-company-form-target="errorSubtitle"
-       class="text-sm text-gray-600 mb-6 break-words"></p>
-    <div class="flex justify-end">
-      <button type="button"
-              data-action="click->company-form#closeErrorModal"
-              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-        Aceptar
-      </button>
-    </div>
-  </div>
-</div>
-
-<%# Modal confirmación (restablecer formato, etc.) %>
-<div data-company-form-target="confirmModal"
-     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-    <h3 data-company-form-target="confirmTitle"
-        class="text-base font-semibold text-gray-800 mb-2"></h3>
-    <p data-company-form-target="confirmSubtitle"
-       class="text-sm text-gray-600 mb-6"></p>
-    <div class="flex justify-end gap-3">
-      <button type="button"
-              data-action="click->company-form#cancelConfirm"
-              class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-        Cancelar
-      </button>
-      <button type="button"
-              data-action="click->company-form#doConfirm"
-              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-        Continuar
-      </button>
-    </div>
-  </div>
-</div>
 
 <%# ============================================================ %>
 <%# PANEL LATERAL DERECHO — Crear Conexión SAP %>

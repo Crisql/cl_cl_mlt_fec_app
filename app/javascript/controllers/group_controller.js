@@ -1,6 +1,6 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller'
 import { Storage, SStore } from 'vendor/clavisco/core'
-import { showToast } from 'vendor/clavisco/alerts'
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts'
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale'
 
 /**
@@ -46,11 +46,6 @@ export default class extends TabulatorController {
     'newGroupNameError',
     'newGroupDescription',
     'createSubmitBtn',
-    // Modales
-    'confirmModal',
-    'errorModal',
-    'errorTitle',
-    'errorSubtitle',
   ]
 
   static values = { ...TabulatorController.values }
@@ -175,7 +170,7 @@ export default class extends TabulatorController {
         this.#loadCompanies(),
       ])
     } catch (err) {
-      this.#showErrorModal('Se produjo un error al obtener la información del grupo', err.message)
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener la información del grupo', message: err.message })
     }
   }
 
@@ -297,28 +292,21 @@ export default class extends TabulatorController {
       })
       showToast('Grupo actualizado exitosamente', 'success')
     } catch (err) {
-      this.#showErrorModal('Error al actualizar el grupo', err.message)
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al actualizar el grupo', message: err.message })
     }
   }
 
   // ── Restablecer formato ───────────────────────────────────────────────────
 
-  resetPrintFormat() {
-    this.confirmModalTarget.classList.remove('hidden')
-  }
-
-  cancelResetFormat() {
-    this.confirmModalTarget.classList.add('hidden')
-  }
-
-  async confirmResetFormat() {
-    this.confirmModalTarget.classList.add('hidden')
+  async resetPrintFormat() {
+    const confirmed = await confirm('Esta acción restablecerá el formato de impresión al predeterminado.', 'Restablecer formato')
+    if (!confirmed) return
     try {
       await this.#apiFetch(`/api/Group/ResetPrintFormat?groupId=${this.#groupId}`, { method: 'PATCH' })
       showToast('Formato de impresión restablecido con éxito', 'success')
       await this.#loadInitialData()
     } catch (err) {
-      this.#showErrorModal('Error al restablecer el formato de impresión', err.message)
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al restablecer el formato de impresión', message: err.message })
     }
   }
 
@@ -402,18 +390,6 @@ export default class extends TabulatorController {
     } catch (err) {
       showToast(err.message || 'Error al crear el grupo.', 'error')
     }
-  }
-
-  // ── Modales ───────────────────────────────────────────────────────────────
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden')
-  }
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title    || 'Error'
-    this.errorSubtitleTarget.textContent = subtitle || ''
-    this.errorModalTarget.classList.remove('hidden')
   }
 
   // ── Badge de estado (CLAUDE.md §1) ────────────────────────────────────────

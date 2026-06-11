@@ -17,7 +17,7 @@
 
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 export default class extends TabulatorController {
@@ -25,8 +25,6 @@ export default class extends TabulatorController {
     ...TabulatorController.targets,
     // filtro
     'roleFilter',
-    // tabla error modal
-    'errorModal', 'errorTitle', 'errorSubtitle',
     // panel
     'panelBackdrop', 'panel', 'panelTitle',
     'panelRole', 'panelRoleError',
@@ -332,7 +330,7 @@ export default class extends TabulatorController {
       this.closePanel();
       await this.#loadRoles();
     } catch (err) {
-      this.#showErrorModal('Error al guardar la asignación', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar la asignación', message: err.message });
     } finally {
       this.submitBtnTarget.disabled = false;
     }
@@ -354,16 +352,6 @@ export default class extends TabulatorController {
     }
     return valid;
   }
-
-  // ── Error modal ───────────────────────────────────────────────────────────
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title;
-    this.errorSubtitleTarget.textContent = subtitle || '';
-    this.errorModalTarget.classList.remove('hidden');
-  }
-
-  closeErrorModal() { this.errorModalTarget.classList.add('hidden'); }
 
   // ── apiFetch ──────────────────────────────────────────────────────────────
 

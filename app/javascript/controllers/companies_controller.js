@@ -1,6 +1,6 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
@@ -29,10 +29,6 @@ export default class extends TabulatorController {
     'searchComercialName',
     'searchIdentification',
     'btnCreate',
-    'confirmModal',
-    'errorModal',
-    'errorTitle',
-    'errorSubtitle',
   ];
 
   static values = { ...TabulatorController.values };
@@ -140,10 +136,7 @@ export default class extends TabulatorController {
       const json = await this.#apiFetch(`${url}?${qp}`);
 
       if (json.Error || !json.Data) {
-        this.#showErrorModal(
-          'Se produjo un error al obtener información de Compañías',
-          json.Message || 'Error desconocido'
-        );
+        showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener información de Compañías', message: json.Message || 'Error desconocido' });
         return { data: [], last_page: 1 };
       }
 
@@ -152,7 +145,7 @@ export default class extends TabulatorController {
       const lastPage = Math.max(1, Math.ceil(total / size));
       return { data: json.Data, last_page: lastPage };
     } catch (err) {
-      this.#showErrorModal('Se produjo un error al obtener las compañías', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener las compañías', message: err.message });
       return { data: [], last_page: 1 };
     }
   }
@@ -168,44 +161,27 @@ export default class extends TabulatorController {
     window.location.href = '/configurations/companies/new';
   }
 
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
-  }
-
-  cancelFavorite() {
-    this.#pendingFavoriteId = null;
-    this.confirmModalTarget.classList.add('hidden');
-  }
-
-  async confirmFavorite() {
-    this.confirmModalTarget.classList.add('hidden');
-    if (!this.#pendingFavoriteId) return;
-
-    const id = this.#pendingFavoriteId;
-    this.#pendingFavoriteId = null;
-
-    try {
-      const json = await this.#apiFetch(`/api/companies/${id}/favorite`, { method: 'POST' });
-      if (json.Error) {
-        showToast(`Error al cambiar la compañía favorita. ${json.Message}`, 'error');
-      } else {
-        showToast('Compañía favorita cambiada con éxito', 'success');
-        this.table.replaceData();   // recarga la página actual
-      }
-    } catch (err) {
-      showToast(`Error: ${err.message}`, 'error');
-    }
-  }
-
   // ── Event handlers de fila ─────────────────────────────────────────────────
 
-  #onFavoriteClick(company) {
+  async #onFavoriteClick(company) {
     if ((company.QtyRolAssign ?? 1) === 0) {
       showToast('Opción no disponible, ya que no posee asignaciones.', 'info');
       return;
     }
-    this.#pendingFavoriteId = company.Id;
-    this.confirmModalTarget.classList.remove('hidden');
+    const confirmed = await confirm('¿Está seguro de que desea cambiar la compañía favorita?', 'Compañía favorita');
+    if (!confirmed) return;
+
+    try {
+      const json = await this.#apiFetch(`/api/companies/${company.Id}/favorite`, { method: 'POST' });
+      if (json.Error) {
+        showToast(`Error al cambiar la compañía favorita. ${json.Message}`, 'error');
+      } else {
+        showToast('Compañía favorita cambiada con éxito', 'success');
+        this.table.replaceData();
+      }
+    } catch (err) {
+      showToast(`Error: ${err.message}`, 'error');
+    }
   }
 
   #onEditClick(company) {
@@ -237,12 +213,6 @@ export default class extends TabulatorController {
   }
 
   // ── Helpers de UI ──────────────────────────────────────────────────────────
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title;
-    this.errorSubtitleTarget.textContent = subtitle;
-    this.errorModalTarget.classList.remove('hidden');
-  }
 
   /** Permissions es string[] — e.g. ["F_CreateCompany", "S_Company"] */
   #hasPerm(name) {

@@ -1,7 +1,7 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { TabulatorFull } from 'tabulator-tables';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
@@ -54,8 +54,6 @@ export default class extends TabulatorController {
     'recActive',     'recActiveLabel',
     'recSaveBtn',    'recSaveIcon', 'recSaveLabel',
 
-    // Modal de error
-    'errorModal', 'errorTitle', 'errorSubtitle',
   ];
 
   static values = { ...TabulatorController.values };
@@ -339,10 +337,7 @@ export default class extends TabulatorController {
       this.closeNumberingPanel();
       await this.#reloadNum();
     } catch (err) {
-      this.#showErrorModal(
-        `Error al ${this.#editingNum ? 'actualizar' : 'registrar'} la numeración`,
-        err.message
-      );
+      showAlert({ type: ALERT_TYPES.ERROR, title: `Error al ${this.#editingNum ? 'actualizar' : 'registrar'} la numeración`, message: err.message });
     } finally {
       this.numSaveBtnTarget.disabled = false;
     }
@@ -454,10 +449,7 @@ export default class extends TabulatorController {
       this.closeReceptionPanel();
       await this.#reloadRec();
     } catch (err) {
-      this.#showErrorModal(
-        `Error al ${this.#editingRec ? 'actualizar' : 'registrar'} la numeración de recepción`,
-        err.message
-      );
+      showAlert({ type: ALERT_TYPES.ERROR, title: `Error al ${this.#editingRec ? 'actualizar' : 'registrar'} la numeración de recepción`, message: err.message });
     } finally {
       this.recSaveBtnTarget.disabled = false;
     }
@@ -494,18 +486,6 @@ export default class extends TabulatorController {
       this.recTerminalErrorTarget,   this.recObvsErrorTarget,
       this.recIntegrationErrorTarget,
     ].forEach(e => e.classList.add('hidden'));
-  }
-
-  // ── Modal de error ─────────────────────────────────────────────────────────
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
-  }
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title;
-    this.errorSubtitleTarget.textContent = subtitle;
-    this.errorModalTarget.classList.remove('hidden');
   }
 
   // ── Helpers de panel ──────────────────────────────────────────────────────

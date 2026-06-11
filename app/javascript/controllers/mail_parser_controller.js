@@ -1,6 +1,6 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
@@ -61,11 +61,6 @@ export default class extends TabulatorController {
     'tableWrapper',
     'tenantsPanel', 'tenantsInboxEmail', 'tenantsSearch', 'tenantsLoading', 'tenantsList',
 
-    // Modal de confirmación
-    'confirmModal', 'confirmTitle', 'confirmMessage',
-
-    // Modal de error
-    'errorModal', 'errorTitle', 'errorSubtitle',
   ];
 
   static values = { ...TabulatorController.values };
@@ -88,9 +83,6 @@ export default class extends TabulatorController {
 
   // Snapshot de credenciales (edición) — se actualiza tras validación exitosa
   #credentialSnapshot = null;
-
-  // Resolver del modal de confirmación
-  #confirmResolve = null;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -312,7 +304,7 @@ export default class extends TabulatorController {
       this.#isCredentialsValidated = false;
       this.#updateValidateButton(false, false);
       this.saveBtnTarget.disabled = true;
-      this.#showErrorModal('Error al validar', displayMessage);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al validar', message: displayMessage });
     } finally {
       this.#isValidating = false;
     }
@@ -338,35 +330,8 @@ export default class extends TabulatorController {
       this.#closePanel();
       this.table?.setData();
     } catch (err) {
-      this.#showErrorModal('Error al guardar', err.message || 'No se pudo guardar la configuración.');
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar', message: err.message || 'No se pudo guardar la configuración.' });
     }
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
-  }
-
-  // ── Modal de confirmación ─────────────────────────────────────────────────
-
-  #showConfirmModal(title, message) {
-    return new Promise(resolve => {
-      this.#confirmResolve = resolve;
-      this.confirmTitleTarget.textContent   = title;
-      this.confirmMessageTarget.textContent = message;
-      this.confirmModalTarget.classList.remove('hidden');
-    });
-  }
-
-  acceptConfirm() {
-    this.confirmModalTarget.classList.add('hidden');
-    this.#confirmResolve?.(true);
-    this.#confirmResolve = null;
-  }
-
-  rejectConfirm() {
-    this.confirmModalTarget.classList.add('hidden');
-    this.#confirmResolve?.(false);
-    this.#confirmResolve = null;
   }
 
   // ── Panel de Compañías Emisoras ───────────────────────────────────────────
@@ -399,9 +364,9 @@ export default class extends TabulatorController {
     if (!tenant) return;
 
     const label = newStatus ? 'activar' : 'inactivar';
-    const confirmed = await this.#showConfirmModal(
-      'Confirmar cambio de estado',
-      `¿Está seguro que desea ${label} la compañía "${tenant.CompanyName}"?`
+    const confirmed = await confirm(
+      `¿Está seguro que desea ${label} la compañía "${tenant.CompanyName}"?`,
+      'Confirmar cambio de estado'
     );
     if (!confirmed) return;
 
@@ -741,12 +706,6 @@ export default class extends TabulatorController {
                  class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">
       ${labelOverride ?? label}
     </span>`;
-  }
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title;
-    this.errorSubtitleTarget.textContent = subtitle;
-    this.errorModalTarget.classList.remove('hidden');
   }
 
   // ── Fetch helper ─────────────────────────────────────────────────────────

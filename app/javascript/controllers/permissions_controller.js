@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
-import { showToast } from 'vendor/clavisco/alerts'
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts'
 import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
 
 /**
@@ -42,8 +42,6 @@ export default class extends Controller {
     'assignCountGlobal', 'unassignCountGlobal',
     'btnCancelGlobal', 'btnApply',
 
-    // Modal de error
-    'errorModal', 'errorTitle', 'errorSubtitle',
   ]
 
   static values = {
@@ -365,7 +363,7 @@ export default class extends Controller {
       await this.#apiFetch(`/api/Permission/GetPermsByUser?companyId=${company.companyId}`)
       window.location.reload()
     } catch (err) {
-      this.#showErrorModal('Error al guardar permisos', err.message || 'Error desconocido')
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar permisos', message: err.message || 'Error desconocido' })
     } finally {
       this.#hideOverlay()
     }
@@ -808,7 +806,7 @@ export default class extends Controller {
       this.#hasGlobalChanges = false
       this.#updateGlobalChangesUI()
     } catch (err) {
-      this.#showErrorModal('Error al aplicar cambios', err.message || 'Error desconocido')
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al aplicar cambios', message: err.message || 'Error desconocido' })
     } finally {
       this.#hideOverlay()
     }
@@ -1061,13 +1059,4 @@ export default class extends Controller {
     return div.innerHTML
   }
 
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title
-    this.errorSubtitleTarget.textContent = subtitle
-    this.errorModalTarget.classList.remove('hidden')
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden')
-  }
 }

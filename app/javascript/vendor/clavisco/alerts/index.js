@@ -179,9 +179,9 @@ class AlertsService {
     return this.showToast(message, ALERT_TYPES.INFO, duration)
   }
 
-  confirm(message, title = 'Confirmar') {
+  confirm(message, title = 'Confirmar', type = ALERT_TYPES.WARNING) {
     return this.showAlert({
-      type: ALERT_TYPES.WARNING,
+      type,
       title,
       message,
       showCancel: true
@@ -222,8 +222,8 @@ export function info(message, duration) {
   return alerts.info(message, duration)
 }
 
-export function confirm(message, title) {
-  return alerts.confirm(message, title)
+export function confirm(message, title, type) {
+  return alerts.confirm(message, title, type)
 }
 
 export default {

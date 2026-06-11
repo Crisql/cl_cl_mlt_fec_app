@@ -1,6 +1,6 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
@@ -27,9 +27,6 @@ export default class extends TabulatorController {
     'submitBtn',
     'submitIcon',
     'submitLabel',
-    'errorModal',
-    'errorTitle',
-    'errorSubtitle',
   ];
 
   static values = { ...TabulatorController.values };
@@ -112,17 +109,14 @@ export default class extends TabulatorController {
       const json = await this.#apiFetch(`/api/Rol/GetRoles?companyId=${this.#companyId}`);
 
       if (json.Error || !json.Data) {
-        this.#showErrorModal(
-          'Se produjo un error al obtener los roles',
-          json.Message || 'Error desconocido'
-        );
+        showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener los roles', message: json.Message || 'Error desconocido' });
         return;
       }
 
       this.#roles = json.Data;
       this.setData(this.#roles);
     } catch (err) {
-      this.#showErrorModal('Se produjo un error al obtener los roles', err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener los roles', message: err.message });
     } finally {
       this.table?.clearAlert();
     }
@@ -209,16 +203,12 @@ export default class extends TabulatorController {
       await this.#loadRoles();
     } catch (err) {
       const action = this.#editingRole ? 'actualizar' : 'registrar';
-      this.#showErrorModal(`Se produjo un error al ${action} el rol`, err.message);
+      showAlert({ type: ALERT_TYPES.ERROR, title: `Se produjo un error al ${action} el rol`, message: err.message });
     }
   }
 
   closeModal() {
     this.modalTarget.classList.add('hidden');
-  }
-
-  closeErrorModal() {
-    this.errorModalTarget.classList.add('hidden');
   }
 
   // ── Helpers de UI ─────────────────────────────────────────────────────────
@@ -232,12 +222,6 @@ export default class extends TabulatorController {
     this.nameInputTarget.value    = '';
     this.submitBtnTarget.disabled = true;
     this.nameErrorTarget.classList.add('hidden');
-  }
-
-  #showErrorModal(title, subtitle) {
-    this.errorTitleTarget.textContent    = title;
-    this.errorSubtitleTarget.textContent = subtitle;
-    this.errorModalTarget.classList.remove('hidden');
   }
 
   async #apiFetch(url, options = {}) {

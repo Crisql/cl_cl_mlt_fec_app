@@ -208,30 +208,6 @@
 
   </div>
 
-  <%# ── Modal de error ─────────────────────────────────────────────────── %>
-  <div data-email-senders-target="errorModal"
-       data-testid="error-modal"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
-      <div class="flex items-start gap-3 mb-4">
-        <span class="material-icons text-red-500 text-2xl flex-shrink-0">error_outline</span>
-        <div>
-          <h3 data-email-senders-target="errorTitle"
-              class="text-base font-semibold text-gray-800"></h3>
-          <p data-email-senders-target="errorSubtitle"
-             class="mt-1 text-sm text-gray-600 break-words"></p>
-        </div>
-      </div>
-      <div class="flex justify-end">
-        <button type="button"
-                data-action="click->email-senders#closeErrorModal"
-                class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-          Aceptar
-        </button>
-      </div>
-    </div>
-  </div>
-
   <%# ── Backdrop panel lateral ──────────────────────────────────────────── %>
   <div data-email-senders-target="panelBackdrop"
        data-action="click->email-senders#closePanel"
