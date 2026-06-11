@@ -274,6 +274,11 @@ export default class extends TabulatorController {
       throw new Error(decodedMessage || text || `HTTP ${response.status}`);
     }
 
+    const hasBody = response.status !== 204 &&
+                    response.headers.get('content-length') !== '0' &&
+                    response.headers.get('content-type')?.includes('application/json');
+    if (!hasBody) return { Message: decodedMessage || null };
+
     const json = await response.json();
     if (decodedMessage && !json.Message) json.Message = decodedMessage;
     return json;

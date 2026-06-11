@@ -340,6 +340,25 @@ await this.#apiFetch('/api/Documents/123/Reprocess?...', {
 - Para errores (non-2xx): usar `decodedMessage` como mensaje primario.
 - **NUNCA** llamar `.json()` sin verificar body — las escrituras frecuentemente devuelven `204`.
 
+### ⚠️ Error: `response.json()` en respuestas 204 No Content
+
+**Síntoma:** Una acción (POST/PATCH/DELETE) lanza una excepción del tipo `SyntaxError: Unexpected end of JSON input` o similar, aunque la operación fue exitosa en el servidor.
+**Causa:** El endpoint devuelve `204 No Content` (sin body) y el código llama `.json()` directamente.
+**Patrón incorrecto:**
+```js
+const json = await response.json(); // ❌ explota si status === 204
+```
+**Fix — usar el guard `hasBody` antes de parsear:**
+```js
+const hasBody = response.status !== 204 &&
+                response.headers.get('content-length') !== '0' &&
+                response.headers.get('content-type')?.includes('application/json');
+if (!hasBody) return { Message: decodedMessage || null };
+
+const json = await response.json(); // ✅ solo si hay body
+```
+Este guard ya está incluido en el patrón `#apiFetch` canónico de arriba — copiar íntegro, nunca recortar.
+
 ### ⚠️ Error silencioso más frecuente
 
 **Síntoma:** La API devuelve 401/403 o datos vacíos aunque el usuario está autenticado.
