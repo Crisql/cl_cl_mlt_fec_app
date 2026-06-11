@@ -121,13 +121,16 @@ export default class extends TabulatorController {
   // ── Configuración Tabulator ────────────────────────────────────────────────
 
   getTableConfig() {
+    const baseConfig = super.getTableConfig();
+    delete baseConfig.data; // Eliminar data estático para que Tabulator use AJAX desde el inicio
+
     return {
-      ...super.getTableConfig(),
+      ...baseConfig,
       height: '100%',
       maxHeight: undefined,
       movableRows: false,
       layout: 'fitColumns',
-      placeholder: 'No hay documentos para mostrar. Aplique un filtro y presione Consultar.',
+      placeholder: 'No se encontraron documentos para los filtros aplicados.',
       // Paginación remota: Tabulator gestiona el UI; nosotros fetcheamos por página
       pagination: true,
       paginationMode: 'remote',
