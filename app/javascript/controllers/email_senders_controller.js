@@ -81,8 +81,7 @@ export default class extends TabulatorController {
   #currentTab   = 'config';
 
   // Tab 1
-  #startPos     = 1;
-  #stepPos      = 5;
+  #totalRecords  = 0;        // total real del servidor (evita sobreestimación de Tabulator)
   #editingRecord = null;
   #isEdit       = false;
   #isCredentialsValidated = false;
@@ -104,10 +103,9 @@ export default class extends TabulatorController {
     const company   = SStore.get('CurrentCompany');
     this.#companyId = company?.companyId ? parseInt(company.companyId) : null;
 
-    super.connect();
+    super.connect();  // inicializa Tabulator; dispara ajaxRequestFunc con page=1 automáticamente
     this.#loadHosts();
     this.#loadCompanies();
-    this.#searchConfig();
   }
 
   // ── Configuración Tabulator ────────────────────────────────────────────────
@@ -123,9 +121,20 @@ export default class extends TabulatorController {
       layout: 'fitColumns',
       placeholder: 'No hay bandejas registradas',
       pagination: true,
-      paginationSize: this.#stepPos,
+      paginationMode: 'remote',
+      paginationSize: 5,
       paginationSizeSelector: [5, 10, 15],
-      paginationCounter: 'rows',
+      // paginationCounter custom — Tabulator calcula el total como last_page*pageSize, lo que
+      // sobreestima cuando la última página no está llena. Usamos el total real del servidor.
+      paginationCounter: (_pageSize, currentRow, _currentPage, _totalRows, _totalPages) => {
+        const total = this.#totalRecords;
+        if (!total) return '';
+        const to = Math.min(currentRow + _pageSize - 1, total);
+        return `Mostrando ${currentRow.toLocaleString('es-CR')}-${to.toLocaleString('es-CR')} de ${total.toLocaleString('es-CR')} filas`;
+      },
+      // ajaxURL requerido para activar modo remote; el request real lo hace ajaxRequestFunc
+      ajaxURL: '/api/EmailConfig/SearchEmailConfig',
+      ajaxRequestFunc: (_url, _config, params) => this.#fetchPage(params),
       locale: TABULATOR_LOCALE,
       langs:  TABULATOR_LANGS,
       dataLoaderLoading: TABULATOR_LOADING_HTML,
@@ -197,8 +206,8 @@ export default class extends TabulatorController {
   }
 
   searchConfig() {
-    this.#startPos = 1;
-    this.#searchConfig();
+    // setData() recarga vía ajaxRequestFunc y vuelve a la página 1
+    this.table?.setData();
   }
 
   openCreatePanel() {
@@ -304,7 +313,7 @@ export default class extends TabulatorController {
         showToast('Bandeja actualizada exitosamente.', 'success');
       }
       this.#closePanel();
-      this.#searchConfig();
+      this.table?.setData();
     } catch (err) {
       this.#showErrorModal('Error al guardar', err.message || 'No se pudo guardar la bandeja.');
     }
@@ -444,18 +453,25 @@ export default class extends TabulatorController {
     } catch (_) { /* no bloquear */ }
   }
 
-  async #searchConfig() {
+  /**
+   * Función de carga remota para Tabulator.
+   * @param {Object} params  { page (1-indexed), size, ... }
+   * @returns {Promise<{data: Array, last_page: number}>}
+   */
+  async #fetchPage(params) {
+    const page = params.page || 1;
+    const size = params.size || 5;
     const hostVal = this.filterHostTarget.value;
-    this.tableLoaderTarget.classList.remove('hidden');
-    try {
-      const payload = {
-        Email:    this.filterEmailTarget.value.trim(),
-        Host:     hostVal === 'Todos' ? '' : hostVal,
-        SSL:      this.filterSslTarget.value,
-        StartPos: this.#startPos,
-        StepPos:  this.#stepPos,
-      };
 
+    const payload = {
+      Email:    this.filterEmailTarget.value.trim(),
+      Host:     hostVal === 'Todos' ? '' : hostVal,
+      SSL:      this.filterSslTarget.value,
+      StartPos: page,
+      StepPos:  size,
+    };
+
+    try {
       const data = await this.#apiFetch('/api/EmailConfig/SearchEmailConfig', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -463,17 +479,13 @@ export default class extends TabulatorController {
       });
 
       const records = data.emailConfigList || [];
-
-      if (this.table) {
-        this.table.setData(records);
-      } else {
-        this.initializeTable();
-        requestAnimationFrame(() => this.table?.setData(records));
-      }
+      const total   = data.maxQuantityRows ?? records[0]?.maxQuantityRows ?? 0;
+      this.#totalRecords = total;
+      const lastPage = Math.max(1, Math.ceil(total / size));
+      return { data: records, last_page: lastPage };
     } catch (err) {
       showToast(err.message || 'Error al buscar las bandejas.', 'error');
-    } finally {
-      this.tableLoaderTarget.classList.add('hidden');
+      return { data: [], last_page: 1 };
     }
   }
 

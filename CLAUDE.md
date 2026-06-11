@@ -1,5 +1,54 @@
 # Convenciones de UI — FEC Rails Migration
 
+## 17. Paginación remota Tabulator — contador de filas correcto
+
+**Problema:** `paginationCounter: 'rows'` calcula el total como `last_page × pageSize`.
+Si la última página no está llena (ej. 154 registros en páginas de 10 → last_page = 16),
+Tabulator muestra "160 filas" en la primera carga y corrige a 154 solo al llegar a la última página.
+
+**Causa raíz:** Tabulator no conoce el total real — solo infiere `last_page` del API response.
+
+**Patrón obligatorio para toda tabla con paginación remota:**
+
+```js
+// 1. Campo de instancia para guardar el total real
+#totalRecords = 0;
+
+// 2. En getTableConfig() — reemplazar paginationCounter: 'rows'
+paginationCounter: (_pageSize, currentRow, _currentPage, _totalRows, _totalPages) => {
+  const total = this.#totalRecords;
+  if (!total) return '';
+  const to = Math.min(currentRow + _pageSize - 1, total);
+  return `Mostrando ${currentRow.toLocaleString('es-CR')}-${to.toLocaleString('es-CR')} de ${total.toLocaleString('es-CR')} filas`;
+},
+
+// 3. En #fetchPage() — guardar el total antes de retornar
+const total = json.Data[0]?.MaxQtyRowsFetch ?? 0;  // o la propiedad que use la API
+this.#totalRecords = total;
+const lastPage = Math.max(1, Math.ceil(total / size));
+return { data: json.Data, last_page: lastPage };
+```
+
+**⚠️ NUNCA usar `paginationCounter: 'rows'`** en tablas con `paginationMode: 'remote'`.
+
+### Paginación remota — migrar de `setData()` local a `ajaxRequestFunc`
+
+Si un controller carga datos con `this.table.setData(records)` (modo local), Tabulator
+no puede paginar correctamente en el servidor. El patrón correcto es `ajaxRequestFunc`:
+
+```js
+// getTableConfig()
+ajaxURL: '/api/MiEndpoint',                              // activa modo remote
+ajaxRequestFunc: (_url, _config, params) => this.#fetchPage(params),
+ajaxResponse:    (_url, _params, response) => response,
+
+// connect() — super.connect() ya dispara la primera carga, no llamar #fetchPage manualmente
+super.connect();
+
+// action público de búsqueda — setData() recarga y vuelve a página 1
+search() { this.table?.setData(); }
+```
+
 ## 0. Registro obligatorio de Stimulus controllers
 
 **Regla:** Todo controller nuevo **DEBE** registrarse en `app/javascript/controllers/index.js`

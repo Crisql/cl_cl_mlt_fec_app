@@ -36,6 +36,7 @@ export default class extends TabulatorController {
   static values = { ...TabulatorController.values };
 
   #permissions = [];
+  #totalRecords = 0;        // total real del servidor (evita sobreestimación de Tabulator)
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -64,7 +65,14 @@ export default class extends TabulatorController {
       paginationMode: 'remote',
       paginationSize: 5,
       paginationSizeSelector: [5, 10, 15],
-      paginationCounter: 'rows',
+      // paginationCounter custom — Tabulator calcula el total como last_page*pageSize, lo que
+      // sobreestima cuando la última página no está llena. Usamos el total real del servidor.
+      paginationCounter: (_pageSize, currentRow, _currentPage, _totalRows, _totalPages) => {
+        const total = this.#totalRecords;
+        if (!total) return '';
+        const to = Math.min(currentRow + _pageSize - 1, total);
+        return `Mostrando ${currentRow.toLocaleString('es-CR')}-${to.toLocaleString('es-CR')} de ${total.toLocaleString('es-CR')} filas`;
+      },
       locale: TABULATOR_LOCALE,
       langs: TABULATOR_LANGS,
       dataLoaderLoading: TABULATOR_LOADING_HTML,
@@ -133,6 +141,7 @@ export default class extends TabulatorController {
       }
 
       const total    = parseInt(headers.get('cl-dba-pagination-records-count') ?? '0') || json.Data.length;
+      this.#totalRecords = total;
       const lastPage = Math.max(1, Math.ceil(total / size));
       return { data: json.Data, last_page: lastPage };
     } catch (err) {
