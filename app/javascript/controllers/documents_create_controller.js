@@ -1,6 +1,8 @@
 import { Controller } from '@hotwired/stimulus'
+import { TabulatorFull as Tabulator } from 'tabulator-tables'
 import { Storage, SStore } from 'vendor/clavisco/core'
 import { showToast } from 'vendor/clavisco/alerts'
+import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale'
 import {
   DOC_TYPE, DocTypes, IdentificationType, ForeignNonResidentIdentification,
   IdentificationTypeFEC, ID_LENGTH, CondicionVenta, CondicionVentaFE, CondicionVentaREP,
@@ -43,8 +45,8 @@ export default class extends Controller {
     'btnAddMedioPago', 'medioPagoList',
     'totalSubtotal', 'totalImpuestos', 'totalDescuento', 'totalTotal',
     'accordionPanel',
-    'customerBackdrop', 'customerPanel', 'customerSearchInput', 'customerCol8707', 'customerBody',
-    'productBackdrop', 'productPanel', 'productSearchInput', 'productBody',
+    'customerBackdrop', 'customerPanel', 'customerSearchInput', 'customerTable',
+    'productBackdrop', 'productPanel', 'productSearchInput', 'productTable',
     'itemBackdrop', 'itemPanel', 'itemPanelTitle', 'itemCabys', 'itemCabysLoading', 'cabysAutocomplete',
     'itemCode', 'itemProductType', 'itemTipoTransaccion', 'itemDescription', 'itemPriceLabel',
     'itemPrice', 'itemQuantity', 'itemDiscount', 'itemUnit', 'unitAutocomplete', 'itemCommercialUnit',
@@ -80,8 +82,10 @@ export default class extends Controller {
   #unitProducto = []
   #unitServicio = []
   #unitOptions = []
-  #customers = []
-  #products = []
+  #customerTabulator = null
+  #customerTotalRecords = 0
+  #productTabulator = null
+  #productTotalRecords = 0
   #terminalSucList = []
 
   #identificationTypeList = []
@@ -165,6 +169,8 @@ export default class extends Controller {
     [this.#cabysTimer, this.#activityTimer, this.#custTimer, this.#prodTimer, this.#unitTimer].forEach(t => t && clearTimeout(t))
     if (this.#docClickHandler) document.removeEventListener('mousedown', this.#docClickHandler)
     if (this.#cabysTooltipEl) this.#cabysTooltipEl.remove()
+    this.#customerTabulator?.destroy()
+    this.#productTabulator?.destroy()
     document.body.style.overflow = ''
   }
 
@@ -371,38 +377,99 @@ export default class extends Controller {
 
   // ── Cliente ───────────────────────────────────────────────
   onCustomerSearchKeydown(event) { if (event.key === 'Tab') this.openCustomerModal() }
-  async openCustomerModal() {
-    this.customerCol8707Target.classList.toggle('hidden', this.#docType !== DOC_TYPE.FEC)
+  openCustomerModal() {
     this.#openPanel(this.customerPanelTarget, this.customerBackdropTarget)
     this.customerSearchInputTarget.value = this.rcprNombreTarget.value || ''
-    await this.#searchCustomers(this.customerSearchInputTarget.value)
+    if (!this.#customerTabulator) {
+      this.#initCustomerTabulator()
+    } else {
+      this.#customerTabulator.setData()
+    }
   }
   closeCustomerModal() { this.#closePanel(this.customerPanelTarget, this.customerBackdropTarget) }
-  onCustomerSearchInput() { clearTimeout(this.#custTimer); this.#custTimer = setTimeout(() => this.#searchCustomers(this.customerSearchInputTarget.value), 300) }
-  async #searchCustomers(filter) {
-    try {
-      const data = await this.#apiFetch(`/api/Customer?companyId=${this.#companyId}&docTypeFE=${this.#docType}&filterCustomer=${encodeURIComponent(filter || '')}`)
-      this.#customers = data?.Data ?? data ?? []
-      this.#renderCustomers()
-    } catch (err) { showToast(`Error al buscar clientes: ${err.message}`, 'error') }
+  onCustomerSearchInput() {
+    clearTimeout(this.#custTimer)
+    this.#custTimer = setTimeout(() => {
+      this.#customerTotalRecords = 0
+      this.#customerTabulator?.replaceData()
+    }, 300)
   }
-  #renderCustomers() {
-    const tbody = this.customerBodyTarget
-    tbody.innerHTML = ''
-    if (!this.#customers.length) { tbody.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-xs text-gray-400">Sin resultados</td></tr>'; return }
+
+  #initCustomerTabulator() {
     const showFEC = this.#docType === DOC_TYPE.FEC
-    this.#customers.forEach((c, idx) => {
-      const tr = document.createElement('tr')
-      tr.className = 'border-b border-gray-100 hover:bg-blue-50 cursor-pointer'
-      tr.dataset.testid = `customer-row-${idx}`
-      tr.innerHTML = `
-        <td class="px-3 py-2 text-xs text-gray-700">${this.#customerName(c)}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${c.RcprIdeNumero ?? c.IdNumber ?? ''}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${c.CodigoActividad ?? c.RcprCodigoActividad ?? ''}</td>
-        ${showFEC ? `<td class="px-3 py-2 text-xs text-gray-700">${c.EmsrRegistrofiscal8707 ?? c.Registrofiscal8707 ?? ''}</td>` : '<td class="hidden"></td>'}`
-      tr.addEventListener('click', () => this.#selectCustomer(c))
-      tbody.appendChild(tr)
+    const columns = [
+      { title: 'Nombre',              field: 'Name',                widthGrow: 2, formatter: (cell) => this.#customerName(cell.getRow().getData()) },
+      { title: 'Identificación',      field: 'RcprIdeNumero',       widthGrow: 1 },
+      { title: 'Código de Actividad', field: 'CodigoActividad',     widthGrow: 1 },
+      ...(showFEC ? [{ title: 'Reg. 8707', field: 'EmsrRegistrofiscal8707', widthGrow: 1 }] : []),
+    ]
+    this.#customerTotalRecords = 0
+    this.#customerTabulator = new Tabulator(this.customerTableTarget, {
+      height: '100%',
+      layout: 'fitColumns',
+      columnDefaults: { headerSort: false },
+      placeholder: 'Sin resultados',
+      pagination: true,
+      paginationMode: 'remote',
+      paginationSize: 10,
+      paginationSizeSelector: [10, 20, 50],
+      paginationCounter: (_pageSize, currentRow, _currentPage, _totalRows, _totalPages) => {
+        const total = this.#customerTotalRecords
+        if (!total) return ''
+        const to = Math.min(currentRow + _pageSize - 1, total)
+        return `Mostrando ${currentRow}-${to} de ${total} filas`
+      },
+      locale: TABULATOR_LOCALE,
+      langs: TABULATOR_LANGS,
+      dataLoaderLoading: TABULATOR_LOADING_HTML,
+      ajaxURL: '/api/Customer',
+      ajaxRequestFunc: (_url, _cfg, params) => this.#fetchCustomerPage(params),
+      ajaxResponse: (_url, _params, response) => response,
+      rowFormatter: (row) => {
+        const el = row.getElement()
+        if (row.getData()._cl_placeholder) { el.style.cssText = 'height:0;overflow:hidden;border:none;padding:0;pointer-events:none' }
+        else { el.style.cursor = 'pointer' }
+      },
+      columns,
     })
+    // Event delegation: un solo listener en el contenedor estable evita duplicados por re-render
+    this.customerTableTarget.addEventListener('click', (e) => {
+      const rowEl = e.target.closest('.tabulator-row')
+      if (!rowEl) return
+      const rows = this.#customerTabulator?.getRows() ?? []
+      const row  = rows.find(r => r.getElement() === rowEl)
+      if (row && !row.getData()._cl_placeholder) this.#selectCustomer(row.getData())
+    })
+  }
+
+  async #fetchCustomerPage(params) {
+    const size   = params.size || 10
+    const apiPage = (params.page || 1) - 1
+    const filter = this.customerSearchInputTarget.value.trim()
+    const qp = new URLSearchParams({
+      companyId:      String(this.#companyId),
+      docTypeFE:      this.#docType,
+      filterCustomer: filter,
+    })
+    try {
+      const { json, headers } = await this.#apiFetchRaw(`/api/Customer?${qp}`, {
+        headers: {
+          'cl-sl-pagination-page':      String(apiPage),
+          'cl-sl-pagination-page-size': String(size),
+        },
+      })
+      if (!json.Data) { showToast(json.Message || 'Error al obtener clientes', 'error'); return { data: [], last_page: 1 } }
+      const total    = parseInt(headers.get('cl-sl-pagination-records-count') ?? '0') || json.Data.length
+      this.#customerTotalRecords = total
+      const lastPage = Math.max(1, Math.ceil(total / size))
+      // Tabulator caps last_page to 1 when data.length < pageSize; pad with placeholders to preserve page count.
+      const data = [...json.Data]
+      while (data.length < size) data.push({ _cl_placeholder: true })
+      return { data, last_page: lastPage }
+    } catch (err) {
+      showToast(`Error al buscar clientes: ${err.message}`, 'error')
+      return { data: [], last_page: 1 }
+    }
   }
   #customerName(c) {
     if (c.Name) return c.Name
@@ -431,7 +498,7 @@ export default class extends Controller {
   }
   onIdentificationTypeChange() {
     const idType = this.rcprIdeTipoTarget.value; const cfg = ID_LENGTH[idType]
-    if (cfg) { this.rcprIdeNumeroTarget.minLength = cfg.min; this.rcprIdeNumeroTarget.maxLength = cfg.max; this.rcprIdeNumeroTarget.disabled = false }
+    if (cfg) { this.rcprIdeNumeroTarget.maxLength = cfg.max; this.rcprIdeNumeroTarget.minLength = cfg.min; this.rcprIdeNumeroTarget.disabled = false }
     else { if (this.#docType === DOC_TYPE.FE || this.#docType === DOC_TYPE.FEC) this.rcprIdeNumeroTarget.value = ''; else this.rcprIdeNumeroTarget.disabled = true }
     const isForeign = idType === '05'
     this.otrasSenasExtranjeroTarget.disabled = !isForeign
@@ -552,29 +619,96 @@ export default class extends Controller {
   }
 
   // ── Búsqueda de producto ──────────────────────────────────
-  async openProductSearch() { this.#openPanel(this.productPanelTarget, this.productBackdropTarget); this.productSearchInputTarget.value = ''; await this.#searchProducts('') }
-  closeProductSearch() { this.#closePanel(this.productPanelTarget, this.productBackdropTarget) }
-  onProductSearchInput() { clearTimeout(this.#prodTimer); this.#prodTimer = setTimeout(() => this.#searchProducts(this.productSearchInputTarget.value), 300) }
-  async #searchProducts(filter) {
-    try {
-      const data = await this.#apiFetch(`/api/Item?companyId=${this.#companyId}&docType=${this.#docType}&filter=${encodeURIComponent(filter || '')}`)
-      this.#products = data?.Data ?? data ?? []
-      this.#renderProducts()
-    } catch (err) { showToast(`Error al buscar productos: ${err.message}`, 'error') }
+  openProductSearch() {
+    this.#openPanel(this.productPanelTarget, this.productBackdropTarget)
+    this.productSearchInputTarget.value = ''
+    if (!this.#productTabulator) {
+      this.#initProductTabulator()
+    } else {
+      this.#productTabulator.setData()
+    }
   }
-  #renderProducts() {
-    const tbody = this.productBodyTarget; tbody.innerHTML = ''
-    if (!this.#products.length) { tbody.innerHTML = '<tr><td colspan="3" class="px-3 py-4 text-center text-xs text-gray-400">Sin resultados</td></tr>'; return }
-    this.#products.forEach((p, idx) => {
-      const tr = document.createElement('tr')
-      tr.className = 'border-b border-gray-100 hover:bg-blue-50 cursor-pointer'; tr.dataset.testid = `product-row-${idx}`
-      tr.innerHTML = `
-        <td class="px-3 py-2 text-xs text-gray-700">${p.CodTipo ?? p.ItemCode ?? p.Code ?? ''}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${p.Descripcion ?? p.ItemName ?? p.Description ?? ''}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmt(p.Precio ?? p.Price ?? 0)}</td>`
-      tr.addEventListener('click', () => this.#selectProduct(p))
-      tbody.appendChild(tr)
+  closeProductSearch() { this.#closePanel(this.productPanelTarget, this.productBackdropTarget) }
+  onProductSearchInput() {
+    clearTimeout(this.#prodTimer)
+    this.#prodTimer = setTimeout(() => {
+      this.#productTotalRecords = 0
+      this.#productTabulator?.replaceData()
+    }, 300)
+  }
+
+  #initProductTabulator() {
+    this.#productTotalRecords = 0
+    this.#productTabulator = new Tabulator(this.productTableTarget, {
+      height: '100%',
+      layout: 'fitColumns',
+      columnDefaults: { headerSort: false },
+      placeholder: 'Sin resultados',
+      pagination: true,
+      paginationMode: 'remote',
+      paginationSize: 10,
+      paginationSizeSelector: [10, 20, 50],
+      paginationCounter: (_pageSize, currentRow, _currentPage, _totalRows, _totalPages) => {
+        const total = this.#productTotalRecords
+        if (!total) return ''
+        const to = Math.min(currentRow + _pageSize - 1, total)
+        return `Mostrando ${currentRow}-${to} de ${total} filas`
+      },
+      locale: TABULATOR_LOCALE,
+      langs: TABULATOR_LANGS,
+      dataLoaderLoading: TABULATOR_LOADING_HTML,
+      ajaxURL: '/api/Item',
+      ajaxRequestFunc: (_url, _cfg, params) => this.#fetchProductPage(params),
+      ajaxResponse: (_url, _params, response) => response,
+      rowFormatter: (row) => {
+        const el = row.getElement()
+        if (row.getData()._cl_placeholder) { el.style.cssText = 'height:0;overflow:hidden;border:none;padding:0;pointer-events:none' }
+        else { el.style.cursor = 'pointer' }
+      },
+      columns: [
+        { title: 'Código',      field: 'CodTipo',     widthGrow: 1, formatter: (cell) => { const d = cell.getRow().getData(); return d.CodTipo ?? d.ItemCode ?? d.Code ?? '' } },
+        { title: 'Descripción', field: 'Descripcion', widthGrow: 3, formatter: (cell) => { const d = cell.getRow().getData(); return d.Descripcion ?? d.ItemName ?? d.Description ?? '' } },
+        { title: 'Precio',      field: 'Precio',      widthGrow: 1, hozAlign: 'right', formatter: (cell) => { const d = cell.getRow().getData(); return this.#fmt(d.Precio ?? d.Price ?? 0) } },
+      ],
     })
+    // Event delegation: un solo listener en el contenedor estable evita duplicados por re-render
+    this.productTableTarget.addEventListener('click', (e) => {
+      const rowEl = e.target.closest('.tabulator-row')
+      if (!rowEl) return
+      const rows = this.#productTabulator?.getRows() ?? []
+      const row  = rows.find(r => r.getElement() === rowEl)
+      if (row && !row.getData()._cl_placeholder) this.#selectProduct(row.getData())
+    })
+  }
+
+  async #fetchProductPage(params) {
+    const size    = params.size || 10
+    const apiPage = (params.page || 1) - 1
+    const filter  = this.productSearchInputTarget.value.trim()
+    const qp = new URLSearchParams({
+      companyId: String(this.#companyId),
+      docType:   this.#docType,
+      filter,
+    })
+    try {
+      const { json, headers } = await this.#apiFetchRaw(`/api/Item?${qp}`, {
+        headers: {
+          'cl-sl-pagination-page':      String(apiPage),
+          'cl-sl-pagination-page-size': String(size),
+        },
+      })
+      if (!json.Data) { showToast(json.Message || 'Error al obtener productos', 'error'); return { data: [], last_page: 1 } }
+      const total    = parseInt(headers.get('cl-sl-pagination-records-count') ?? '0') || json.Data.length
+      this.#productTotalRecords = total
+      const lastPage = Math.max(1, Math.ceil(total / size))
+      // Tabulator caps last_page to 1 when data.length < pageSize; pad with placeholders to preserve page count.
+      const data = [...json.Data]
+      while (data.length < size) data.push({ _cl_placeholder: true })
+      return { data, last_page: lastPage }
+    } catch (err) {
+      showToast(`Error al buscar productos: ${err.message}`, 'error')
+      return { data: [], last_page: 1 }
+    }
   }
   #selectProduct(p) {
     this.itemCodeTarget.value = p.CodTipo ?? p.ItemCode ?? p.Code ?? ''
@@ -1357,7 +1491,7 @@ export default class extends Controller {
         CodigoDescuentoSurtido: '',
         DescuentoSurtidoOtros: '',
         BaseImponibleSurtido: null,
-        IVACobradoFabricaSurtido: null,
+        IVACobradoFabricaSurtoSurtido: null,
         ImpCodigoImpuestoSurtido: null,
         ImpCodigoImpuestoOTROSurtido: null,
         ImpTarifaIVASurtido: null,
@@ -1420,6 +1554,27 @@ export default class extends Controller {
   #today() { const d = new Date(); const pad = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
   #fmt(value) { const num = parseFloat(value); if (isNaN(num)) return `${this.#selectedCurrencySymbol} 0,00`; return `${this.#selectedCurrencySymbol} ${num.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
   async #fetchJson(path) { const res = await fetch(path); if (!res.ok) throw new Error(`No se pudo cargar ${path}`); return res.json() }
+
+  // Variante de #apiFetch que devuelve también los headers de respuesta (para paginación).
+  async #apiFetchRaw(url, options = {}) {
+    const apiTarget = options.headers?.['API'] ?? 'ApiAppUrl'
+    const token = (Storage.get('Session') || {}).access_token
+    const company = SStore.get('CurrentCompany')
+    const companyId = company?.companyId ?? this.#companyId
+    const headers = {
+      'Content-Type': 'application/json', 'API': apiTarget, 'X-Skip-Error-Interceptor': 'true',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(companyId ? { 'Cl-Company-Id': String(companyId) } : {}),
+      ...(options.headers || {}),
+    }
+    const response = await fetch(url, { ...options, headers })
+    const clMessage = response.headers.get('cl-message')
+    const decoded = clMessage ? (() => { try { return decodeURIComponent(clMessage) } catch { return clMessage } })() : null
+    if (!response.ok) { const text = await response.text().catch(() => response.statusText); throw new Error(decoded || text || `HTTP ${response.status}`) }
+    const json = await response.json()
+    if (decoded && !json.Message) json.Message = decoded
+    return { json, headers: response.headers }
+  }
 
   async #apiFetch(url, options = {}) {
     const apiTarget = options.headers?.['API'] ?? 'ApiAppUrl'
