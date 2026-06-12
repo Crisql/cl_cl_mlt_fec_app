@@ -1,0 +1,3 @@
+{
+  "_comment": "JSON no soporta comentarios reales, pero esta clave sirve como nota: la definicion del menu vive en app/javascript/data/menu.js. Se movio ahi por compatibilidad con Rails importmap, que no puede resolver imports de JSON ni rutas fuera de app/javascript/."
+}
