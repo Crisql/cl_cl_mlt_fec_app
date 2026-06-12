@@ -1,0 +1,406 @@
+<% content_for :title, "Gestión de Usuarios" %>
+<% content_for :page_title, "Gestión de Usuarios" %>
+
+<%# Users — migración de /configurations/users (3 tabs: Lista, Completar Registro, Asignación) %>
+<div data-controller="users"
+     class="p-6 flex flex-col h-full">
+
+  <%# ── Tab navigation ─────────────────────────────────────────────────── %>
+  <div class="mb-4 flex-shrink-0 border-b border-gray-200">
+    <nav class="-mb-px flex gap-4" aria-label="Tabs">
+
+      <button type="button"
+              data-users-target="tabBtn"
+              data-tab-name="list"
+              data-perm="Configurations_Users_ListAccess"
+              data-action="click->users#switchTab"
+              class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors whitespace-nowrap">
+        Lista de Usuarios
+      </button>
+
+      <button type="button"
+              data-users-target="tabBtn"
+              data-tab-name="complete-registration"
+              data-perm="S_CompUser"
+              data-action="click->users#switchTab"
+              class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors whitespace-nowrap">
+        Completar Registro
+      </button>
+
+      <button type="button"
+              data-users-target="tabBtn"
+              data-tab-name="assignment"
+              data-perm="S_AsigUser"
+              data-action="click->users#switchTab"
+              class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors whitespace-nowrap">
+        Asignación de compañías
+      </button>
+
+    </nav>
+  </div>
+
+  <%# ══════════════════════════════════════════════════════════════════════ %>
+  <%# TAB 0 — Lista de Usuarios                                             %>
+  <%# ══════════════════════════════════════════════════════════════════════ %>
+  <div data-users-target="tabContent"
+       data-tab="list"
+       class="hidden flex-col flex-1 min-h-0 gap-4">
+
+    <%# Toolbar %>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-shrink-0">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Nombre Completo</label>
+          <input type="text"
+                 data-users-target="searchName"
+                 placeholder="Nombre Completo"
+                 class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Correo Electrónico</label>
+          <input type="text"
+                 data-users-target="searchEmail"
+                 placeholder="Correo Electrónico"
+                 class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="flex gap-2">
+          <button type="button"
+                  data-action="click->users#searchUsers"
+                  class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
+            <span class="material-icons text-base">filter_alt</span>
+            Consultar
+          </button>
+          <a href="<%= configurations_users_register_path %>"
+             data-users-target="createBtn"
+             class="hidden flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+            <span class="material-icons text-base">add</span>
+            Crear
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+    <%# Tabla %>
+    <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div data-users-target="table" class="h-full"></div>
+    </div>
+
+  </div>
+
+  <%# ══════════════════════════════════════════════════════════════════════ %>
+  <%# TAB 1 — Completar Registro                                            %>
+  <%# ══════════════════════════════════════════════════════════════════════ %>
+  <div data-users-target="tabContent"
+       data-tab="complete-registration"
+       class="hidden flex-col flex-1 min-h-0">
+
+    <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div data-users-target="completeTable" class="h-full"></div>
+    </div>
+
+  </div>
+
+  <%# ══════════════════════════════════════════════════════════════════════ %>
+  <%# TAB 2 — Asignación de compañías                                       %>
+  <%# ══════════════════════════════════════════════════════════════════════ %>
+  <div data-users-target="tabContent"
+       data-tab="assignment"
+       class="hidden flex-col gap-4 flex-1 min-h-0">
+
+    <%# Filtros de búsqueda %>
+    <div class="flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+      <div class="flex flex-wrap gap-4 items-end">
+
+        <%# Autocomplete Usuario %>
+        <div class="flex flex-col gap-1 flex-1 min-w-[240px]">
+          <label class="text-xs font-medium text-gray-600">Buscar Usuario</label>
+          <div class="relative">
+            <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+              <input type="text"
+                     data-users-target="userInput"
+                     data-action="input->users#filterUsers focus->users#showUserDropdown"
+                     placeholder="Escribe para buscar..."
+                     autocomplete="off"
+                     class="flex-1 px-3 py-2 text-sm outline-none bg-transparent">
+              <span class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-400 flex-shrink-0">
+                <span class="material-icons text-base leading-none">search</span>
+              </span>
+            </div>
+            <ul data-users-target="userDropdown"
+                class="hidden absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm">
+            </ul>
+          </div>
+        </div>
+
+        <%# Autocomplete Grupo %>
+        <div class="flex flex-col gap-1 flex-1 min-w-[240px]">
+          <label class="text-xs font-medium text-gray-600">Buscar Grupo de Compañías</label>
+          <div class="relative">
+            <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+              <input type="text"
+                     data-users-target="groupInput"
+                     data-action="input->users#filterGroups focus->users#showGroupDropdown"
+                     placeholder="Escribe para buscar..."
+                     autocomplete="off"
+                     class="flex-1 px-3 py-2 text-sm outline-none bg-transparent">
+              <span class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-400 flex-shrink-0">
+                <span class="material-icons text-base leading-none">search</span>
+              </span>
+            </div>
+            <ul data-users-target="groupDropdown"
+                class="hidden absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm">
+            </ul>
+          </div>
+        </div>
+
+        <%# Badge cambios pendientes %>
+        <div data-users-target="changesBadge"
+             class="hidden items-center gap-2 bg-gray-100 rounded-full px-4 py-2">
+          <span class="text-xs text-gray-500">Cambios pendientes:</span>
+          <span data-users-target="changesBadgeValue"
+                class="font-bold text-gray-400 text-sm min-w-6 text-center">0</span>
+        </div>
+
+      </div>
+    </div>
+
+    <%# Estado vacío %>
+    <div data-users-target="emptyState"
+         class="flex-1 flex flex-col items-center justify-center bg-white rounded-xl shadow-sm border border-gray-200 text-gray-400">
+      <span class="material-icons text-6xl mb-3">person_search</span>
+      <h2 class="text-lg font-semibold text-gray-600">Selecciona un usuario</h2>
+      <p class="text-sm mt-1">Elige un usuario para gestionar sus compañías asignadas</p>
+    </div>
+
+    <%# Panel dual-list (visible solo cuando hay usuario seleccionado) %>
+    <div data-users-target="assignmentPanel"
+         class="hidden flex-1 min-h-0 flex flex-col gap-3">
+
+      <%# Dual list %>
+      <div class="flex-1 min-h-0 grid grid-cols-[1fr_auto_1fr] gap-6">
+
+        <%# Compañías Disponibles %>
+        <div class="flex flex-col min-h-0">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-t-lg text-white flex-shrink-0"
+               style="background: linear-gradient(135deg, #4db8e8 0%, #0082c0 100%)">
+            <span class="material-icons text-xl">business</span>
+            <h3 class="flex-1 text-sm font-medium m-0">Compañías Disponibles</h3>
+            <span data-users-target="unassignedCount"
+                  class="bg-white/30 px-3 py-0.5 rounded-full text-xs font-bold">0</span>
+            <button type="button"
+                    data-action="click->users#assignAll"
+                    data-tooltip="Asignar todas"
+                    class="text-white hover:bg-white/20 rounded p-0.5 transition-colors">
+              <span class="material-icons">chevron_right</span>
+            </button>
+          </div>
+          <div data-users-target="unassignedList"
+               data-drop-zone="unassigned"
+               data-action="dragover->users#onDragOver dragleave->users#onDragLeave drop->users#onDrop"
+               class="flex-1 min-h-0 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 bg-gray-50 overflow-y-auto transition-colors">
+            <div data-users-target="emptyUnassigned"
+                 class="flex flex-col items-center justify-center h-full text-gray-400 py-10">
+              <span class="material-icons text-5xl opacity-40 mb-3">check_circle</span>
+              <p class="text-xs">Todas las compañías están asignadas</p>
+            </div>
+          </div>
+        </div>
+
+        <%# Indicador central %>
+        <div class="flex flex-col items-center justify-center gap-2 py-5">
+          <span class="material-icons text-5xl text-gray-300 animate-pulse">swap_horiz</span>
+        </div>
+
+        <%# Compañías Asignadas %>
+        <div class="flex flex-col min-h-0">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-t-lg text-white flex-shrink-0"
+               style="background: linear-gradient(135deg, #0082c0 0%, #005a85 100%)">
+            <button type="button"
+                    data-action="click->users#unassignAll"
+                    data-tooltip="Desasignar todas"
+                    class="text-white hover:bg-white/20 rounded p-0.5 transition-colors">
+              <span class="material-icons">chevron_left</span>
+            </button>
+            <span class="material-icons text-xl">assignment_turned_in</span>
+            <h3 class="flex-1 text-sm font-medium m-0">Compañías Asignadas</h3>
+            <span data-users-target="assignedCount"
+                  class="bg-white/30 px-3 py-0.5 rounded-full text-xs font-bold">0</span>
+          </div>
+          <div data-users-target="assignedList"
+               data-drop-zone="assigned"
+               data-action="dragover->users#onDragOver dragleave->users#onDragLeave drop->users#onDrop"
+               class="flex-1 min-h-0 border-2 border-dashed border-gray-200 border-t-0 rounded-b-lg p-3 bg-gray-50 overflow-y-auto transition-colors">
+            <div data-users-target="emptyAssigned"
+                 class="flex flex-col items-center justify-center h-full text-gray-400 py-10">
+              <span class="material-icons text-5xl opacity-40 mb-3">inbox</span>
+              <p class="text-xs">No hay compañías asignadas</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <%# Resumen de cambios %>
+      <div data-users-target="changesSummary"
+           class="hidden flex-shrink-0 border-t border-gray-100 pt-4">
+        <div class="flex flex-col gap-3">
+          <div data-users-target="assignSummaryRow"
+               class="hidden items-center gap-3 text-sm">
+            <span class="material-icons text-green-500 text-xl">add_circle</span>
+            <span><strong data-users-target="assignCount">0</strong> compañía(s) para asignar</span>
+          </div>
+          <div data-users-target="unassignSummaryRow"
+               class="hidden items-center gap-3 text-sm">
+            <span class="material-icons text-red-500 text-xl">remove_circle</span>
+            <span><strong data-users-target="unassignCount">0</strong> compañía(s) para desasignar</span>
+          </div>
+        </div>
+      </div>
+
+      <%# Acciones %>
+      <div class="flex-shrink-0 flex justify-end gap-3 pt-4 border-t border-gray-100">
+        <button type="button"
+                data-action="click->users#cancelChanges"
+                data-users-target="cancelBtn"
+                disabled
+                class="flex items-center gap-2 px-5 py-2 rounded-lg border border-red-300 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          <span class="material-icons text-base">close</span>
+          Cancelar Cambios
+        </button>
+        <button type="button"
+                data-action="click->users#applyChanges"
+                data-users-target="applyBtn"
+                disabled
+                class="flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          <span class="material-icons text-base">check</span>
+          Aplicar Cambios
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <%# ── Edit user — panel lateral ─────────────────────────────────────────── %>
+  <div data-users-target="editBackdrop"
+       data-action="click->users#closeEditPanel"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-users-target="editPanel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <%# Header %>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Editar Usuario</h3>
+      <button type="button" data-action="click->users#closeEditPanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <%# Loader overlay %>
+    <div data-users-target="editLoadingOverlay"
+         class="hidden absolute inset-0 z-10 bg-white/80 flex items-center justify-center">
+      <div class="flex flex-col items-center gap-2">
+        <svg class="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        <span class="text-sm text-gray-600">Cargando...</span>
+      </div>
+    </div>
+
+    <%# Body %>
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+      <%# Nombre completo %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Nombre Completo <span class="text-red-500">*</span></label>
+        <input type="text" data-users-target="editFullName"
+               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-users-target="editFullNameError" class="hidden mt-1 text-xs text-red-600">Campo requerido</p>
+      </div>
+
+      <%# Identificación %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Identificación <span class="text-red-500">*</span></label>
+        <input type="text" data-users-target="editIdentification"
+               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-users-target="editIdentificationError" class="hidden mt-1 text-xs text-red-600">Campo requerido</p>
+      </div>
+
+      <%# Usuario SAP %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Usuario SAP <span class="text-red-500">*</span></label>
+        <input type="text" data-users-target="editSapUser"
+               data-action="input->users#onEditSapFieldChange"
+               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-users-target="editSapUserError" class="hidden mt-1 text-xs text-red-600">Campo requerido</p>
+      </div>
+
+      <%# Contraseña SAP %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Contraseña SAP</label>
+        <div class="relative mt-1">
+          <input type="password" data-users-target="editSapPass"
+                 data-action="input->users#onEditSapFieldChange"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" data-action="click->users#toggleEditPassVisibility"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700">
+            <span data-users-target="editPassIcon" class="material-icons text-base">visibility_off</span>
+          </button>
+        </div>
+      </div>
+
+      <%# Compañía para probar credenciales %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Compañía para probar credenciales</label>
+        <select data-users-target="editCredentialCompany"
+                data-action="change->users#onEditCredentialCompanyChange"
+                class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">-- Seleccione --</option>
+        </select>
+      </div>
+
+      <%# Activo %>
+      <div class="flex items-center gap-3">
+        <input type="checkbox" data-users-target="editActiveCheck"
+               id="editActiveCheck"
+               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+        <label for="editActiveCheck" class="text-sm text-gray-700">Activo</label>
+      </div>
+
+    </div>
+
+    <%# Footer %>
+    <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
+      <%# Probar credenciales — izquierda %>
+      <button type="button" data-users-target="editTestCredBtn"
+              data-action="click->users#testEditCredentials"
+              disabled
+              class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span data-users-target="editTestCredIcon" class="material-icons text-base">wifi_tethering</span>
+        <span data-users-target="editTestCredLabel">Probar credenciales</span>
+      </button>
+      <%# Cancelar + Guardar — derecha %>
+      <div class="flex gap-3">
+        <button type="button" data-action="click->users#closeEditPanel"
+                class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          <span class="material-icons text-base">cancel</span>Cancelar
+        </button>
+        <button type="button" data-users-target="editSubmitBtn"
+                data-action="click->users#saveEditUser"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <span class="material-icons text-base">check</span>Guardar
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>

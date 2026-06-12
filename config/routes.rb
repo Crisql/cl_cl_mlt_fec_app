@@ -37,6 +37,11 @@ Rails.application.routes.draw do
     # Email Senders (bandejas de envío + asignación a compañías)
     # Reemplaza la ruta Angular /emailInbox
     get 'email-senders', to: 'email_senders#index', as: :email_senders
+
+    # Users — Gestión de usuarios (Lista, Completar Registro, Asignación)
+    get 'users',          to: 'users#index',    as: :users
+    get 'users/register', to: 'users#register', as: :users_register
+    get 'users/edit',     to: 'users#edit',     as: :users_edit
   end
 
   namespace :documents do
