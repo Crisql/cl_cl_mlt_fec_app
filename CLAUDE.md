@@ -558,6 +558,8 @@ export default class extends TabulatorController {
 ```js
 export default class extends TabulatorController {
 
+
+
   // ❌ INCORRECTO — privado, el base NO puede llamarlo
   #getColumns() { ... }
 
@@ -776,3 +778,106 @@ this.table?.clearAlert()                   // ocultar
 
 **No usar** `animate-spin material-icons autorenew`, `border-b-2 border-blue-600`,
 ni `border-4 border-t-transparent` — son patrones legacy ya eliminados.
+
+---
+
+## 17. Paginación remota Tabulator — contador de filas correcto
+
+**Problema:** `paginationCounter: 'rows'` calcula el total como `last_page × pageSize`.
+Si la última página no está llena (ej. 154 registros en páginas de 10 → last_page = 16),
+Tabulator muestra "160 filas" en la primera carga y corrige a 154 solo al llegar a la última página.
+
+**Causa raíz:** Tabulator no conoce el total real — solo infiere `last_page` del API response.
+
+**Patrón obligatorio para toda tabla con paginación remota:**
+
+```js
+// 1. Campo de instancia para guardar el total real
+#totalRecords = 0;
+
+// 2. En getTableConfig() — reemplazar paginationCounter: 'rows'
+paginationCounter: (_pageSize, currentRow, _currentPage, _totalRows, _totalPages) => {
+  const total = this.#totalRecords;
+  if (!total) return '';
+  const to = Math.min(currentRow + _pageSize - 1, total);
+  return `Mostrando ${currentRow.toLocaleString('es-CR')}-${to.toLocaleString('es-CR')} de ${total.toLocaleString('es-CR')} filas`;
+},
+
+// 3. En #fetchPage() — guardar el total antes de retornar
+const total = json.Data[0]?.MaxQtyRowsFetch ?? 0;  // o la propiedad que use la API
+this.#totalRecords = total;
+const lastPage = Math.max(1, Math.ceil(total / size));
+return { data: json.Data, last_page: lastPage };
+```
+
+**⚠️ NUNCA usar `paginationCounter: 'rows'`** en tablas con `paginationMode: 'remote'`.
+
+### Paginación remota — migrar de `setData()` local a `ajaxRequestFunc`
+
+Si un controller carga datos con `this.table.setData(records)` (modo local), Tabulator
+no puede paginar correctamente en el servidor. El patrón correcto es `ajaxRequestFunc`:
+
+```js
+// getTableConfig()
+ajaxURL: '/api/MiEndpoint',                              // activa modo remote
+ajaxRequestFunc: (_url, _config, params) => this.#fetchPage(params),
+ajaxResponse:    (_url, _params, response) => response,
+
+// connect() — super.connect() ya dispara la primera carga, no llamar #fetchPage manualmente
+super.connect();
+
+// action público de búsqueda — setData() recarga y vuelve a página 1
+search() { this.table?.setData(); }
+```
+
+
+
+## 18. Escritura de archivos — usar script Python obligatorio
+
+**Problema:** La herramienta `Edit` trabaja contra el snapshot del archivo en el contexto de la sesión.
+Si ese snapshot está desactualizado o incompleto, escribe sobre datos incorrectos y **trunca el archivo**.
+
+**Regla:** Para cualquier modificación de archivo (especialmente archivos >200 líneas), usar un script Python ejecutado vía bash.
+
+### Patrón obligatorio
+
+```python
+# Siempre: leer del disco real → modificar en memoria → escribir completo
+with open('/path/to/file', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Modificación — usar replace() con count=1 para reemplazar primera ocurrencia
+content = content.replace('old_string', 'new_string', 1)
+
+# Para múltiples cambios, hacer todos antes de escribir
+content = content.replace('old_A', 'new_A', 1)
+content = content.replace('old_B', 'new_B', 1)
+
+with open('/path/to/file', 'w', encoding='utf-8') as f:
+    f.write(content)
+```
+
+Ejecutar en bash (rutas dentro del sandbox Linux):
+```bash
+python3 /sessions/<id>/mnt/outputs/patch.py
+```
+
+### Por qué funciona
+
+| Aspecto | `Edit` tool | Script Python |
+|---|---|---|
+| Fuente de lectura | Snapshot del contexto (puede ser stale) | Disco real (siempre actualizado) |
+| Escritura | Parcial si hay error de matching | Archivo completo atomicamente |
+| Múltiples cambios | Un `Edit` call por cambio (riesgo acumulado) | Todos en memoria, una escritura |
+
+### Cuándo aplica
+
+- Archivos ERB (`.html.erb`) de más de 200 líneas
+- Controllers JS grandes (`*_controller.js`)
+- Cualquier archivo donde se hayan detectado truncaciones previas
+
+### ⚠️ Señales de que ocurrió truncación
+
+- El archivo termina abruptamente en medio de un bloque HTML/JS
+- Rails lanza error de sintaxis ERB en líneas que antes funcionaban
+- El `wc -l` del archivo es menor al esperado

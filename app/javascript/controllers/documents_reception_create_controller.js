@@ -1,7 +1,9 @@
 import { Controller } from '@hotwired/stimulus'
+import { TabulatorFull as Tabulator } from 'tabulator-tables'
 import { Storage, SStore } from 'vendor/clavisco/core'
 import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts'
 import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
+import { TABULATOR_LOCALE, TABULATOR_LANGS } from 'controllers/tabulator_locale'
 
 // ── Constantes de dominio ──────────────────────────────────
 const RETURN_URL = '/documents/receptions'
@@ -37,13 +39,13 @@ export default class extends Controller {
     'inputDocDate', 'inputCardName', 'inputDocDueDate', 'inputNumAtCard',
     'inputTaxDate', 'inputDocCur', 'inputComments', 'commentsCharCount',
     'udfsContainer',
-    'apInvoiceLinesBody',
+    'apInvoiceLinesTable',
     'totalsSubtotal', 'totalsOtrosCargos', 'totalsImpuestos', 'totalsDescuento', 'totalsTotal',
     'btnCreateDraft', 'btnCreateSap',
     // Líneas
-    'xmlLinesBody', 'sapLinesBody',
+    'xmlLinesTable', 'sapLinesTable',
     // Otros Cargos
-    'otrosCargosBody',
+    'otrosCargosTable',
     // Loading overlay
     'loadingOverlay', 'loadingMessage',
     // Modales
@@ -57,6 +59,26 @@ export default class extends Controller {
     'itemPanelBackdrop', 'itemPanel', 'itemPanelLineInfo',
     'itemSelectItem', 'itemSelectWarehouse', 'itemQuantity',
     'itemSelectAccount', 'itemSelectProject',
+    // Otros Cargos panel
+    'ocPanelBackdrop', 'ocPanel', 'ocPanelLineInfo',
+    'ocQuantityRow', 'ocQuantity',
+    'ocItemRow', 'ocInputItem', 'ocSelectItem', 'ocItemList',
+    'ocWarehouseRow', 'ocInputWarehouse', 'ocSelectWarehouse', 'ocWarehouseList',
+    'ocInputTaxCode', 'ocSelectTaxCode', 'ocTaxCodeList',
+    'ocInputAccount', 'ocSelectAccount', 'ocAccountList',
+    'ocInputProject', 'ocSelectProject', 'ocProjectList',
+    'ocFreightRow', 'ocSelectFreight',   // modo 2: cargo adicional SAP
+    'ocMode1Fields', 'ocMode2Fields',     // wrappers visibles según modo
+    'ocDimIcon', 'ocDimBody',
+    'ocDimRow1', 'ocDimRow2', 'ocDimRow3', 'ocDimRow4', 'ocDimRow5',
+    'ocDim1', 'ocDim2', 'ocDim3', 'ocDim4', 'ocDim5',
+    // Otros Cargos result tables
+    'ocApLinesSection', 'ocApLinesTable',
+    'ocChargesSection', 'ocChargesTable',
+    // Panel edición de dimensiones post-agregado
+    'dimEditBackdrop', 'dimEditPanel', 'dimEditLineInfo',
+    'dimEditRow1', 'dimEditRow2', 'dimEditRow3', 'dimEditRow4', 'dimEditRow5',
+    'dimEdit1', 'dimEdit2', 'dimEdit3', 'dimEdit4', 'dimEdit5',
   ]
 
   // ── Estado interno ─────────────────────────────────────
@@ -78,6 +100,10 @@ export default class extends Controller {
   #defaultTaxForXML = ''
   #dynamicUdfs      = []
   #sendReceptAndApInv = false
+  #freightChargesMode = 1   // 1 = Artículos (tabla APInvoiceLines), 2 = Otros Cargos (tabla DocumentAdditionalExpenses)
+  #dimensionList      = []  // IDimensions[] — solo las dimensiones configuradas en SAP
+  #freightList        = []  // FreightModel[] — cargos adicionales para modo 2
+  #dimEditContext     = null // { type: 'sap'|'other', id } — contexto del panel de edición de dims
 
   // Datos del XML
   #xmlDoc           = null
@@ -99,6 +125,8 @@ export default class extends Controller {
   #otherChargeLines = []     // líneas de otros cargos
   #idItemTable      = 0
   #selectedXmlLine  = null   // línea XML actualmente seleccionada para agregar
+  #selectedOcLines  = []     // líneas XML de cargo seleccionadas para Otros Cargos (multi-select)
+  #ocApLines        = []     // líneas DocumentAPInvoiceLines agregadas desde Otros Cargos (solo para display)
   #errorOnCreate    = false
 
   // Preview doc (reception)
@@ -113,6 +141,14 @@ export default class extends Controller {
 
   // Mapeo de UDFs completado
   #mappedUdfs = []
+
+  // Instancias Tabulator
+  #xmlLinesTabulator        = null
+  #sapLinesTabulator        = null
+  #otrosCargosTabulator     = null
+  #apInvoiceLinesTabulator  = null
+  #ocApLinesTabulator       = null
+  #ocChargesTabulator       = null
 
   // ── connect ───────────────────────────────────────────
   connect() {
@@ -141,6 +177,12 @@ export default class extends Controller {
   disconnect() {
     sessionStorage.removeItem('shouldRecept')
     if (this.#refDocDebounceTimer) clearTimeout(this.#refDocDebounceTimer)
+    this.#xmlLinesTabulator?.destroy()
+    this.#sapLinesTabulator?.destroy()
+    this.#otrosCargosTabulator?.destroy()
+    this.#apInvoiceLinesTabulator?.destroy()
+    this.#ocApLinesTabulator?.destroy()
+    this.#ocChargesTabulator?.destroy()
   }
 
   // ── Carga inicial paralela ─────────────────────────────
@@ -160,7 +202,8 @@ export default class extends Controller {
     try {
       const [
         accountsRes, docXmlRes, docChargesRes, taxRes, itemsRes,
-        companyRes, dimensionsRes, warehouseRes, projectsRes, currenciesRes
+        companyRes, dimensionsRes, warehouseRes, projectsRes, currenciesRes,
+        freightRes
       ] = await Promise.all([
         this.#apiFetch('/api/Account/GetAccounts'),
         this.#apiFetch(`/api/Documents/GetDocAPInvoiceInfoXML?docId=${this.#docId}`),
@@ -172,6 +215,7 @@ export default class extends Controller {
         this.#apiFetch(`/api/Warehouse?CompanyId=${this.#companyId}`),
         this.#apiFetch('/api/Project'),
         this.#apiFetch(`/api/Companies/${this.#companyId}/currencies`),
+        this.#apiFetch('/api/Companies/GetAdditionalFreights'),
       ])
 
       if (accountsRes?.Data?.length)     this.#accountList      = accountsRes.Data
@@ -182,10 +226,13 @@ export default class extends Controller {
       if (companyRes?.Data) {
         this.#xmlToleranceAmounts = companyRes.Data.XmlToleranceAmounts ?? []
         this.#defaultTaxForXML    = companyRes.Data.DefaultTaxForXML    ?? ''
+        this.#freightChargesMode  = companyRes.Data.FreightCharges === 2 ? 2 : 1
       }
+      if (dimensionsRes?.Data?.length)   this.#dimensionList    = dimensionsRes.Data
       if (warehouseRes?.Data?.length)    this.#warehouseList    = warehouseRes.Data
       if (projectsRes?.Data?.length)     this.#projectList      = projectsRes.Data
       if (currenciesRes?.Data)           this.#companyCurrencies = currenciesRes.Data ?? []
+      if (freightRes?.Data?.length)      this.#freightList        = freightRes.Data
     } catch (err) {
       this.#hideLoading()
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al cargar datos', message: err.message })
@@ -265,8 +312,7 @@ export default class extends Controller {
     this.#renderDynamicUdfs()
     this.#prefillHeaderFromXML()
     this.#patchSupplierFromXML()
-    this.#renderXmlLinesTable()
-    this.#renderOtrosCargosTable()
+    this.#initializeTables()
     this.#loadReceptPreviewIfNeeded()
     this.tabsContainerTarget.classList.remove('hidden')
   }
@@ -316,6 +362,47 @@ export default class extends Controller {
       opt.value       = prj.Code
       opt.textContent = `${prj.Code} - ${prj.Name}`
       prjSel.appendChild(opt)
+    })
+
+    // OC panel — autocomplete fields usan listas en memoria, no necesitan poblar selects
+
+    // OC panel — Cargos adicionales SAP (modo 2)
+    const freightSel = this.ocSelectFreightTarget
+    freightSel.innerHTML = '<option value="">-- Seleccione cargo --</option>'
+    this.#freightList.forEach(f => {
+      const opt = document.createElement('option')
+      opt.value       = f.ExpenseCode
+      opt.textContent = `${f.ExpenseCode} - ${f.Name}`
+      freightSel.appendChild(opt)
+    })
+
+    // OC panel — Dimensiones (solo las configuradas en SAP)
+    this.#dimensionList.forEach(dim => {
+      const code = dim.DimCode  // 1-5
+      const rowTarget  = this[`ocDimRow${code}Target`]
+      const selTarget  = this[`ocDim${code}Target`]
+      if (!rowTarget || !selTarget) return
+
+      // Label dinámico
+      const label = rowTarget.querySelector('label')
+      if (label) label.textContent = dim.DimName || `Dimensión ${code}`
+
+      // Opción vacía
+      const blank = document.createElement('option')
+      blank.value       = ''
+      blank.textContent = 'Ninguna'
+      selTarget.appendChild(blank)
+
+      // Centros de costo
+      dim.CenterCost?.forEach(cc => {
+        const opt = document.createElement('option')
+        opt.value       = cc.PrcCode
+        opt.textContent = `${cc.PrcCode} - ${cc.PrcName}`
+        selTarget.appendChild(opt)
+      })
+
+      // Mostrar fila
+      rowTarget.classList.remove('hidden')
     })
   }
 
@@ -385,6 +472,514 @@ export default class extends Controller {
     } else if (this.#xmlDoc.LicTradNum) {
       showToast(`El proveedor ${this.#xmlDoc.CardName} con la cédula ${this.#xmlDoc.LicTradNum} no existe en SAP`, 'warning')
     }
+  }
+
+  // ── Inicialización de tablas Tabulator ─────────────────
+  #initializeTables() {
+    this.#initXmlLinesTable()
+    this.#initSapLinesTable()
+    this.#initOtrosCargosTable()
+    this.#initApInvoiceLinesTable()
+    this.#initOcApLinesTable()
+    this.#initOcChargesTable()
+  }
+
+  #initXmlLinesTable() {
+    this.#xmlLinesTabulator = new Tabulator(this.xmlLinesTableTarget, {
+      data:           this.#xmlDoc?.DocReceptXMLLines ?? [],
+      layout:         'fitColumns',
+      maxHeight:      '320px',
+      placeholder:    'Sin líneas',
+      locale:         TABULATOR_LOCALE,
+      langs:          TABULATOR_LANGS,
+      columnDefaults: { headerSort: false },
+      columns: [
+        { title: 'Código',      field: 'Code',      widthGrow: 1 },
+        { title: 'Detalle',     field: 'Detail',    widthGrow: 2 },
+        { title: 'Cantidad',    field: 'Quantity',  hozAlign: 'right', width: 90 },
+        { title: 'Precio',      field: 'UnitPrice', hozAlign: 'right', width: 120,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Descuento',   field: 'Discount',  hozAlign: 'right', width: 110,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Impuesto',    field: 'ImpTarifa', hozAlign: 'right', width: 90,
+          formatter: (cell) => `${cell.getValue() ?? 0}%` },
+        { title: 'Monto Línea', field: 'TotalLine', hozAlign: 'right', width: 130,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Disponible',  field: 'Available', hozAlign: 'right', width: 100,
+          formatter: (cell) => {
+            const val = cell.getValue() ?? 0
+            return `<span class="${val <= 0 ? 'text-green-600 font-semibold' : ''}">${val}</span>`
+          }
+        },
+        { title: 'Acción', field: '_action', hozAlign: 'center', width: 70,
+          formatter: (cell) => {
+            const available = cell.getRow().getData().Available ?? 0
+            const disabled  = available <= 0
+            return `<button type="button" title="Agregar" ${disabled ? 'disabled' : ''}
+                      class="p-1.5 ${disabled ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-50'} rounded transition-colors">
+                      <span class="material-icons text-base">add_circle_outline</span>
+                    </button>`
+          },
+          cellClick: (_e, cell) => {
+            const data = cell.getRow().getData()
+            if ((data.Available ?? 0) <= 0) return
+            const line = this.#xmlDoc?.DocReceptXMLLines?.find(l => l.RowId === data.RowId)
+            if (line) this.#openItemSelectionForLine(line)
+          },
+        },
+      ],
+    })
+  }
+
+  #initSapLinesTable() {
+    this.#sapLinesTabulator = new Tabulator(this.sapLinesTableTarget, {
+      data:           [...this.#apInvoiceLines],
+      layout:         'fitColumns',
+      maxHeight:      '320px',
+      placeholder:    'Sin líneas',
+      locale:         TABULATOR_LOCALE,
+      langs:          TABULATOR_LANGS,
+      columnDefaults: { headerSort: false },
+      columns: [
+        { title: 'Código SAP', field: 'ItemCode',       widthGrow: 1 },
+        { title: 'Código XML', field: 'ItemCodeXML',    widthGrow: 1 },
+        { title: 'Detalle',    field: 'ItemNameEdited', widthGrow: 2,
+          editor: 'input',
+          cellEdited: (cell) => this.#onSapLineCellEdited(cell) },
+        { title: 'Cuenta',     field: 'SapAccountCode', widthGrow: 2,
+          editor: this.#makeAutocompleteEditor(
+            this.#accountList,
+            a => `${a.FormatCode} - ${a.AcctName}`,
+            a => a.AcctCode,
+          ),
+          formatter: (cell) => {
+            const acc = this.#accountList.find(a => a.AcctCode === cell.getValue())
+            return acc ? `${acc.FormatCode} - ${acc.AcctName}` : (cell.getValue() || '—')
+          },
+          cellEdited: (cell) => this.#onSapLineCellEdited(cell) },
+        { title: 'Proyecto',   field: 'ProjectCode',    widthGrow: 1,
+          editor: this.#makeAutocompleteEditor(
+            this.#projectList,
+            p => `${p.Code} - ${p.Name}`,
+            p => p.Code,
+          ),
+          formatter: (cell) => {
+            const prj = this.#projectList.find(p => p.Code === cell.getValue())
+            return prj ? `${prj.Code} - ${prj.Name}` : (cell.getValue() || '—')
+          },
+          cellEdited: (cell) => this.#onSapLineCellEdited(cell) },
+        { title: 'Cantidad',   field: 'Quantity',       hozAlign: 'right', width: 90 },
+        { title: 'Almacén',    field: 'WhsCode',        width: 90 },
+        { title: 'Precio',     field: 'UnitPrice',      hozAlign: 'right', width: 120,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Descuento',  field: 'Disc',           hozAlign: 'right', width: 110,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Impuesto',   field: 'TaxCode',        width: 100,
+          editor: this.#makeAutocompleteEditor(
+            this.#taxCodeList,
+            t => t.TaxCode,
+            t => t.TaxCode,
+          ),
+          cellEdited: (cell) => this.#onSapLineCellEdited(cell) },
+        { title: 'Monto',      field: 'LineTotal',      hozAlign: 'right', width: 130,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Acciones',   field: '_delete',        hozAlign: 'center', width: 80,
+          formatter: () => `<button type="button" title="Eliminar"
+                              class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors">
+                              <span class="material-icons text-base">delete</span>
+                            </button>`,
+          cellClick: (_e, cell) => this.#removeSapLineByTableId(cell.getRow().getData().TableId),
+        },
+      ],
+    })
+  }
+
+  // ── Editor autocomplete personalizado ──────────────────
+  // Retorna una función editor compatible con Tabulator.
+  // El dropdown se monta en document.body con position:fixed para evitar
+  // el overflow:hidden de las celdas (mismo patrón que el tooltip system).
+  #makeAutocompleteEditor(list, labelFn, valueFn) {
+    return (cell, onRendered, success, cancel) => {
+      const dropId = `cl-ac-${Math.random().toString(36).slice(2)}`
+
+      const input       = document.createElement('input')
+      input.type        = 'text'
+      input.placeholder = 'Buscar...'
+      input.style.cssText = [
+        'width:100%', 'padding:2px 6px', 'border:1px solid #3b82f6',
+        'outline:none', 'font-size:12px', 'box-sizing:border-box',
+        'background:#fff', 'color:#111827',
+      ].join(';')
+
+      // Mostrar la etiqueta del valor actual
+      const currentItem = list.find(i => valueFn(i) === cell.getValue())
+      input.value = currentItem ? labelFn(currentItem) : (cell.getValue() || '')
+
+      const cleanup = () => document.getElementById(dropId)?.remove()
+
+      const showDropdown = (filter) => {
+        cleanup()
+        const rect  = input.getBoundingClientRect()
+        const drop  = document.createElement('div')
+        drop.id     = dropId
+        drop.style.cssText = [
+          'position:fixed',
+          `top:${rect.bottom + 2}px`,
+          `left:${rect.left}px`,
+          `width:${Math.max(rect.width, 260)}px`,
+          'background:#fff',
+          'border:1px solid #e5e7eb',
+          'border-radius:6px',
+          'box-shadow:0 4px 12px rgba(0,0,0,.15)',
+          'max-height:200px',
+          'overflow-y:auto',
+          'z-index:99999',
+          'font-size:12px',
+        ].join(';')
+
+        const items = filter
+          ? list.filter(i => labelFn(i).toLowerCase().includes(filter) || valueFn(i).toLowerCase().includes(filter))
+          : list.slice(0, 80)
+
+        if (!items.length) {
+          drop.innerHTML = `<div style="padding:8px 10px;color:#9ca3af">Sin resultados</div>`
+        } else {
+          items.forEach(i => {
+            const opt = document.createElement('div')
+            opt.style.cssText = 'padding:6px 10px;cursor:pointer;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
+            opt.textContent   = labelFn(i)
+            opt.title         = labelFn(i)
+            opt.addEventListener('mousedown', e => {
+              e.preventDefault()   // evita que el blur del input se dispare primero
+              cleanup()
+              success(valueFn(i))
+            })
+            opt.addEventListener('mouseenter', () => { opt.style.background = '#eff6ff' })
+            opt.addEventListener('mouseleave', () => { opt.style.background = '' })
+            drop.appendChild(opt)
+          })
+        }
+
+        document.body.appendChild(drop)
+      }
+
+      onRendered(() => {
+        input.focus()
+        showDropdown('')
+      })
+
+      input.addEventListener('input',   () => showDropdown(input.value.toLowerCase()))
+      input.addEventListener('blur',    () => setTimeout(() => { cleanup(); cancel() }, 200))
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { cleanup(); cancel() }
+        if (e.key === 'Tab')    { cleanup(); cancel() }
+      })
+
+      return input
+    }
+  }
+
+  #onSapLineCellEdited(cell) {
+    const field   = cell.getColumn().getField()
+    const rowData = cell.getRow().getData()
+    const apLine  = this.#apInvoiceLines.find(l => l.TableId === rowData.TableId)
+    if (!apLine) return
+
+    apLine[field] = cell.getValue()
+
+    if (field === 'SapAccountCode') {
+      const acc = this.#accountList.find(a => a.AcctCode === cell.getValue())
+      apLine.SapAccountName = acc ? `${acc.FormatCode}-${acc.AcctName}` : ''
+    }
+
+    if (field === 'TaxCode') {
+      const tax = this.#taxCodeList.find(t => t.TaxCode === cell.getValue())
+      if (tax) {
+        apLine.TaxRate   = String(tax.TaxRate ?? 0)
+        apLine.TaxAmount = ((apLine.UnitPrice * apLine.Quantity) - apLine.Disc) * (Number(apLine.TaxRate) / 100)
+        apLine.LineTotal = ((apLine.UnitPrice * apLine.Quantity) - apLine.Disc) + apLine.TaxAmount
+        cell.getRow().update({ LineTotal: apLine.LineTotal })
+        this.#calculateTotals()
+      }
+    }
+
+    if (field === 'ProjectCode') {
+      const prj = this.#projectList.find(p => p.Code === cell.getValue())
+      apLine.ProjectName = prj ? `${prj.Code}-${prj.Name}` : ''
+    }
+
+    this.#renderApInvoiceLinesHeader()
+  }
+
+  #removeSapLineByTableId(tableId) {
+    const idx = this.#apInvoiceLines.findIndex(l => l.TableId === tableId)
+    if (idx < 0) return
+    const line = this.#apInvoiceLines[idx]
+
+    const xmlLine = this.#xmlDoc?.DocReceptXMLLines?.find(l => l.RowId === line.RowId)
+    if (xmlLine) xmlLine.Available += line.Quantity
+
+    this.#apInvoiceLines.splice(idx, 1)
+    this.#renderSapLinesTable()
+    this.#renderXmlLinesTable()
+    this.#renderApInvoiceLinesHeader()
+    this.#calculateTotals()
+  }
+
+  #initOtrosCargosTable() {
+    this.#otrosCargosTabulator = new Tabulator(this.otrosCargosTableTarget, {
+      data:            this.#xmlDoc2?.DocChargesXMLLines ?? [],
+      layout:          'fitColumns',
+      maxHeight:       '320px',
+      placeholder:     'Sin cargos adicionales',
+      locale:          TABULATOR_LOCALE,
+      langs:           TABULATOR_LANGS,
+      columnDefaults:  { headerSort: false },
+      selectable:      true,
+      selectableRangeMode: 'click',
+      columns: [
+        { formatter: 'rowSelection', titleFormatter: 'rowSelection', hozAlign: 'center', headerHozAlign: 'center', width: 40, headerSort: false },
+        { title: 'Código',     field: 'Code',      widthGrow: 1 },
+        { title: 'Detalle',    field: 'Detail',    widthGrow: 2 },
+        { title: 'Cantidad',   field: 'Quantity',  hozAlign: 'right', width: 90 },
+        { title: 'Precio',     field: 'UnitPrice', hozAlign: 'right', width: 120,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Disponible', field: 'Available', hozAlign: 'right', width: 100 },
+        { title: 'Acción',     field: '_action',   hozAlign: 'center', width: 70,
+          formatter: () => `<button type="button" data-tooltip="Agregar"
+                              class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors">
+                              <span class="material-icons text-base">add_circle_outline</span>
+                            </button>`,
+          cellClick: (_e, cell) => {
+            const rowData = cell.getRow().getData()
+            const line    = this.#xmlDoc2?.DocChargesXMLLines?.find(l => l.RowId === rowData.RowId)
+            if (!line) return
+            // Si hay filas seleccionadas, usar todas; si no, solo esta línea
+            const selected = this.#otrosCargosTabulator.getSelectedRows().map(r => {
+              return this.#xmlDoc2?.DocChargesXMLLines?.find(l => l.RowId === r.getData().RowId)
+            }).filter(Boolean)
+            const lines = selected.length > 0 ? selected : [line]
+            this.#openOcSelectionForLines(lines)
+          },
+        },
+      ],
+    })
+  }
+
+  #initApInvoiceLinesTable() {
+    this.#apInvoiceLinesTabulator = new Tabulator(this.apInvoiceLinesTableTarget, {
+      data:           [...this.#apInvoiceLines],
+      layout:         'fitColumns',
+      maxHeight:      '240px',
+      placeholder:    'Sin líneas agregadas',
+      locale:         TABULATOR_LOCALE,
+      langs:          TABULATOR_LANGS,
+      columnDefaults: { headerSort: false },
+      columns: [
+        { title: 'Código SAP', field: 'ItemCode',       widthGrow: 1 },
+        { title: 'Código XML', field: 'ItemCodeXML',    widthGrow: 1 },
+        { title: 'Detalle',    field: 'ItemNameEdited', widthGrow: 2 },
+        { title: 'Cuenta',     field: 'SapAccountName', widthGrow: 2 },
+        { title: 'Proyecto',   field: 'ProjectName',    widthGrow: 1 },
+        { title: 'Cantidad',   field: 'Quantity',       hozAlign: 'right', width: 90 },
+        { title: 'Almacén',    field: 'WhsCode',        width: 90 },
+        { title: 'Precio',     field: 'UnitPrice',      hozAlign: 'right', width: 120,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Descuento',  field: 'Disc',           hozAlign: 'right', width: 110,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Impuesto',   field: 'TaxCode',        width: 90 },
+        { title: 'Monto',      field: 'LineTotal',      hozAlign: 'right', width: 130,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+      ],
+    })
+  }
+
+  #initOcApLinesTable() {
+    this.#ocApLinesTabulator = new Tabulator(this.ocApLinesTableTarget, {
+      data:            [],
+      layout:          'fitColumns',
+      maxHeight:       '280px',
+      placeholder:     'Sin líneas agregadas',
+      locale:          TABULATOR_LOCALE,
+      langs:           TABULATOR_LANGS,
+      columnDefaults:  { headerSort: false },
+      selectable:      true,
+      selectableRangeMode: 'click',
+      columns: [
+        { formatter: 'rowSelection', titleFormatter: 'rowSelection', hozAlign: 'center', headerHozAlign: 'center', width: 40, headerSort: false },
+        { title: 'Código XML',  field: 'ItemCodeXML',    widthGrow: 1 },
+        { title: 'Detalle',     field: 'ItemNameEdited', widthGrow: 2,
+          editor: 'input', editorParams: { elementAttributes: { maxlength: 200 } },
+          cellEdited: (cell) => { cell.getRow().getData().ItemNameEdited = cell.getValue() } },
+        { title: 'Cuenta',      field: 'SapAccountName', widthGrow: 2,
+          editor: this.#makeAutocompleteEditor(
+            this.#accountList,
+            a => `${a.FormatCode} - ${a.AcctName}`,
+            a => `${a.FormatCode} - ${a.AcctName}`,
+          ),
+          cellEdited: (cell) => {
+            const row  = cell.getRow()
+            const data = row.getData()
+            const acc  = this.#accountList.find(a => `${a.FormatCode} - ${a.AcctName}` === cell.getValue())
+            if (acc) { data.SapAccountCode = acc.AcctCode; data.SapAccountName = cell.getValue() }
+          },
+        },
+        { title: 'Proyecto',    field: 'ProjectName',    widthGrow: 1,
+          editor: this.#makeAutocompleteEditor(
+            this.#projectList,
+            p => `${p.Code} - ${p.Name}`,
+            p => `${p.Code}-${p.Name}`,   // valueFn → escribe directo en ProjectName
+          ),
+          cellEdited: (cell) => {
+            const data = cell.getRow().getData()
+            // Sincronizar ProjectCode (lo que va a SAP) desde el valor seleccionado
+            const raw = cell.getValue()   // formato "Code - Name" (del labelFn del autocomplete)
+            const prj = this.#projectList.find(p => `${p.Code} - ${p.Name}` === raw || `${p.Code}-${p.Name}` === raw)
+            if (prj) data.ProjectCode = prj.Code
+          },
+        },
+        { title: 'Cantidad',    field: 'Quantity',       hozAlign: 'right', width: 90 },
+        { title: 'Impuesto',    field: 'TaxCode',        width: 120,
+          editor: this.#makeAutocompleteEditor(
+            this.#taxCodeList,
+            t => `${t.TaxCode} (${t.TaxRate}%)`,
+            t => t.TaxCode,
+          ),
+          cellEdited: (cell) => {
+            const data   = cell.getRow().getData()
+            const taxObj = this.#taxCodeList.find(t => t.TaxCode === cell.getValue())
+            if (!taxObj) return
+            data.TaxCode   = taxObj.TaxCode
+            data.TaxRate   = String(taxObj.TaxRate)
+            const net      = (data.UnitPrice * data.Quantity) - (data.Disc ?? 0)
+            data.TaxAmount = net * (Number(taxObj.TaxRate) / 100)
+            data.LineTotal = net + data.TaxAmount
+            cell.getRow().update(data)
+          },
+        },
+        { title: 'Monto',       field: 'LineTotal',      hozAlign: 'right', width: 130,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Acciones',    field: '_actions',       hozAlign: 'center', width: 100,
+          formatter: () => `
+            <button type="button" data-action-type="dim" data-tooltip="Ajuste de dimensiones"
+                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors">
+              <span class="material-icons text-base">tune</span>
+            </button>
+            <button type="button" data-action-type="delete" data-tooltip="Eliminar"
+                    class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors">
+              <span class="material-icons text-base">delete</span>
+            </button>`,
+          cellClick: (_e, cell) => {
+            const btn  = _e.target.closest('[data-action-type]')
+            if (!btn) return
+            const data = cell.getRow().getData()
+            if (btn.dataset.actionType === 'dim') {
+              this.#openDimEditPanel('sap', data.TableId, data)
+            } else {
+              const selected = this.#ocApLinesTabulator.getSelectedRows()
+              const ids = selected.length > 0
+                ? selected.map(r => r.getData().TableId)
+                : [data.TableId]
+              ids.forEach(id => this.#removeOcApLine(id))
+            }
+          },
+        },
+      ],
+    })
+  }
+
+  #initOcChargesTable() {
+    this.#ocChargesTabulator = new Tabulator(this.ocChargesTableTarget, {
+      data:            [],
+      layout:          'fitColumns',
+      maxHeight:       '280px',
+      placeholder:     'Sin cargos adicionales',
+      locale:          TABULATOR_LOCALE,
+      langs:           TABULATOR_LANGS,
+      columnDefaults:  { headerSort: false },
+      selectable:      true,
+      selectableRangeMode: 'click',
+      columns: [
+        { formatter: 'rowSelection', titleFormatter: 'rowSelection', hozAlign: 'center', headerHozAlign: 'center', width: 40, headerSort: false },
+        { title: 'Código',         field: 'ExpenseCode', width: 100 },
+        { title: 'Detalle',        field: 'Remarks',     widthGrow: 3 },
+        { title: 'Tarifa Impuesto',field: 'TaxCode',     width: 150,
+          editor: this.#makeAutocompleteEditor(
+            this.#taxCodeList,
+            t => `${t.TaxCode} (${t.TaxRate}%)`,
+            t => t.TaxCode,
+          ),
+          cellEdited: (cell) => {
+            const data   = cell.getRow().getData()
+            const taxObj = this.#taxCodeList.find(t => t.TaxCode === cell.getValue())
+            if (!taxObj) return
+            data.TaxCode = taxObj.TaxCode
+            const net    = data.OriginalLineTotal ?? data.LineTotal
+            const taxAmount = net * (Number(taxObj.TaxRate) / 100)
+            data.LineTotal  = Number((net + taxAmount).toFixed(2))
+            cell.getRow().update(data)
+          },
+        },
+        { title: 'Monto Cargo',    field: 'LineTotal',   hozAlign: 'right', width: 140,
+          formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
+        { title: 'Acciones',       field: '_actions',    hozAlign: 'center', width: 100,
+          formatter: () => `
+            <button type="button" data-action-type="dim" data-tooltip="Ajuste de dimensiones"
+                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors">
+              <span class="material-icons text-base">tune</span>
+            </button>
+            <button type="button" data-action-type="delete" data-tooltip="Eliminar"
+                    class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors">
+              <span class="material-icons text-base">delete</span>
+            </button>`,
+          cellClick: (_e, cell) => {
+            const btn  = _e.target.closest('[data-action-type]')
+            if (!btn) return
+            const data = cell.getRow().getData()
+            if (btn.dataset.actionType === 'dim') {
+              this.#openDimEditPanel('other', data.ExpenseCode, data)
+            } else {
+              const selected = this.#ocChargesTabulator.getSelectedRows()
+              const codes = selected.length > 0
+                ? selected.map(r => r.getData().ExpenseCode)
+                : [data.ExpenseCode]
+              codes.forEach(code => this.#removeOcCharge(code))
+            }
+          },
+        },
+      ],
+    })
+  }
+
+  // ── Render methods (setData en instancias ya inicializadas) ────
+  #renderXmlLinesTable() {
+    this.#xmlLinesTabulator?.setData(this.#xmlDoc?.DocReceptXMLLines ?? [])
+  }
+
+  #renderOtrosCargosTable() {
+    this.#otrosCargosTabulator?.setData(this.#xmlDoc2?.DocChargesXMLLines ?? [])
+  }
+
+  #renderOcApLinesTable() {
+    this.#ocApLinesTabulator?.setData([...this.#ocApLines])
+    // Solo visible en modo 1 (Artículos) y cuando hay datos
+    const show = this.#freightChargesMode === 1 && this.#ocApLines.length > 0
+    this.ocApLinesSectionTarget.classList.toggle('hidden', !show)
+  }
+
+  #renderOcChargesTable() {
+    this.#ocChargesTabulator?.setData([...this.#otherChargeLines])
+    // Solo visible en modo 2 (Otros Cargos) y cuando hay datos
+    const show = this.#freightChargesMode === 2 && this.#otherChargeLines.length > 0
+    this.ocChargesSectionTarget.classList.toggle('hidden', !show)
+  }
+
+  #renderSapLinesTable() {
+    this.#sapLinesTabulator?.setData([...this.#apInvoiceLines])
+  }
+
+  #renderApInvoiceLinesHeader() {
+    this.#apInvoiceLinesTabulator?.setData([...this.#apInvoiceLines])
   }
 
   // ── Acordeón de recepción ──────────────────────────────
@@ -574,6 +1169,65 @@ export default class extends Controller {
     this.checkCloseRefDocTarget.disabled = false
   }
 
+  // ── OC Panel — autocomplete helpers ───────────────────
+  // Helper genérico: filtra una lista, renderiza el dropdown y cierra al seleccionar
+  #renderOcAutocomplete({ listTarget, inputTarget, hiddenTarget, items, labelFn, valueFn }) {
+    const query = inputTarget.value.toLowerCase().trim()
+    listTarget.innerHTML = ''
+
+    const filtered = query
+      ? items.filter(i => labelFn(i).toLowerCase().includes(query)).slice(0, 30)
+      : items.slice(0, 30)
+
+    if (!filtered.length) {
+      listTarget.classList.add('hidden')
+      return
+    }
+
+    filtered.forEach(item => {
+      const div = document.createElement('div')
+      div.className = 'px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm truncate'
+      div.textContent = labelFn(item)
+      div.addEventListener('mousedown', e => {
+        e.preventDefault()   // evita que el input pierda foco antes del click
+        inputTarget.value  = labelFn(item)
+        hiddenTarget.value = valueFn(item)
+        listTarget.classList.add('hidden')
+      })
+      listTarget.appendChild(div)
+    })
+
+    listTarget.classList.remove('hidden')
+  }
+
+  #closeAllOcDropdowns(except = null) {
+    const lists = ['ocItemList', 'ocWarehouseList', 'ocTaxCodeList', 'ocAccountList', 'ocProjectList']
+    lists.forEach(name => {
+      const t = this[`${name}Target`]
+      if (t !== except) t.classList.add('hidden')
+    })
+  }
+
+  // Impuesto
+  onOcTaxCodeInput()  { this.#renderOcAutocomplete({ listTarget: this.ocTaxCodeListTarget, inputTarget: this.ocInputTaxCodeTarget, hiddenTarget: this.ocSelectTaxCodeTarget, items: this.#taxCodeList, labelFn: t => `${t.TaxCode} (${t.TaxRate}%)`, valueFn: t => t.TaxCode }) }
+  onOcTaxCodeFocus()  { this.#closeAllOcDropdowns(this.ocTaxCodeListTarget); this.#renderOcAutocomplete({ listTarget: this.ocTaxCodeListTarget, inputTarget: this.ocInputTaxCodeTarget, hiddenTarget: this.ocSelectTaxCodeTarget, items: this.#taxCodeList, labelFn: t => `${t.TaxCode} (${t.TaxRate}%)`, valueFn: t => t.TaxCode }) }
+
+  // Artículo SAP
+  onOcItemInput()  { this.#renderOcAutocomplete({ listTarget: this.ocItemListTarget, inputTarget: this.ocInputItemTarget, hiddenTarget: this.ocSelectItemTarget, items: this.#itemSAPList, labelFn: i => i.FullName || `${i.ItemCode} - ${i.ItemName}`, valueFn: i => i.ItemCode }) }
+  onOcItemFocus()  { this.#closeAllOcDropdowns(this.ocItemListTarget); this.#renderOcAutocomplete({ listTarget: this.ocItemListTarget, inputTarget: this.ocInputItemTarget, hiddenTarget: this.ocSelectItemTarget, items: this.#itemSAPList, labelFn: i => i.FullName || `${i.ItemCode} - ${i.ItemName}`, valueFn: i => i.ItemCode }) }
+
+  // Almacén
+  onOcWarehouseInput()  { this.#renderOcAutocomplete({ listTarget: this.ocWarehouseListTarget, inputTarget: this.ocInputWarehouseTarget, hiddenTarget: this.ocSelectWarehouseTarget, items: this.#warehouseList, labelFn: w => `${w.WhCode} — ${w.WhName}`, valueFn: w => w.WhCode }) }
+  onOcWarehouseFocus()  { this.#closeAllOcDropdowns(this.ocWarehouseListTarget); this.#renderOcAutocomplete({ listTarget: this.ocWarehouseListTarget, inputTarget: this.ocInputWarehouseTarget, hiddenTarget: this.ocSelectWarehouseTarget, items: this.#warehouseList, labelFn: w => `${w.WhCode} — ${w.WhName}`, valueFn: w => w.WhCode }) }
+
+  // Cuenta SAP
+  onOcAccountInput()  { this.#renderOcAutocomplete({ listTarget: this.ocAccountListTarget, inputTarget: this.ocInputAccountTarget, hiddenTarget: this.ocSelectAccountTarget, items: this.#accountList, labelFn: a => `${a.FormatCode} - ${a.AcctName}`, valueFn: a => a.AcctCode }) }
+  onOcAccountFocus()  { this.#closeAllOcDropdowns(this.ocAccountListTarget); this.#renderOcAutocomplete({ listTarget: this.ocAccountListTarget, inputTarget: this.ocInputAccountTarget, hiddenTarget: this.ocSelectAccountTarget, items: this.#accountList, labelFn: a => `${a.FormatCode} - ${a.AcctName}`, valueFn: a => a.AcctCode }) }
+
+  // Proyecto
+  onOcProjectInput()  { this.#renderOcAutocomplete({ listTarget: this.ocProjectListTarget, inputTarget: this.ocInputProjectTarget, hiddenTarget: this.ocSelectProjectTarget, items: this.#projectList, labelFn: p => `${p.Code} - ${p.Name}`, valueFn: p => p.Code }) }
+  onOcProjectFocus()  { this.#closeAllOcDropdowns(this.ocProjectListTarget); this.#renderOcAutocomplete({ listTarget: this.ocProjectListTarget, inputTarget: this.ocInputProjectTarget, hiddenTarget: this.ocSelectProjectTarget, items: this.#projectList, labelFn: p => `${p.Code} - ${p.Name}`, valueFn: p => p.Code }) }
+
   onCardCodeInput() {
     const filterValue = this.inputCardCodeTarget.value.toLowerCase()
     const filtered    = this.#supplierList.filter(s =>
@@ -671,78 +1325,19 @@ export default class extends Controller {
     window.location.reload()
   }
 
-  // ── Tabla XML de líneas ────────────────────────────────
-  #renderXmlLinesTable() {
-    if (!this.#xmlDoc?.DocReceptXMLLines?.length) return
-    const tbody = this.xmlLinesBodyTarget
-    tbody.innerHTML = ''
-
-    this.#xmlDoc.DocReceptXMLLines.forEach(line => {
-      const tr = document.createElement('tr')
-      tr.className           = 'border-b border-gray-100'
-      tr.dataset.rowId       = line.RowId
-      const available        = line.Available ?? line.Quantity
-      const isAdded          = available <= 0
-
-      tr.innerHTML = `
-        <td class="px-3 py-2 text-xs text-gray-700">${line.Code}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.Detail}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${line.Quantity}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.UnitPrice, this.#docCurrency)}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.Discount, this.#docCurrency)}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${line.ImpTarifa ?? 0}%</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.TotalLine, this.#docCurrency)}</td>
-        <td class="px-3 py-2 text-xs text-right ${isAdded ? 'text-green-600 font-semibold' : 'text-gray-700'}">${available}</td>
-        <td class="px-3 py-2 text-center">
-          <button type="button"
-                  ${isAdded ? 'disabled' : ''}
-                  data-action="click->documents-reception-create#openItemSelection"
-                  data-row-id="${line.RowId}"
-                  data-tooltip="Agregar"
-                  class="p-1.5 ${isAdded ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-50'} rounded transition-colors">
-            <span class="material-icons text-base">add_circle_outline</span>
-          </button>
-        </td>`
-      tbody.appendChild(tr)
-    })
-  }
-
-  // ── Tabla Otros Cargos ─────────────────────────────────
-  #renderOtrosCargosTable() {
-    if (!this.#xmlDoc2?.DocChargesXMLLines?.length) return
-    const tbody = this.otrosCargosBodyTarget
-    tbody.innerHTML = ''
-
-    this.#xmlDoc2.DocChargesXMLLines.forEach(line => {
-      const tr = document.createElement('tr')
-      tr.className     = 'border-b border-gray-100'
-      tr.dataset.rowId = line.RowId
-      const available  = line.Available ?? line.Quantity
-
-      tr.innerHTML = `
-        <td class="px-3 py-2 text-xs text-gray-700">${line.Code ?? ''}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.Detail ?? ''}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${line.Quantity}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.UnitPrice, this.#docCurrency)}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${available}</td>
-        <td class="px-3 py-2 text-center">
-          <button type="button"
-                  data-action="click->documents-reception-create#openOtrosCargosSelection"
-                  data-row-id="${line.RowId}"
-                  data-tooltip="Agregar cargo"
-                  class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors">
-            <span class="material-icons text-base">add_circle_outline</span>
-          </button>
-        </td>`
-      tbody.appendChild(tr)
-    })
-  }
-
   // ── Panel lateral de selección de ítem ────────────────
   openItemSelection(event) {
     const rowId = Number(event.currentTarget.dataset.rowId)
-    const line  = this.#xmlDoc.DocReceptXMLLines.find(l => l.RowId === rowId)
-    if (!line || line.Available <= 0) {
+    const line  = this.#xmlDoc?.DocReceptXMLLines?.find(l => l.RowId === rowId)
+    if (!line || (line.Available ?? 0) <= 0) {
+      showToast('Esta línea ya está agregada', 'warning')
+      return
+    }
+    this.#openItemSelectionForLine(line)
+  }
+
+  #openItemSelectionForLine(line) {
+    if ((line.Available ?? 0) <= 0) {
       showToast('Esta línea ya está agregada', 'warning')
       return
     }
@@ -750,7 +1345,6 @@ export default class extends Controller {
     this.itemQuantityTarget.value = line.Available
     this.itemQuantityTarget.max   = line.Available
 
-    // Mostrar info de la línea XML en el panel
     this.itemPanelLineInfoTarget.innerHTML =
       `<span class="font-semibold">${line.Code}</span> — ${line.Detail}` +
       `<span class="ml-3 text-blue-600 font-medium">Disponible: ${line.Available}</span>`
@@ -849,162 +1443,343 @@ export default class extends Controller {
     return match ? { TaxCode: match.TaxCode } : { TaxCode: this.#defaultTaxForXML }
   }
 
-  openOtrosCargosSelection(event) {
-    // Implementación básica — agrega como cargo adicional
-    const rowId = Number(event.currentTarget.dataset.rowId)
-    const line  = this.#xmlDoc2?.DocChargesXMLLines?.find(l => l.RowId === rowId)
-    if (!line) return
-    showToast('Funcionalidad de otros cargos en desarrollo', 'info')
-  }
-
-  // ── Tabla SAP de líneas ────────────────────────────────
-  #renderSapLinesTable() {
-    const tbody = this.sapLinesBodyTarget
-    tbody.innerHTML = ''
-
-    if (!this.#apInvoiceLines.length) {
-      tbody.innerHTML = '<tr><td colspan="12" class="px-3 py-4 text-center text-xs text-gray-400">Sin líneas</td></tr>'
+  // ── Otros Cargos — panel lateral ──────────────────────
+  #openOcSelectionForLines(lines) {
+    const available = lines.filter(l => (l.Available ?? 0) > 0)
+    if (available.length === 0) {
+      showToast('Las líneas seleccionadas ya fueron agregadas completamente', 'warning')
       return
     }
 
-    this.#apInvoiceLines.forEach((line, idx) => {
-      const tr = document.createElement('tr')
-      tr.className = 'border-b border-gray-100'
+    this.#selectedOcLines = available
+    const isMulti = available.length > 1
 
-      // Dropdown impuesto
-      const taxOptions = this.#taxCodeList
-        .map(t => `<option value="${t.TaxCode}" ${t.TaxCode === line.TaxCode ? 'selected' : ''}>${t.TaxCode}</option>`)
-        .join('')
-
-      // Dropdown cuenta
-      const accOptions = `<option value="">—</option>` + this.#accountList
-        .map(a => `<option value="${a.AcctCode}" ${a.AcctCode === line.SapAccountCode ? 'selected' : ''}>${a.FormatCode}-${a.AcctName}</option>`)
-        .join('')
-
-      // Dropdown proyecto
-      const prjOptions = `<option value="">—</option>` + this.#projectList
-        .map(p => `<option value="${p.Code}" ${p.Code === line.ProjectCode ? 'selected' : ''}>${p.Code}-${p.Name}</option>`)
-        .join('')
-
-      tr.innerHTML = `
-        <td class="px-3 py-2 text-xs text-gray-700">${line.ItemCode}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.ItemCodeXML}</td>
-        <td class="px-3 py-2 text-xs">
-          <input type="text" value="${line.ItemNameEdited}"
-                 data-idx="${idx}" data-field="ItemNameEdited"
-                 data-action="change->documents-reception-create#onSapLineFieldChange"
-                 class="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400">
-        </td>
-        <td class="px-3 py-2 text-xs">
-          <select data-idx="${idx}" data-field="SapAccountCode"
-                  data-action="change->documents-reception-create#onSapLineSelectChange"
-                  class="w-full border border-gray-200 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-400">
-            ${accOptions}
-          </select>
-        </td>
-        <td class="px-3 py-2 text-xs">
-          <select data-idx="${idx}" data-field="ProjectCode"
-                  data-action="change->documents-reception-create#onSapLineSelectChange"
-                  class="w-full border border-gray-200 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-400">
-            ${prjOptions}
-          </select>
-        </td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${line.Quantity}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.WhsCode}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.UnitPrice, this.#docCurrency)}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.Disc, this.#docCurrency)}</td>
-        <td class="px-3 py-2 text-xs">
-          <select data-idx="${idx}" data-field="TaxCode"
-                  data-action="change->documents-reception-create#onSapLineSelectChange"
-                  class="w-full border border-gray-200 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-400">
-            ${taxOptions}
-          </select>
-        </td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.LineTotal, this.#docCurrency)}</td>
-        <td class="px-3 py-2 text-center">
-          <button type="button"
-                  data-action="click->documents-reception-create#removeSapLine"
-                  data-idx="${idx}"
-                  data-tooltip="Eliminar"
-                  class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors">
-            <span class="material-icons text-base">delete</span>
-          </button>
-        </td>`
-      tbody.appendChild(tr)
-    })
-  }
-
-  onSapLineFieldChange(event) {
-    const idx   = Number(event.target.dataset.idx)
-    const field = event.target.dataset.field
-    this.#apInvoiceLines[idx][field] = event.target.value
-    this.#renderApInvoiceLinesHeader()
-  }
-
-  onSapLineSelectChange(event) {
-    const idx   = Number(event.target.dataset.idx)
-    const field = event.target.dataset.field
-    this.#apInvoiceLines[idx][field] = event.target.value
-
-    if (field === 'SapAccountCode') {
-      const acc = this.#accountList.find(a => a.AcctCode === event.target.value)
-      this.#apInvoiceLines[idx].SapAccountName = acc ? `${acc.FormatCode}-${acc.AcctName}` : ''
+    // Info de línea(s)
+    if (!isMulti) {
+      const l = available[0]
+      this.ocPanelLineInfoTarget.innerHTML =
+        `<span class="font-semibold">${l.Code}</span> — ${l.Detail}` +
+        `<span class="ml-3 text-blue-600 font-medium">Disponible: ${l.Available}</span>`
+      this.ocQuantityTarget.value = l.Available
+      this.ocQuantityTarget.max   = l.Available
+    } else {
+      this.ocPanelLineInfoTarget.innerHTML =
+        `<span class="font-semibold">${available.length} líneas seleccionadas</span>` +
+        ` — se usará la cantidad disponible de cada una`
     }
-    if (field === 'TaxCode') {
-      const tax = this.#taxCodeList.find(t => t.TaxCode === event.target.value)
-      if (tax) {
-        const line = this.#apInvoiceLines[idx]
-        line.TaxRate   = String(tax.TaxRate ?? 0)
-        line.TaxAmount = ((line.UnitPrice * line.Quantity) - line.Disc) * (Number(line.TaxRate) / 100)
-        line.LineTotal = ((line.UnitPrice * line.Quantity) - line.Disc) + line.TaxAmount
+
+    // Cantidad: solo en modo 1, y ocultar si es multi-selección
+    const isMode1 = this.#freightChargesMode === 1
+    this.ocQuantityRowTarget.classList.toggle('hidden', !isMode1 || isMulti)
+
+    // Campos exclusivos de modo 1 (Artículo, Almacén, Cuenta, Proyecto, Impuesto)
+    this.ocMode1FieldsTarget.classList.toggle('hidden', !isMode1)
+    // Campos exclusivos de modo 2 (Cargo adicional SAP)
+    this.ocMode2FieldsTarget.classList.toggle('hidden', isMode1)
+
+    // Reset campos autocomplete
+    this.ocInputItemTarget.value      = '';  this.ocSelectItemTarget.value      = ''
+    this.ocInputWarehouseTarget.value = '';  this.ocSelectWarehouseTarget.value = ''
+    this.ocInputTaxCodeTarget.value   = '';  this.ocSelectTaxCodeTarget.value   = ''
+    this.ocInputAccountTarget.value   = '';  this.ocSelectAccountTarget.value   = ''
+    this.ocInputProjectTarget.value   = '';  this.ocSelectProjectTarget.value   = ''
+    this.ocSelectFreightTarget.value  = ''
+    this.#closeAllOcDropdowns()
+
+    // Pre-seleccionar impuesto por ImpTarifa de la primera línea
+    const resolved = this.#resolveTaxForLine(available[0])
+    if (resolved.TaxCode) {
+      const taxObj = this.#taxCodeList.find(t => t.TaxCode === resolved.TaxCode)
+      if (taxObj) {
+        this.ocInputTaxCodeTarget.value  = `${taxObj.TaxCode} (${taxObj.TaxRate}%)`
+        this.ocSelectTaxCodeTarget.value = taxObj.TaxCode
       }
     }
-    this.#calculateTotals()
-    this.#renderApInvoiceLinesHeader()
+
+    // Reset dimensiones
+    ;[this.ocDim1Target, this.ocDim2Target, this.ocDim3Target, this.ocDim4Target, this.ocDim5Target]
+      .forEach(el => { el.value = '' })
+    this.ocDimBodyTarget.classList.add('hidden')
+    this.ocDimIconTarget.style.transform = 'rotate(0deg)'
+
+    this.ocPanelBackdropTarget.classList.remove('hidden')
+    this.ocPanelTarget.classList.remove('translate-x-full')
+    document.body.style.overflow = 'hidden'
   }
 
-  removeSapLine(event) {
-    const idx  = Number(event.currentTarget.dataset.idx)
-    const line = this.#apInvoiceLines[idx]
+  // ── Panel edición de dimensiones post-agregado ────────
+  #openDimEditPanel(type, id, rowData) {
+    this.#dimEditContext = { type, id }
 
-    // Restituir disponible en la tabla XML
-    const xmlLine = this.#xmlDoc?.DocReceptXMLLines?.find(l => l.RowId === line.RowId)
-    if (xmlLine) xmlLine.Available = (xmlLine.Available + line.Quantity)
+    // Info de la fila
+    const label = type === 'sap'
+      ? `${rowData.ItemCodeXML} — ${rowData.ItemNameEdited}`
+      : `${rowData.ExpenseCode} — ${rowData.Remarks}`
+    this.dimEditLineInfoTarget.textContent = label
 
-    this.#apInvoiceLines.splice(idx, 1)
-    this.#renderSapLinesTable()
-    this.#renderXmlLinesTable()
-    this.#renderApInvoiceLinesHeader()
-    this.#calculateTotals()
+    // Poblar selects desde #dimensionList y pre-seleccionar valores actuales
+    this.#dimensionList.forEach(dim => {
+      const code     = dim.DimCode   // 1-5
+      const rowEl    = this[`dimEditRow${code}Target`]
+      const selEl    = this[`dimEdit${code}Target`]
+      if (!rowEl || !selEl) return
+
+      const label = rowEl.querySelector('label')
+      if (label) label.textContent = dim.DimName || `Dimensión ${code}`
+
+      // Poblar solo si aún vacío
+      if (selEl.options.length === 0) {
+        const blank = document.createElement('option')
+        blank.value = ''; blank.textContent = 'Ninguna'
+        selEl.appendChild(blank)
+        dim.CenterCost?.forEach(cc => {
+          const opt = document.createElement('option')
+          opt.value = cc.PrcCode
+          opt.textContent = `${cc.PrcCode} - ${cc.PrcName}`
+          selEl.appendChild(opt)
+        })
+      }
+
+      // Pre-seleccionar valor actual
+      const currentVal = type === 'sap'
+        ? rowData[`Dimension${code}`]
+        : rowData[`DistributionRule${code > 1 ? code : ''}`]
+      selEl.value = currentVal ?? ''
+
+      rowEl.classList.remove('hidden')
+    })
+
+    this.dimEditBackdropTarget.classList.remove('hidden')
+    this.dimEditPanelTarget.classList.remove('translate-x-full')
+    document.body.style.overflow = 'hidden'
   }
 
-  // ── Tabla de líneas en Cabecera (read-only) ────────────
-  #renderApInvoiceLinesHeader() {
-    const tbody = this.apInvoiceLinesBodyTarget
-    tbody.innerHTML = ''
+  saveDimEdit() {
+    const { type, id } = this.#dimEditContext ?? {}
+    if (!type || id === undefined) return
 
-    if (!this.#apInvoiceLines.length) {
-      tbody.innerHTML = '<tr><td colspan="11" class="px-3 py-4 text-center text-xs text-gray-400">Sin líneas agregadas</td></tr>'
-      return
+    const dims = [1,2,3,4,5].map(i => this[`dimEdit${i}Target`]?.value ?? '')
+    const selectedDimensions = dims.filter(Boolean).join(', ')
+
+    if (type === 'sap') {
+      const line = this.#ocApLines.find(l => l.TableId === id)
+      if (line) {
+        line.Dimension1 = dims[0]; line.Dimension2 = dims[1]; line.Dimension3 = dims[2]
+        line.Dimension4 = dims[3]; line.Dimension5 = dims[4]
+        line.SelectedDimensions = selectedDimensions
+        this.#renderOcApLinesTable()
+      }
+    } else {
+      const charge = this.#otherChargeLines.find(c => c.ExpenseCode === id)
+      if (charge) {
+        charge.DistributionRule  = dims[0]; charge.DistributionRule2 = dims[1]
+        charge.DistributionRule3 = dims[2]; charge.DistributionRule4 = dims[3]
+        charge.DistributionRule5 = dims[4]
+        charge.SelectedDimensions = selectedDimensions
+        this.#renderOcChargesTable()
+      }
     }
 
-    this.#apInvoiceLines.forEach(line => {
-      const tr = document.createElement('tr')
-      tr.className  = 'border-b border-gray-100'
-      tr.innerHTML  = `
-        <td class="px-3 py-2 text-xs text-gray-700">${line.ItemCode}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.ItemCodeXML}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.ItemNameEdited}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.SapAccountName}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.ProjectCode}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${line.Quantity}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.WhsCode}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.UnitPrice, this.#docCurrency)}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.Disc, this.#docCurrency)}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${line.TaxCode}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmtMoney(line.LineTotal, this.#docCurrency)}</td>`
-      tbody.appendChild(tr)
+    this.cancelDimEdit()
+  }
+
+  cancelDimEdit() {
+    this.#dimEditContext = null
+    this.dimEditPanelTarget.classList.add('translate-x-full')
+    this.dimEditBackdropTarget.classList.add('hidden')
+    document.body.style.overflow = ''
+  }
+
+  toggleOcDimensions() {
+    const body    = this.ocDimBodyTarget
+    const icon    = this.ocDimIconTarget
+    const hidden  = body.classList.toggle('hidden')
+    icon.style.transform = hidden ? 'rotate(0deg)' : 'rotate(90deg)'
+  }
+
+  // Botón "Agregar seleccionados" en toolbar (acción pública Stimulus)
+  addSelectedOcLines() {
+    const selectedRows = this.#otrosCargosTabulator?.getSelectedRows() ?? []
+    if (selectedRows.length === 0) {
+      showToast('Seleccione al menos una línea', 'warning')
+      return
+    }
+    const lines = selectedRows.map(r => {
+      return this.#xmlDoc2?.DocChargesXMLLines?.find(l => l.RowId === r.getData().RowId)
+    }).filter(Boolean)
+    this.#openOcSelectionForLines(lines)
+  }
+
+  cancelOcSelection() {
+    this.#selectedOcLines = []
+    this.#closeAllOcDropdowns()
+    this.ocPanelTarget.classList.add('translate-x-full')
+    this.ocPanelBackdropTarget.classList.add('hidden')
+    document.body.style.overflow = ''
+  }
+
+  confirmOcSelection() {
+    const lines = this.#selectedOcLines
+    if (!lines.length) return
+
+    const isMulti   = lines.length > 1
+    const taxCode   = this.ocSelectTaxCodeTarget.value
+    const accCode   = this.ocSelectAccountTarget.value
+    const prjCode   = this.ocSelectProjectTarget.value
+    const itemCode  = this.ocSelectItemTarget.value
+    const whsCode   = this.ocSelectWarehouseTarget.value
+    const acc       = this.#accountList.find(a => a.AcctCode === accCode)
+    const prj       = this.#projectList.find(p => p.Code === prjCode)
+    const itemSAP   = this.#itemSAPList.find(i => i.ItemCode === itemCode)
+    const taxObj    = this.#taxCodeList.find(t => t.TaxCode === taxCode)
+    const taxRate   = Number(taxObj?.TaxRate ?? 0)
+    const dims      = [
+      this.ocDim1Target.value,
+      this.ocDim2Target.value,
+      this.ocDim3Target.value,
+      this.ocDim4Target.value,
+      this.ocDim5Target.value,
+    ]
+    const selectedDims = dims.filter(Boolean).join(', ')
+
+    // Validaciones modo 1
+    if (this.#freightChargesMode === 1) {
+      if (!itemCode) { showToast('Seleccione un artículo SAP', 'warning'); return }
+      if (!whsCode)  { showToast('Seleccione un almacén', 'warning');     return }
+    }
+
+    // Validar cantidad solo para selección individual
+    if (!isMulti) {
+      const qty = Number(this.ocQuantityTarget.value)
+      if (!qty || qty <= 0) { showToast('La cantidad debe ser mayor a 0', 'warning'); return }
+    }
+
+    lines.forEach(line => {
+      const quantity  = isMulti ? line.Available : Number(this.ocQuantityTarget.value)
+      const disc      = (line.Discount / Math.max(line.Quantity, 1)) * quantity
+      const taxAmount = ((line.UnitPrice * quantity) - disc) * (taxRate / 100)
+      const lineTotal = ((line.UnitPrice * quantity) - disc) + taxAmount
+
+      if (this.#freightChargesMode === 1) {
+        // ── Modo 1: DocumentAPInvoiceLines ──
+        const apLine = {
+          RowId:          line.RowId,
+          TableId:        this.#idItemTable++,
+          ItemCode:       itemCode,
+          InvtItem:       itemSAP?.InvntItem ?? '',
+          SapAccountCode: acc?.AcctCode ?? '',
+          SapAccountName: acc ? `${acc.FormatCode}-${acc.AcctName}` : '',
+          ItemCodeXML:    line.Code,
+          ItemNameXML:    line.Detail,
+          ItemNameEdited: line.Detail,
+          LineCurr:       line.DocCur ?? this.#docCurrency,
+          Quantity:       quantity,
+          UnitPrice:      line.UnitPrice,
+          Disc:           disc,
+          TaxCode:        taxCode,
+          TaxRate:        String(taxRate),
+          TaxAmount:      taxAmount,
+          LineTotal:      lineTotal,
+          WhsCode:        whsCode,
+          Dimension1:     dims[0], Dimension2: dims[1], Dimension3: dims[2],
+          Dimension4:     dims[3], Dimension5: dims[4],
+          SelectedDimensions: selectedDims,
+          IsSelected:     false,
+          XmlUndMed:      line.XmlUndMed          ?? '',
+          XmlUndMedComercial: line.XmlUndMedComercial ?? '',
+          XmlCodType:     line.XmlCodType          ?? '',
+          ProjectCode:    prjCode,
+          ProjectName:    prj ? `${prj.Code}-${prj.Name}` : '',
+        }
+        this.#apInvoiceLines.push(apLine)
+        this.#ocApLines.push(apLine)
+
+      } else {
+        // ── Modo 2: ChargesAPInvoiceBase ──
+        // ExpenseCode viene del select de cargos adicionales seleccionado por el usuario
+        const expenseCode = Number(this.ocSelectFreightTarget.value || 0)
+        if (!expenseCode) { showToast('Seleccione un cargo adicional SAP', 'warning'); return }
+        const existing    = this.#otherChargeLines.find(c => c.ExpenseCode === expenseCode)
+
+        if (existing) {
+          existing.LineTotal         = Number((existing.LineTotal + lineTotal).toFixed(2))
+          existing.OriginalLineTotal = existing.LineTotal
+          existing.TaxCode           = taxCode
+          // Registrar row asociada para poder restaurar Available al eliminar
+          existing._xmlRowIds = [...(existing._xmlRowIds ?? []), { rowId: line.RowId, qty: quantity }]
+        } else {
+          this.#otherChargeLines.push({
+            ExpenseCode:       expenseCode,
+            Remarks:           line.Detail ?? '',
+            TaxCode:           taxCode,
+            LineTotal:         Number(lineTotal.toFixed(2)),
+            OriginalLineTotal: Number(lineTotal.toFixed(2)),
+            DistributionRule:  dims[0],
+            DistributionRule2: dims[1],
+            DistributionRule3: dims[2],
+            DistributionRule4: dims[3],
+            DistributionRule5: dims[4],
+            IsSelected:        false,
+            SelectedDimensions: selectedDims,
+            _xmlRowIds:        [{ rowId: line.RowId, qty: quantity }],
+          })
+        }
+      }
+
+      line.Available = (line.Available - quantity)
     })
+
+    this.#renderOtrosCargosTable()
+    if (this.#freightChargesMode === 1) {
+      this.#renderOcApLinesTable()
+    } else {
+      this.#renderOcChargesTable()
+    }
+    this.#renderSapLinesTable()
+    this.#renderApInvoiceLinesHeader()
+    this.#calculateTotals()
+
+    this.#otrosCargosTabulator?.deselectRow()
+    this.cancelOcSelection()
+  }
+
+  // ── Eliminación en tablas Otros Cargos ────────────────
+  #removeOcApLine(tableId) {
+    const idx = this.#ocApLines.findIndex(l => l.TableId === tableId)
+    if (idx < 0) return
+    const line = this.#ocApLines[idx]
+
+    // Restaurar disponible en la línea XML de origen
+    const xmlChargeLine = this.#xmlDoc2?.DocChargesXMLLines?.find(l => l.RowId === line.RowId)
+    if (xmlChargeLine) xmlChargeLine.Available += line.Quantity
+
+    this.#ocApLines.splice(idx, 1)
+    const mainIdx = this.#apInvoiceLines.findIndex(l => l.TableId === tableId)
+    if (mainIdx >= 0) this.#apInvoiceLines.splice(mainIdx, 1)
+
+    this.#renderOtrosCargosTable()
+    this.#renderOcApLinesTable()
+    this.#renderSapLinesTable()
+    this.#renderApInvoiceLinesHeader()
+    this.#calculateTotals()
+  }
+
+  #removeOcCharge(expenseCode) {
+    const idx = this.#otherChargeLines.findIndex(c => c.ExpenseCode === expenseCode)
+    if (idx < 0) return
+    const charge = this.#otherChargeLines[idx]
+
+    // Restaurar Available en cada línea XML que aportó a este cargo
+    ;(charge._xmlRowIds ?? []).forEach(({ rowId, qty }) => {
+      const xmlLine = this.#xmlDoc2?.DocChargesXMLLines?.find(l => l.RowId === rowId)
+      if (xmlLine) xmlLine.Available = (xmlLine.Available ?? 0) + qty
+    })
+
+    this.#otherChargeLines.splice(idx, 1)
+
+    this.#renderOtrosCargosTable()
+    this.#renderOcChargesTable()
+    this.#calculateTotals()
   }
 
   // ── Totales ────────────────────────────────────────────
@@ -1341,8 +2116,6 @@ export default class extends Controller {
     this.successModalTarget.classList.add('hidden')
     window.location.href = this.#getReturnUrl()
   }
-
-
 
   // ── Preview panel ──────────────────────────────────────
   #openPreview() {

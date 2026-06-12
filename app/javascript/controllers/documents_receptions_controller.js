@@ -361,7 +361,8 @@ export default class extends TabulatorController {
     const canPreview          = row.Status === 7;
     const canBandeja          = row.Bandeja != null && row.Bandeja !== '';
     const canReprocess        = row.Status === 4;
-    const canSAP              = row.Status === 1 && this.#hasPerm('F_CreateAPInvoice');
+    const alreadyInSAP        = row.ConsecutivoDoc > 0;
+    const canSAP              = row.Status === 1 && this.#hasPerm('F_CreateAPInvoice') && !alreadyInSAP;
     const xmlHaciendaAvail    = row.Status === 1 || row.Status === 4;
 
     const options = [
@@ -415,7 +416,9 @@ export default class extends TabulatorController {
         icon: 'ios_share',
         action: 'send-sap',
         disabled: !canSAP,
-        disabledReason: 'Solo disponible para documentos Aceptados y con el permiso necesario',
+        disabledReason: alreadyInSAP
+          ? `N° Consecutivo ${row.ConsecutivoDoc} — El documento ya fue creado en SAP`
+          : 'Solo disponible para documentos Aceptados y con el permiso necesario',
       },
       {
         label: 'Reprocesar',
@@ -725,12 +728,6 @@ export default class extends TabulatorController {
     }
     if (!this.#hasPerm('F_CreateAPInvoice')) {
       showToast('No tiene permiso para realizar esta acción', 'info');
-      return;
-    }
-    if (row.ConsecutivoDoc > 0) {
-      this.infoTitleTarget.textContent = 'Información';
-      this.infoBodyTarget.textContent  = `N° Consecutivo ${row.ConsecutivoDoc} — El documento fue creado anteriormente.`;
-      this.infoModalTarget.classList.remove('hidden');
       return;
     }
     if (!this.#companyInfo?.DefaultTaxForXML) {

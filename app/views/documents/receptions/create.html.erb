@@ -319,30 +319,7 @@
 
       <%# Tabla de líneas (read-only, llena desde tab Líneas) %>
       <div class="mb-6 border border-gray-200 rounded-xl overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código SAP</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código XML</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Detalle</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Cuenta</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Proyecto</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Cantidad</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Almacén</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Precio</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Descuento</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Impuesto</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Monto</th>
-              </tr>
-            </thead>
-            <tbody data-documents-reception-create-target="apInvoiceLinesBody">
-              <tr>
-                <td colspan="11" class="px-3 py-4 text-center text-xs text-gray-400">Sin líneas agregadas</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <div data-documents-reception-create-target="apInvoiceLinesTable"></div>
       </div>
 
       <%# Comentario + Totales %>
@@ -435,28 +412,7 @@
       <div>
         <h4 class="text-sm font-semibold text-gray-700 mb-2">Líneas del XML</h4>
         <div class="border border-gray-200 rounded-xl overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm" data-testid="xml-lines-table">
-              <thead class="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Detalle</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Cantidad</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Precio</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Descuento</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Impuesto</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Monto Línea</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Disponible</th>
-                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-600">Acción</th>
-                </tr>
-              </thead>
-              <tbody data-documents-reception-create-target="xmlLinesBody">
-                <tr>
-                  <td colspan="9" class="px-3 py-4 text-center text-xs text-gray-400">Sin líneas</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <div data-documents-reception-create-target="xmlLinesTable" data-testid="xml-lines-table"></div>
         </div>
       </div>
 
@@ -464,31 +420,7 @@
       <div>
         <h4 class="text-sm font-semibold text-gray-700 mb-2">Líneas a enviar a SAP</h4>
         <div class="border border-gray-200 rounded-xl overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm" data-testid="sap-lines-table">
-              <thead class="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código SAP</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código XML</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Detalle</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Cuenta</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Proyecto</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Cantidad</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Almacén</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Precio</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Descuento</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Impuesto</th>
-                  <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Monto</th>
-                  <th class="px-3 py-2 text-center text-xs font-medium text-gray-600">Acciones</th>
-                </tr>
-              </thead>
-              <tbody data-documents-reception-create-target="sapLinesBody">
-                <tr>
-                  <td colspan="12" class="px-3 py-4 text-center text-xs text-gray-400">Sin líneas</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <div data-documents-reception-create-target="sapLinesTable" data-testid="sap-lines-table"></div>
         </div>
       </div>
 
@@ -496,29 +428,38 @@
 
     <%# ── TAB: OTROS CARGOS ──────────────────────────── %>
     <div data-documents-reception-create-target="tabOtrosCargos"
-         class="hidden flex-1 overflow-y-auto p-6">
-      <h4 class="text-sm font-semibold text-gray-700 mb-4">Otros Cargos del XML</h4>
-      <div class="border border-gray-200 rounded-xl overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Código</th>
-                <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">Detalle</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Cantidad</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Precio</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-600">Disponible</th>
-                <th class="px-3 py-2 text-center text-xs font-medium text-gray-600">Acción</th>
-              </tr>
-            </thead>
-            <tbody data-documents-reception-create-target="otrosCargosBody">
-              <tr>
-                <td colspan="6" class="px-3 py-4 text-center text-xs text-gray-400">Sin cargos adicionales</td>
-              </tr>
-            </tbody>
-          </table>
+         class="hidden flex-1 overflow-y-auto p-6 space-y-6">
+
+      <%# Tabla fuente: líneas XML de cargos %>
+      <div>
+        <h4 class="text-sm font-semibold text-gray-700 mb-3">Otros Cargos del XML</h4>
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <div data-documents-reception-create-target="otrosCargosTable"></div>
         </div>
       </div>
+
+      <%# Tabla resultado A: líneas para envío a SAP — visible solo en modo FreightCharges=1 %>
+      <div data-documents-reception-create-target="ocApLinesSection" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-sm font-semibold text-gray-700">Líneas para envío a SAP</h4>
+          <span class="text-xs text-gray-400">Seleccione filas y presione el ícono eliminar para quitar varias</span>
+        </div>
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <div data-documents-reception-create-target="ocApLinesTable"></div>
+        </div>
+      </div>
+
+      <%# Tabla resultado B: cargos adicionales SAP — visible solo en modo FreightCharges=2 %>
+      <div data-documents-reception-create-target="ocChargesSection" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-sm font-semibold text-gray-700">Cargos adicionales para SAP</h4>
+          <span class="text-xs text-gray-400">Seleccione filas y presione el ícono eliminar para quitar varias</span>
+        </div>
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <div data-documents-reception-create-target="ocChargesTable"></div>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -670,8 +611,171 @@
   </div>
 
   <%# ──────────────────────────────────────────────────── %>
-  <%# PANEL LATERAL: Selección de ítem (líneas) %>
+  <%# PANEL LATERAL: Otros Cargos %>
   <%# ──────────────────────────────────────────────────── %>
+  <div data-documents-reception-create-target="ocPanelBackdrop"
+       data-action="click->documents-reception-create#cancelOcSelection"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-reception-create-target="ocPanel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Agregar cargo adicional</h3>
+      <button type="button"
+              data-action="click->documents-reception-create#cancelOcSelection"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+      <%# Info de línea(s) seleccionada(s) %>
+      <div data-documents-reception-create-target="ocPanelLineInfo"
+           class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800">
+      </div>
+
+      <%# Cantidad — se oculta cuando hay múltiples líneas seleccionadas %>
+      <div data-documents-reception-create-target="ocQuantityRow">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad <span class="text-red-500">*</span></label>
+        <input type="number"
+               min="1"
+               data-documents-reception-create-target="ocQuantity"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# ── Modo 1: Artículos ── %>
+      <div data-documents-reception-create-target="ocMode1Fields" class="space-y-4">
+
+        <%# Artículo SAP %>
+        <div data-documents-reception-create-target="ocItemRow" class="relative">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Artículo SAP <span class="text-red-500">*</span></label>
+          <input type="text"
+                 data-documents-reception-create-target="ocInputItem"
+                 data-action="input->documents-reception-create#onOcItemInput focus->documents-reception-create#onOcItemFocus"
+                 placeholder="Buscar por código o nombre"
+                 autocomplete="off"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="hidden" data-documents-reception-create-target="ocSelectItem">
+          <div data-documents-reception-create-target="ocItemList"
+               class="hidden absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"></div>
+        </div>
+
+        <%# Almacén %>
+        <div data-documents-reception-create-target="ocWarehouseRow" class="relative">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Almacén <span class="text-red-500">*</span></label>
+          <input type="text"
+                 data-documents-reception-create-target="ocInputWarehouse"
+                 data-action="input->documents-reception-create#onOcWarehouseInput focus->documents-reception-create#onOcWarehouseFocus"
+                 placeholder="Buscar almacén"
+                 autocomplete="off"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="hidden" data-documents-reception-create-target="ocSelectWarehouse">
+          <div data-documents-reception-create-target="ocWarehouseList"
+               class="hidden absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"></div>
+        </div>
+
+        <%# Impuesto %>
+        <div class="relative">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Impuesto</label>
+          <input type="text"
+                 data-documents-reception-create-target="ocInputTaxCode"
+                 data-action="input->documents-reception-create#onOcTaxCodeInput focus->documents-reception-create#onOcTaxCodeFocus"
+                 placeholder="Buscar impuesto"
+                 autocomplete="off"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="hidden" data-documents-reception-create-target="ocSelectTaxCode">
+          <div data-documents-reception-create-target="ocTaxCodeList"
+               class="hidden absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"></div>
+        </div>
+
+        <%# Cuenta SAP %>
+        <div class="relative">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Cuenta SAP</label>
+          <input type="text"
+                 data-documents-reception-create-target="ocInputAccount"
+                 data-action="input->documents-reception-create#onOcAccountInput focus->documents-reception-create#onOcAccountFocus"
+                 placeholder="Buscar cuenta"
+                 autocomplete="off"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="hidden" data-documents-reception-create-target="ocSelectAccount">
+          <div data-documents-reception-create-target="ocAccountList"
+               class="hidden absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"></div>
+        </div>
+
+        <%# Proyecto %>
+        <div class="relative">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Proyecto</label>
+          <input type="text"
+                 data-documents-reception-create-target="ocInputProject"
+                 data-action="input->documents-reception-create#onOcProjectInput focus->documents-reception-create#onOcProjectFocus"
+                 placeholder="Buscar proyecto"
+                 autocomplete="off"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="hidden" data-documents-reception-create-target="ocSelectProject">
+          <div data-documents-reception-create-target="ocProjectList"
+               class="hidden absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"></div>
+        </div>
+
+      </div><%# /ocMode1Fields %>
+
+      <%# ── Modo 2: Cargos adicionales SAP ── %>
+      <div data-documents-reception-create-target="ocMode2Fields" class="hidden space-y-4">
+
+        <%# Cargo adicional SAP %>
+        <div data-documents-reception-create-target="ocFreightRow">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Cargo adicional SAP <span class="text-red-500">*</span></label>
+          <select data-documents-reception-create-target="ocSelectFreight"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">-- Seleccione cargo --</option>
+          </select>
+        </div>
+
+      </div><%# /ocMode2Fields %>
+
+      <%# Dimensiones — acordeón colapsable (ambos modos) %>
+      <div>
+        <button type="button"
+                data-action="click->documents-reception-create#toggleOcDimensions"
+                class="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700">
+          <span data-documents-reception-create-target="ocDimIcon"
+                class="material-icons text-sm transition-transform duration-200">chevron_right</span>
+          Dimensiones
+        </button>
+        <div data-documents-reception-create-target="ocDimBody"
+        <div data-documents-reception-create-target="ocDimBody" class="hidden mt-3 space-y-2">
+          <% (1..5).each do |i| %>
+            <div class="hidden"
+                 data-documents-reception-create-target="ocDimRow<%= i %>">
+              <label class="block text-xs font-medium text-gray-600 mb-1">Dimensión <%= i %></label>
+              <select data-documents-reception-create-target="ocDim<%= i %>"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              </select>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->documents-reception-create#cancelOcSelection"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>Cancelar
+      </button>
+      <button type="button"
+              data-action="click->documents-reception-create#confirmOcSelection"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <span class="material-icons text-base">check</span>Agregar cargo
+      </button>
+    </div>
+
+  </div>
+
+  <%# PANEL LATERAL: Selección de ítem (líneas) %>
   <div data-documents-reception-create-target="itemPanelBackdrop"
        data-action="click->documents-reception-create#cancelItemSelection"
        class="hidden fixed inset-0 z-40 bg-black/40"></div>
@@ -691,7 +795,6 @@
 
     <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
 
-      <%# Info de la línea XML seleccionada %>
       <div data-documents-reception-create-target="itemPanelLineInfo"
            class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800">
       </div>
@@ -712,8 +815,7 @@
 
       <div>
         <label class="block text-xs font-medium text-gray-600 mb-1">Cantidad <span class="text-red-500">*</span></label>
-        <input type="number"
-               min="1"
+        <input type="number" min="1"
                data-documents-reception-create-target="itemQuantity"
                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
@@ -746,6 +848,56 @@
               data-action="click->documents-reception-create#confirmItemSelection"
               class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
         <span class="material-icons text-base">check</span>Agregar línea
+      </button>
+    </div>
+
+  </div>
+
+  <%# PANEL LATERAL: Editar dimensiones (líneas ya agregadas) %>
+  <div data-documents-reception-create-target="dimEditBackdrop"
+       data-action="click->documents-reception-create#cancelDimEdit"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-reception-create-target="dimEditPanel"
+       class="fixed top-0 right-0 h-full w-full max-w-sm bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Dimensiones</h3>
+      <button type="button"
+              data-action="click->documents-reception-create#cancelDimEdit"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+      <div data-documents-reception-create-target="dimEditLineInfo"
+           class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800">
+      </div>
+
+      <% (1..5).each do |i| %>
+        <div class="hidden" data-documents-reception-create-target="dimEditRow<%= i %>">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Dimensión <%= i %></label>
+          <select data-documents-reception-create-target="dimEdit<%= i %>"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          </select>
+        </div>
+      <% end %>
+
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->documents-reception-create#cancelDimEdit"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>Cancelar
+      </button>
+      <button type="button"
+              data-action="click->documents-reception-create#saveDimEdit"
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <span class="material-icons text-base">check</span>Guardar
       </button>
     </div>
 
