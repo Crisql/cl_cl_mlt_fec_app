@@ -168,7 +168,7 @@ export default class extends TabulatorController {
       showToast('Opción no disponible, ya que no posee asignaciones.', 'info');
       return;
     }
-    const confirmed = await confirm('¿Está seguro de que desea cambiar la compañía favorita?', 'Compañía favorita');
+    const confirmed = await confirm('¿Está seguro de que desea cambiar la compañía favorita?', 'Compañía favorita', ALERT_TYPES.QUESTION);
     if (!confirmed) return;
 
     try {

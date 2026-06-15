@@ -890,5 +890,57 @@ with open('app/views/modulo/index.html.erb', 'w', encoding='utf-8') as f:
 | `business_partners_controller.js` | ~2578 |
 | `authenticated.html.erb` | ~278 (CRLF — siempre Python) |
 
+### Patrón seguro obligatorio — verificación antes y después
+
+Todo script Python de edición debe seguir este patrón completo. Sin las verificaciones, un truncado pasa silenciosamente:
+
+```python
+path = 'ruta/al/archivo'
+
+with open(path, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+lines_before = content.count('\n') + 1
+
+# Verificar que el texto a reemplazar existe ANTES de escribir
+old = 'texto original exacto'
+new = 'texto nuevo exacto'
+assert old in content, f"ERROR: texto no encontrado en {path} — abortando"
+
+content = content.replace(old, new)
+lines_after = content.count('\n') + 1
+
+# Una edición de 1 línea no debería cambiar el conteo más de ±5
+assert abs(lines_after - lines_before) < 20, f"ERROR: conteo de líneas cambió de {lines_before} a {lines_after} — posible truncado"
+
+with open(path, 'w', encoding='utf-8') as f:
+    f.write(content)
+
+# Verificar en disco que el archivo quedó completo
+with open(path, 'r', encoding='utf-8') as f:
+    written = f.read()
+lines_disk = written.count('\n') + 1
+assert lines_disk == lines_after, f"ERROR: disco tiene {lines_disk} líneas, esperaba {lines_after}"
+
+print(f"OK — {lines_before} → {lines_after} líneas, cambio aplicado: {new in written}")
+```
+
+### ⚠️ Señales de truncado silencioso
+
+- El script reporta "Done" pero las líneas bajaron más de lo esperado
+- `tail` del archivo muestra que se corta en medio de una función o expresión
+- El browser lanza `SyntaxError: Private field '#x' must be declared in an enclosing class` — indica que la clase no cerró correctamente
+
+### Recuperación cuando ocurre truncado
+
+```bash
+# 1. Verificar líneas actuales vs git HEAD
+wc -l app/javascript/controllers/mi_controller.js
+git show HEAD:app/javascript/controllers/mi_controller.js | wc -l
+
+# 2. Si difieren, restaurar desde git y re-aplicar el cambio
+git show HEAD:app/javascript/controllers/mi_controller.js > app/javascript/controllers/mi_controller.js
+```
+
 
 ---

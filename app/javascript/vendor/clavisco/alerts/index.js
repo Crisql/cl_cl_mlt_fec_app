@@ -14,7 +14,8 @@ export const ALERT_TYPES = {
   SUCCESS: 'success',
   ERROR: 'error',
   WARNING: 'warning',
-  INFO: 'info'
+  INFO: 'info',
+  QUESTION: 'question'
 }
 
 // ============================================================
@@ -113,6 +114,7 @@ class AlertsService {
         [ALERT_TYPES.ERROR]:   { iconColor: '#dc2626', iconBg: '#fef2f2', icon: 'error',       confirmBg: '#dc2626', confirmHover: '#b91c1c' },
         [ALERT_TYPES.WARNING]: { iconColor: '#d97706', iconBg: '#fffbeb', icon: 'warning',     confirmBg: '#d97706', confirmHover: '#b45309' },
         [ALERT_TYPES.INFO]:    { iconColor: '#2563eb', iconBg: '#eff6ff', icon: 'info',        confirmBg: '#2563eb', confirmHover: '#1d4ed8' },
+        [ALERT_TYPES.QUESTION]: { iconColor: '#0369a1', iconBg: '#f0f9ff', icon: 'help',        confirmBg: '#0369a1', confirmHover: '#075985' },
       }[type] ?? { iconColor: '#6b7280', iconBg: '#f9fafb', icon: 'info', confirmBg: '#2563eb', confirmHover: '#1d4ed8' }
 
       const modal = document.createElement('div')
