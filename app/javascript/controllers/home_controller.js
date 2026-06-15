@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
+import { showToast } from 'vendor/clavisco/alerts'
 
 /**
  * HomeController — Dashboard principal.
@@ -37,6 +38,7 @@ export default class extends Controller {
     this.#loadCurrentUser()
     this.#loadSelectedCompany()
     this.#loadBanner()
+    this.#checkCertExpireAlarm()
   }
 
   // ---------------------------------------------------------------------------
@@ -165,6 +167,88 @@ export default class extends Controller {
     }
 
     Storage.set('BannerUser', bannerUsers)
+  }
+
+  /**
+   * Consulta la alarma de vencimiento de certificado para la empresa activa
+   * y muestra un toast de advertencia si el certificado esta proximo a vencer.
+   *
+   * Equivalente Angular: GlobalFunctionsService.GetCertExpireDateAlarm(companyId)
+   * invocado desde home.component.ts -> Onload().
+   *
+   * Nota importante sobre el bug del legacy:
+   *   el API devuelve `Data` como ARRAY, por lo que `data.Data.ShowAlarm`
+   *   siempre era undefined. Aqui se lee `Data[0].ShowAlarm`.
+   *
+   * Cambio de empresa: company_selector_controller hace window.location.reload(),
+   * por lo que connect() se vuelve a ejecutar y la alarma se reevalua con la
+   * nueva empresa seleccionada.
+   */
+  async #checkCertExpireAlarm() {
+    const companyId = this.#selectedCompany?.companyId
+    if (!companyId) return
+
+    try {
+      const json = await this.#apiFetch(
+        `/api/Companies/GetCertExpireDateAlarm?companyId=${companyId}`
+      )
+
+      const alarm = Array.isArray(json?.Data) ? json.Data[0] : json?.Data
+
+      if (alarm) {
+        if (alarm.ShowAlarm) {
+          showToast(alarm.SmsAlert, 'warning')
+        }
+      } else if (json?.Message) {
+        showToast(json.Message, 'warning')
+      }
+    } catch (error) {
+      showToast(
+        error.message || 'Error al obtener la fecha de expiracion del certificado',
+        'error'
+      )
+    }
+  }
+
+  /**
+   * Fetch contra el App server (ApiAppUrl). Reenvia token de sesion y
+   * Cl-Company-Id, y decodifica el header `cl-message` para errores.
+   */
+  async #apiFetch(url, options = {}) {
+    const token     = (Storage.get('Session') || {}).access_token
+    const company   = SStore.get('CurrentCompany')
+    const companyId = company?.companyId ?? this.#selectedCompany?.companyId
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type':             'application/json',
+        'API':                      'ApiAppUrl',
+        'X-Skip-Error-Interceptor': 'true',
+        ...(token     ? { Authorization:   `Bearer ${token}` } : {}),
+        ...(companyId ? { 'Cl-Company-Id': String(companyId) } : {}),
+        ...(options.headers || {}),
+      },
+    })
+
+    const clMessage = response.headers.get('cl-message')
+    const decodedMessage = clMessage ? (() => {
+      try { return decodeURIComponent(clMessage) } catch { return clMessage }
+    })() : null
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => response.statusText)
+      throw new Error(decodedMessage || text || `HTTP ${response.status}`)
+    }
+
+    const hasBody = response.status !== 204 &&
+                    response.headers.get('content-length') !== '0' &&
+                    response.headers.get('content-type')?.includes('application/json')
+    if (!hasBody) return { Message: decodedMessage || null }
+
+    const json = await response.json()
+    if (decodedMessage && !json.Message) json.Message = decodedMessage
+    return json
   }
 
   #showBanner() {
