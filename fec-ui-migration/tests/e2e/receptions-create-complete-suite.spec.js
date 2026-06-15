@@ -112,6 +112,13 @@ async function mockAllApis(page) {
       Reception: { Mensaje: 1, CondicionImpuesto: '01', TaxFactor: '', CodigoActividad: '620100', DetalleMensaje: '' }
     }, Message: '' } })
   })
+  // Por defecto el match automático está APAGADO para no interferir con el resto de suites.
+  await page.route('**/CompanyUseMatchAuto.json', async route => {
+    await route.fulfill({ json: { Data: { UseMatchAuto: false } } })
+  })
+  await page.route('**/api/Documents/MatchAutomatic**', async route => {
+    await route.fulfill({ json: { Data: { DocumentsLines: [] }, Message: '' } })
+  })
 }
 
 // ─────────────────────────────────────────────────────────
@@ -406,6 +413,211 @@ test.describe('Tab Líneas', () => {
     await page.keyboard.press('Enter')
     await page.locator('[data-testid="tab-lineas"]').click()
     await expect(page.locator('[data-testid="input-card-code"]')).toBeDisabled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────
+// SUITE 4b: Match automático al abrir el tab Líneas
+// ─────────────────────────────────────────────────────────
+test.describe('Match automático de líneas', () => {
+  // Activa el flag y permite definir la respuesta de MatchAutomatic por prueba.
+  async function setupMatchAuto(page, matchedLines) {
+    await injectAuth(page)
+    await mockAllApis(page)
+    // Override: flag ENCENDIDO
+    await page.route('**/CompanyUseMatchAuto.json', async route => {
+      await route.fulfill({ json: { Data: { UseMatchAuto: true } } })
+    })
+    // Override: respuesta del endpoint de match
+    await page.route('**/api/Documents/MatchAutomatic**', async route => {
+      await route.fulfill({ json: { Data: { DocumentsLines: matchedLines }, Message: '' } })
+    })
+    await page.goto(TARGET_URL)
+    await page.locator('[data-testid="input-card-code"]').fill('V001 - Proveedor S.A.')
+    await page.locator('[data-testid="autocomplete-supplier-list"] [data-testid="option-V001"]').click()
+  }
+
+  const MATCHED_LINE = {
+    RowId: 1, ItemCode: 'ART-001', Code: 'ART-001', Detail: 'Artículo de prueba',
+    DocCur: '₡', Quantity: 2, UnitPrice: 75000, Discount: 0, ImpTarifa: 13,
+    TaxCode: 'IVA13', TaxAmount: 19500, TotalLine: 169500, Available: 2,
+    DfltWH: '01', FormatCode: '1110',
+    Dimension1: '', Dimension2: '', Dimension3: '', Dimension4: '', Dimension5: ''
+  }
+
+  test('Al abrir Líneas se invoca POST /api/Documents/MatchAutomatic', async ({ page }) => {
+    await setupMatchAuto(page, [MATCHED_LINE])
+    const reqPromise = page.waitForRequest(req =>
+      req.url().includes('/api/Documents/MatchAutomatic') && req.method() === 'POST', { timeout: 10000 })
+    await page.locator('[data-testid="tab-lineas"]').click()
+    const req = await reqPromise
+    const body = JSON.parse(req.postData() || '{}')
+    expect(body.CardCode).toBe('V001')
+    expect(body.CompanyId).toBe(1)
+    expect(Array.isArray(body.DocumentsLines)).toBe(true)
+    expect(body.DocumentsLines.length).toBeGreaterThan(0)
+  })
+
+  test('Las líneas mapeadas se cargan automáticamente en la tabla SAP', async ({ page }) => {
+    await setupMatchAuto(page, [MATCHED_LINE])
+    await page.locator('[data-testid="tab-lineas"]').click()
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('ART-001', { timeout: 10000 })
+  })
+
+  test('La línea XML consumida queda con Disponible 0', async ({ page }) => {
+    await setupMatchAuto(page, [MATCHED_LINE])
+    await page.locator('[data-testid="tab-lineas"]').click()
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('ART-001', { timeout: 10000 })
+    // Disponible 0 se resalta en verde en la tabla XML
+    await expect(page.locator('[data-testid="xml-lines-table"] .text-green-600').first()).toBeVisible()
+  })
+
+  test('Sin líneas mapeadas, la tabla SAP queda vacía', async ({ page }) => {
+    await setupMatchAuto(page, [])
+    await page.locator('[data-testid="tab-lineas"]').click()
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('Sin líneas', { timeout: 10000 })
+  })
+
+  test('El match automático se ejecuta una sola vez (no se repite al volver al tab)', async ({ page }) => {
+    await setupMatchAuto(page, [MATCHED_LINE])
+    let calls = 0
+    await page.route('**/api/Documents/MatchAutomatic**', async route => {
+      calls++
+      await route.fulfill({ json: { Data: { DocumentsLines: [MATCHED_LINE] }, Message: '' } })
+    })
+    await page.locator('[data-testid="tab-lineas"]').click()
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('ART-001', { timeout: 10000 })
+    await page.locator('[data-testid="tab-cabecera"]').click()
+    await page.locator('[data-testid="tab-lineas"]').click()
+    await page.waitForTimeout(500)
+    expect(calls).toBe(1)
+  })
+
+  test('Con el flag apagado, NO se invoca MatchAutomatic', async ({ page }) => {
+    await injectAuth(page)
+    await mockAllApis(page) // flag OFF por defecto
+    let called = false
+    await page.route('**/api/Documents/MatchAutomatic**', async route => {
+      called = true
+      await route.fulfill({ json: { Data: { DocumentsLines: [] }, Message: '' } })
+    })
+    await page.goto(TARGET_URL)
+    await page.locator('[data-testid="input-card-code"]').fill('V001 - Proveedor S.A.')
+    await page.locator('[data-testid="autocomplete-supplier-list"] [data-testid="option-V001"]').click()
+    await page.locator('[data-testid="tab-lineas"]').click()
+    await page.waitForTimeout(500)
+    expect(called).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────
+// SUITE 4c: Selección múltiple y eliminación con confirmación
+// ─────────────────────────────────────────────────────────
+test.describe('Selección múltiple y eliminación', () => {
+  async function goToLineas(page) {
+    await injectAuth(page)
+    await mockAllApis(page)
+    await page.goto(TARGET_URL)
+    await page.locator('[data-testid="input-card-code"]').fill('V001 - Proveedor S.A.')
+    await page.locator('[data-testid="autocomplete-supplier-list"] [data-testid="option-V001"]').click()
+    await page.locator('[data-testid="tab-lineas"]').click()
+  }
+
+  test('La tabla XML tiene columna de selección múltiple', async ({ page }) => {
+    await goToLineas(page)
+    await expect(page.locator('[data-testid="xml-lines-table"] .tabulator-header input[type="checkbox"]')).toBeVisible({ timeout: 10000 })
+  })
+
+  test('La tabla SAP tiene columna de selección múltiple', async ({ page }) => {
+    await goToLineas(page)
+    await expect(page.locator('[data-testid="sap-lines-table"] .tabulator-header input[type="checkbox"]')).toBeVisible({ timeout: 10000 })
+  })
+
+  // Poblamos la tabla SAP usando el match automático (camino ya probado)
+  const M1 = { RowId: 1, ItemCode: 'ART-001', Code: 'ART-001', Detail: 'Artículo A',
+    DocCur: '₡', Quantity: 2, UnitPrice: 75000, Discount: 0, ImpTarifa: 13,
+    TaxCode: 'IVA13', Available: 2, DfltWH: '01', FormatCode: '1110',
+    Dimension1: '', Dimension2: '', Dimension3: '', Dimension4: '', Dimension5: '' }
+  const M2 = { ...M1, RowId: 2, Code: 'ART-002', Detail: 'Artículo B' }
+
+  async function goToLineasWithMatched(page, matchedLines) {
+    await injectAuth(page)
+    await mockAllApis(page)
+    await page.route('**/CompanyUseMatchAuto.json', async route => {
+      await route.fulfill({ json: { Data: { UseMatchAuto: true } } })
+    })
+    await page.route('**/api/Documents/MatchAutomatic**', async route => {
+      await route.fulfill({ json: { Data: { DocumentsLines: matchedLines }, Message: '' } })
+    })
+    await page.goto(TARGET_URL)
+    await page.locator('[data-testid="input-card-code"]').fill('V001 - Proveedor S.A.')
+    await page.locator('[data-testid="autocomplete-supplier-list"] [data-testid="option-V001"]').click()
+    await page.locator('[data-testid="tab-lineas"]').click()
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('ART-001', { timeout: 10000 })
+  }
+
+  test('Eliminar una fila SAP pide confirmación', async ({ page }) => {
+    await goToLineasWithMatched(page, [M1])
+    await page.locator('[data-testid="sap-lines-table"] [data-action-type="delete"]').first().click()
+    await expect(page.getByText('¿Está seguro de que desea eliminar esta fila')).toBeVisible()
+  })
+
+  test('Cancelar la confirmación conserva la fila SAP', async ({ page }) => {
+    await goToLineasWithMatched(page, [M1])
+    await page.locator('[data-testid="sap-lines-table"] [data-action-type="delete"]').first().click()
+    await page.locator('[data-action="cancel"]').click()
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('ART-001')
+  })
+
+  test('Confirmar elimina la fila SAP', async ({ page }) => {
+    await goToLineasWithMatched(page, [M1])
+    await page.locator('[data-testid="sap-lines-table"] [data-action-type="delete"]').first().click()
+    await page.locator('[data-action="confirm"]').click()
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('Sin líneas', { timeout: 10000 })
+  })
+
+  test('Seleccionar varias filas SAP y eliminar juntas (mensaje en plural)', async ({ page }) => {
+    await goToLineasWithMatched(page, [M1, M2])
+    // Marcar todas con el checkbox del header
+    await page.locator('[data-testid="sap-lines-table"] .tabulator-header input[type="checkbox"]').check()
+    await page.locator('[data-testid="sap-lines-table"] [data-action-type="delete"]').first().click()
+    await expect(page.getByText('eliminar las 2 filas seleccionadas')).toBeVisible()
+    await page.locator('[data-action="confirm"]').click()
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('Sin líneas', { timeout: 10000 })
+  })
+
+  test('Multi-agregar: marcar varias líneas XML y agregarlas juntas', async ({ page }) => {
+    await injectAuth(page)
+    await mockAllApis(page)
+    // XML con 2 líneas pendientes
+    await page.route('**/api/Documents/GetDocAPInvoiceInfoXML**', async route => {
+      await route.fulfill({ json: { Data: {
+        DocCur: 'CRC', TaxDate: '2026-01-15T00:00:00', CardName: 'Proveedor S.A.',
+        NumAtCard: 'REF-001', Comments: '', LicTradNum: '3101234567', OthersRecepts: [],
+        DocReceptXMLLines: [
+          { RowId: 1, Code: 'ART-001', Detail: 'Artículo A', DocCur: 'CRC', Quantity: 2, UnitPrice: 75000, Discount: 0, ImpTarifa: 13, TotalLine: 169500, Available: 2 },
+          { RowId: 2, Code: 'ART-002', Detail: 'Artículo B', DocCur: 'CRC', Quantity: 1, UnitPrice: 50000, Discount: 0, ImpTarifa: 13, TotalLine: 56500, Available: 1 }
+        ]
+      }, Message: '' } })
+    })
+    await page.goto(TARGET_URL)
+    await page.locator('[data-testid="input-card-code"]').fill('V001 - Proveedor S.A.')
+    await page.locator('[data-testid="autocomplete-supplier-list"] [data-testid="option-V001"]').click()
+    await page.locator('[data-testid="tab-lineas"]').click()
+
+    // Marcar todas las líneas XML pendientes
+    await page.locator('[data-testid="xml-lines-table"] .tabulator-header input[type="checkbox"]').check()
+    // Abrir el panel desde el botón Agregar de una fila
+    await page.locator('[data-testid="xml-lines-table"] [title="Agregar"]').first().click()
+    // El panel se abre en modo multi (campo Cantidad oculto)
+    await expect(page.locator('[data-documents-reception-create-target="itemQuantityRow"]')).toBeHidden()
+    // Setear artículo y almacén (inputs hidden que lee confirmItemSelection)
+    await page.locator('[data-documents-reception-create-target="itemSelectItem"]').evaluate(el => { el.value = 'ART-001' })
+    await page.locator('[data-documents-reception-create-target="itemSelectWarehouse"]').evaluate(el => { el.value = '01' })
+    await page.locator('[data-action="click->documents-reception-create#confirmItemSelection"]').click()
+    // Ambas líneas deben aparecer en la tabla SAP
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('Artículo A', { timeout: 10000 })
+    await expect(page.locator('[data-testid="sap-lines-table"]')).toContainText('Artículo B')
   })
 })
 

@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus'
 import { TabulatorFull as Tabulator } from 'tabulator-tables'
 import { Storage, SStore } from 'vendor/clavisco/core'
-import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts'
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts'
 import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
 import { TABULATOR_LOCALE, TABULATOR_LANGS } from 'controllers/tabulator_locale'
 
@@ -59,7 +59,7 @@ export default class extends Controller {
     'itemPanelBackdrop', 'itemPanel', 'itemPanelLineInfo',
     'itemInputItem', 'itemSelectItem', 'itemItemList',
     'itemInputWarehouse', 'itemSelectWarehouse', 'itemWarehouseList',
-    'itemQuantity',
+    'itemQuantity', 'itemQuantityRow',
     'itemInputAccount', 'itemSelectAccount', 'itemAccountList',
     'itemInputProject', 'itemSelectProject', 'itemProjectList',
     'itemDimIcon', 'itemDimBody',
@@ -110,6 +110,8 @@ export default class extends Controller {
   #dimensionList      = []  // IDimensions[] — solo las dimensiones configuradas en SAP
   #freightList        = []  // FreightModel[] — cargos adicionales para modo 2
   #dimEditContext     = null // { type: 'sap'|'other', id } — contexto del panel de edición de dims
+  #useMatchAuto       = false // flag de empresa: ejecutar match automático al abrir Líneas
+  #matchAutoRan       = false // guard: el match automático ya se ejecutó una vez
 
   // Datos del XML
   #xmlDoc           = null
@@ -131,6 +133,7 @@ export default class extends Controller {
   #otherChargeLines = []     // líneas de otros cargos
   #idItemTable      = 0
   #selectedXmlLine  = null   // línea XML actualmente seleccionada para agregar
+  #selectedItemLines = []    // líneas XML seleccionadas para agregar juntas (multi-select)
   #selectedOcLines  = []     // líneas XML de cargo seleccionadas para Otros Cargos (multi-select)
   #ocApLines        = []     // líneas DocumentAPInvoiceLines agregadas desde Otros Cargos (solo para display)
   #errorOnCreate    = false
@@ -260,8 +263,25 @@ export default class extends Controller {
       showToast(`Advertencia al cargar catálogos: ${err.message}`, 'warning')
     }
 
+    // Flag de empresa: ¿ejecutar match automático al abrir el tab Líneas?
+    // Puente estático equivalente al legacy assets/data/CompanyUseMatchAuto.json
+    await this.#loadMatchAutoFlag()
+
     this.#hideLoading()
     await this.#validateAndApplyDocXML()
+  }
+
+  // ── Flag de match automático (puente estático) ────────
+  async #loadMatchAutoFlag() {
+    try {
+      const res  = await fetch('/CompanyUseMatchAuto.json', { headers: { Accept: 'application/json' } })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      this.#useMatchAuto = !!json?.Data?.UseMatchAuto
+    } catch (err) {
+      this.#useMatchAuto = false
+      console.warn('No se pudo leer CompanyUseMatchAuto.json, match automático deshabilitado:', err)
+    }
   }
 
   // ── Validación de moneda del XML ───────────────────────
@@ -485,7 +505,10 @@ export default class extends Controller {
       locale:         TABULATOR_LOCALE,
       langs:          TABULATOR_LANGS,
       columnDefaults: { headerSort: false },
+      selectable:      true,
+      selectableRangeMode: 'click',
       columns: [
+        { formatter: 'rowSelection', titleFormatter: 'rowSelection', hozAlign: 'center', headerHozAlign: 'center', width: 40, headerSort: false },
         { title: 'Código',      field: 'Code',      widthGrow: 1 },
         { title: 'Detalle',     field: 'Detail',    widthGrow: 2 },
         { title: 'Cantidad',    field: 'Quantity',  hozAlign: 'right', width: 90 },
@@ -516,7 +539,13 @@ export default class extends Controller {
             const data = cell.getRow().getData()
             if ((data.Available ?? 0) <= 0) return
             const line = this.#xmlDoc?.DocReceptXMLLines?.find(l => l.RowId === data.RowId)
-            if (line) this.#openItemSelectionForLine(line)
+            if (!line) return
+            // Si hay filas marcadas, agregar todas juntas; si no, solo esta línea
+            const selected = this.#xmlLinesTabulator.getSelectedRows()
+              .map(r => this.#xmlDoc?.DocReceptXMLLines?.find(l => l.RowId === r.getData().RowId))
+              .filter(Boolean)
+            const lines = selected.length > 0 ? selected : [line]
+            this.#openItemSelectionForLines(lines)
           },
         },
       ],
@@ -532,7 +561,10 @@ export default class extends Controller {
       locale:         TABULATOR_LOCALE,
       langs:          TABULATOR_LANGS,
       columnDefaults: { headerSort: false },
+      selectable:      true,
+      selectableRangeMode: 'click',
       columns: [
+        { formatter: 'rowSelection', titleFormatter: 'rowSelection', hozAlign: 'center', headerHozAlign: 'center', width: 40, headerSort: false },
         { title: 'Código SAP', field: 'ItemCode',       widthGrow: 1 },
         { title: 'Código XML', field: 'ItemCodeXML',    widthGrow: 1 },
         { title: 'Detalle',    field: 'ItemNameEdited', widthGrow: 2,
@@ -592,7 +624,11 @@ export default class extends Controller {
             if (btn.dataset.actionType === 'dim') {
               this.#openDimEditPanel('item', data.TableId, data)
             } else {
-              this.#removeSapLineByTableId(data.TableId)
+              const selected = this.#sapLinesTabulator.getSelectedRows()
+              const ids = selected.length > 0
+                ? selected.map(r => r.getData().TableId)
+                : [data.TableId]
+              this.#confirmAndRemoveSapLines(ids)
             }
           },
         },
@@ -730,6 +766,35 @@ export default class extends Controller {
     this.#renderXmlLinesTable()
     this.#renderApInvoiceLinesHeader()
     this.#calculateTotals()
+  }
+
+  // ── Confirmación de borrado (siempre, 1 o varias filas) ───
+  #confirmDelete(count) {
+    const msg = count > 1
+      ? `¿Está seguro de que desea eliminar las ${count} filas seleccionadas? Esta acción no se puede deshacer.`
+      : '¿Está seguro de que desea eliminar esta fila? Esta acción no se puede deshacer.'
+    return confirm(msg, 'Eliminar')
+  }
+
+  async #confirmAndRemoveSapLines(ids) {
+    if (!ids?.length) return
+    if (!(await this.#confirmDelete(ids.length))) return
+    ids.forEach(id => this.#removeSapLineByTableId(id))
+    this.#sapLinesTabulator?.deselectRow()
+  }
+
+  async #confirmAndRemoveOcApLines(ids) {
+    if (!ids?.length) return
+    if (!(await this.#confirmDelete(ids.length))) return
+    ids.forEach(id => this.#removeOcApLine(id))
+    this.#ocApLinesTabulator?.deselectRow()
+  }
+
+  async #confirmAndRemoveOcCharges(codes) {
+    if (!codes?.length) return
+    if (!(await this.#confirmDelete(codes.length))) return
+    codes.forEach(code => this.#removeOcCharge(code))
+    this.#ocChargesTabulator?.deselectRow()
   }
 
   #initOtrosCargosTable() {
@@ -888,7 +953,7 @@ export default class extends Controller {
               const ids = selected.length > 0
                 ? selected.map(r => r.getData().TableId)
                 : [data.TableId]
-              ids.forEach(id => this.#removeOcApLine(id))
+              this.#confirmAndRemoveOcApLines(ids)
             }
           },
         },
@@ -952,7 +1017,7 @@ export default class extends Controller {
               const codes = selected.length > 0
                 ? selected.map(r => r.getData().ExpenseCode)
                 : [data.ExpenseCode]
-              codes.forEach(code => this.#removeOcCharge(code))
+              this.#confirmAndRemoveOcCharges(codes)
             }
           },
         },
@@ -1145,6 +1210,11 @@ export default class extends Controller {
         this.#xmlLinesTabulator?.redraw(true)
         this.#sapLinesTabulator?.redraw(true)
       })
+      // Match automático: agregar las líneas ya mapeadas una sola vez
+      if (this.#useMatchAuto && !this.#matchAutoRan) {
+        this.#matchAutoRan = true
+        this.#addAutomaticLines()
+      }
     }
 
     // Al cambiar a Otros Cargos: redraw de tablas del panel
@@ -1436,13 +1506,38 @@ export default class extends Controller {
       showToast('Esta línea ya está agregada', 'warning')
       return
     }
-    this.#selectedXmlLine = line
-    this.itemQuantityTarget.value = line.Available
-    this.itemQuantityTarget.max   = line.Available
+    this.#openItemSelectionForLines([line])
+  }
 
-    this.itemPanelLineInfoTarget.innerHTML =
-      `<span class="font-semibold">${line.Code}</span> — ${line.Detail}` +
-      `<span class="ml-3 text-blue-600 font-medium">Disponible: ${line.Available}</span>`
+  // Abre el panel de selección de ítem para una o varias líneas XML.
+  // En modo multi se aplican artículo/almacén/cuenta/proyecto/impuesto comunes y
+  // se usa el Disponible de cada línea como cantidad (campo Cantidad oculto).
+  #openItemSelectionForLines(lines) {
+    const available = (lines ?? []).filter(l => (l.Available ?? 0) > 0)
+    if (available.length === 0) {
+      showToast('Las líneas seleccionadas ya fueron agregadas completamente', 'warning')
+      return
+    }
+
+    this.#selectedItemLines = available
+    this.#selectedXmlLine   = available[0]
+    const isMulti = available.length > 1
+
+    if (!isMulti) {
+      const l = available[0]
+      this.itemPanelLineInfoTarget.innerHTML =
+        `<span class="font-semibold">${l.Code}</span> — ${l.Detail}` +
+        `<span class="ml-3 text-blue-600 font-medium">Disponible: ${l.Available}</span>`
+      this.itemQuantityTarget.value = l.Available
+      this.itemQuantityTarget.max   = l.Available
+    } else {
+      this.itemPanelLineInfoTarget.innerHTML =
+        `<span class="font-semibold">${available.length} líneas seleccionadas</span>` +
+        ` — se usará la cantidad disponible de cada una`
+    }
+
+    // En multi se oculta la cantidad (se usa el Disponible de cada línea)
+    this.itemQuantityRowTarget.classList.toggle('hidden', isMulti)
 
     this.#openItemPanel()
   }
@@ -1477,76 +1572,106 @@ export default class extends Controller {
       .forEach(el => { el.value = '' })
     this.itemDimBodyTarget.classList.add('hidden')
     this.itemDimIconTarget.style.transform = 'rotate(0deg)'
+    // Restaurar visibilidad de Cantidad y limpiar selección multi
+    this.itemQuantityRowTarget.classList.remove('hidden')
+    this.#selectedItemLines = []
   }
 
   confirmItemSelection() {
-    const line      = this.#selectedXmlLine
-    if (!line) return
+    const lines = this.#selectedItemLines.length
+      ? this.#selectedItemLines
+      : (this.#selectedXmlLine ? [this.#selectedXmlLine] : [])
+    if (lines.length === 0) return
 
+    const isMulti   = lines.length > 1
     const itemCode  = this.itemSelectItemTarget.value
     const whsCode   = this.itemSelectWarehouseTarget.value
-    const quantity  = Number(this.itemQuantityTarget.value)
+    const enteredQty = Number(this.itemQuantityTarget.value)
     const accCode   = this.itemSelectAccountTarget.value
     const prjCode   = this.itemSelectProjectTarget.value
 
-    if (!itemCode || !whsCode || !quantity) {
-      showToast('Complete artículo, almacén y cantidad', 'warning')
+    if (!itemCode || !whsCode) {
+      showToast('Complete artículo y almacén', 'warning')
+      return
+    }
+    if (!isMulti && !enteredQty) {
+      showToast('Indique la cantidad', 'warning')
       return
     }
 
-    const itemSAP  = this.#itemSAPList.find(i => i.ItemCode === itemCode)
-    const acc      = this.#accountList.find(a => a.AcctCode === accCode)
-    const prj      = this.#projectList.find(p => p.Code === prjCode)
-    const taxEntry = this.#resolveTaxForLine(line)
+    const itemSAP = this.#itemSAPList.find(i => i.ItemCode === itemCode)
+    const acc     = this.#accountList.find(a => a.AcctCode === accCode)
+    const prj     = this.#projectList.find(p => p.Code === prjCode)
 
-    const apLine = {
-      RowId:          line.RowId,
-      TableId:        this.#idItemTable++,
-      ItemCode:       itemCode,
-      InvtItem:       itemSAP?.InvntItem ?? '',
-      SapAccountCode: acc?.AcctCode      ?? '',
-      SapAccountName: acc ? `${acc.FormatCode}-${acc.AcctName}` : '',
-      ItemCodeXML:    line.Code,
-      ItemNameXML:    line.Detail,
-      ItemNameEdited: line.Detail,
-      LineCurr:       line.DocCur,
-      Quantity:       quantity,
-      UnitPrice:      line.UnitPrice,
-      Disc:           (line.Discount / line.Quantity) * quantity,
-      TaxCode:        taxEntry.TaxCode,
-      TaxRate:        String(line.ImpTarifa ?? 0),
-      TaxAmount:      0,
-      LineTotal:      0,
-      WhsCode:        whsCode,
-      Dimension1:  this.itemDim1Target.value,
-      Dimension2:  this.itemDim2Target.value,
-      Dimension3:  this.itemDim3Target.value,
-      Dimension4:  this.itemDim4Target.value,
-      Dimension5:  this.itemDim5Target.value,
-      SelectedDimensions: [this.itemDim1Target.value, this.itemDim2Target.value, this.itemDim3Target.value, this.itemDim4Target.value, this.itemDim5Target.value].filter(Boolean).join(', '),
-      IsSelected:     false,
-      XmlUndMed:      line.XmlUndMed      ?? '',
-      XmlUndMedComercial: line.XmlUndMedComercial ?? '',
-      XmlCodType:     line.XmlCodType     ?? '',
-      ProjectCode:    prjCode,
-      ProjectName:    prj ? `${prj.Code}-${prj.Name}` : '',
+    // Dimensiones comunes del panel (se aplican a todas las líneas)
+    const dims = [
+      this.itemDim1Target.value, this.itemDim2Target.value, this.itemDim3Target.value,
+      this.itemDim4Target.value, this.itemDim5Target.value,
+    ]
+    const selectedDims = dims.filter(Boolean).join(', ')
+
+    let added = 0
+    lines.forEach(line => {
+      const quantity = isMulti ? (line.Available ?? 0) : enteredQty
+      if (quantity <= 0) return
+
+      const taxEntry = this.#resolveTaxForLine(line)
+      const disc     = line.Quantity ? (line.Discount / line.Quantity) * quantity : 0
+
+      const apLine = {
+        RowId:          line.RowId,
+        TableId:        this.#idItemTable++,
+        ItemCode:       itemCode,
+        InvtItem:       itemSAP?.InvntItem ?? '',
+        SapAccountCode: acc?.AcctCode      ?? '',
+        SapAccountName: acc ? `${acc.FormatCode}-${acc.AcctName}` : '',
+        ItemCodeXML:    line.Code,
+        ItemNameXML:    line.Detail,
+        ItemNameEdited: line.Detail,
+        LineCurr:       line.DocCur,
+        Quantity:       quantity,
+        UnitPrice:      line.UnitPrice,
+        Disc:           disc,
+        TaxCode:        taxEntry.TaxCode,
+        TaxRate:        String(line.ImpTarifa ?? 0),
+        TaxAmount:      0,
+        LineTotal:      0,
+        WhsCode:        whsCode,
+        Dimension1:  dims[0],
+        Dimension2:  dims[1],
+        Dimension3:  dims[2],
+        Dimension4:  dims[3],
+        Dimension5:  dims[4],
+        SelectedDimensions: selectedDims,
+        IsSelected:     false,
+        XmlUndMed:      line.XmlUndMed      ?? '',
+        XmlUndMedComercial: line.XmlUndMedComercial ?? '',
+        XmlCodType:     line.XmlCodType     ?? '',
+        ProjectCode:    prjCode,
+        ProjectName:    prj ? `${prj.Code}-${prj.Name}` : '',
+      }
+
+      apLine.TaxAmount = ((apLine.UnitPrice * quantity) - disc) * (Number(apLine.TaxRate) / 100)
+      apLine.LineTotal = ((apLine.UnitPrice * quantity) - disc) + apLine.TaxAmount
+
+      this.#apInvoiceLines.push(apLine)
+      line.Available = (line.Available - quantity)
+      added++
+    })
+
+    if (added === 0) {
+      showToast('No se agregó ninguna línea', 'warning')
+      return
     }
-
-    // Calcular TaxAmount y LineTotal
-    apLine.TaxAmount = ((apLine.UnitPrice * quantity) - apLine.Disc) * (Number(apLine.TaxRate) / 100)
-    apLine.LineTotal = ((apLine.UnitPrice * quantity) - apLine.Disc) + apLine.TaxAmount
-
-    this.#apInvoiceLines.push(apLine)
-
-    // Actualizar disponible en tabla XML
-    line.Available = (line.Available - quantity)
 
     this.#renderXmlLinesTable()
     this.#renderSapLinesTable()
     this.#renderApInvoiceLinesHeader()
     this.#calculateTotals()
+    this.#xmlLinesTabulator?.deselectRow()
     this.#closeItemPanel()
-    this.#selectedXmlLine = null
+    this.#selectedXmlLine   = null
+    this.#selectedItemLines = []
   }
 
   #resolveTaxForLine(xmlLine) {
@@ -1555,6 +1680,189 @@ export default class extends Controller {
       Number(t.TaxRate ?? t.Percent ?? 0) === Number(impTarifa)
     )
     return match ? { TaxCode: match.TaxCode } : { TaxCode: this.#defaultTaxForXML }
+  }
+
+  // ── Match automático ──────────────────────────────────
+  // Porta AddAutomaticLines del legacy (lines.component.ts):
+  // consulta /api/Documents/MatchAutomatic con las líneas del XML y, por cada
+  // línea que el backend devuelve ya mapeada a un ItemCode de SAP disponible,
+  // agrega automáticamente la línea a la tabla de envío a SAP con su cuenta,
+  // dimensiones, impuesto y cantidad pre-seleccionados.
+  async #addAutomaticLines() {
+    const xmlLines = this.#xmlDoc?.DocReceptXMLLines ?? []
+    if (xmlLines.length === 0) return
+
+    const cardCode   = this.inputCardCodeTarget.value.split(' - ')[0].trim()
+    const pocl24     = this.inputRefDocEntryTarget.value || ''
+    const docBaseType = Number(this.selectRefDocTypeTarget.value) || 0
+
+    const payload = {
+      CardCode:      cardCode,
+      CompanyId:     this.#companyId,
+      POCL24:        pocl24,
+      DocBaseType:   docBaseType,
+      DocumentsLines: xmlLines.map(x => this.#toMatchAutoLine(x)),
+    }
+
+    this.#showLoading('Buscando líneas mapeadas...')
+    let res
+    try {
+      res = await this.#apiFetch('/api/Documents/MatchAutomatic', {
+        method: 'POST',
+        body:   JSON.stringify(payload),
+      })
+    } catch (err) {
+      this.#hideLoading()
+      showToast(`Error al obtener las líneas automáticas: ${err.message}`, 'error')
+      return
+    }
+    this.#hideLoading()
+
+    const matchedLines = res?.Data?.DocumentsLines
+    if (!Array.isArray(matchedLines)) {
+      showToast(res?.Message || 'Se produjo un error al obtener las líneas para realizar el match', 'warning')
+      return
+    }
+
+    let added = 0
+    matchedLines.forEach(line => {
+      const itemSAP = this.#itemSAPList.find(i => i.ItemCode === line.ItemCode)
+      if (!itemSAP || !(line.Available > 0) || !line.ItemCode) return
+
+      // Cuenta automática por FormatCode
+      let selectedAcc = null
+      if (line.FormatCode && line.FormatCode > 0) {
+        selectedAcc = this.#accountList.find(a => a.FormatCode === line.FormatCode) ?? null
+      }
+
+      // Dimensiones automáticas (solo si están configuradas en SAP)
+      const d1 = this.#resolveDimensionAuto(line.Dimension1, 1)
+      const d2 = this.#resolveDimensionAuto(line.Dimension2, 2)
+      const d3 = this.#resolveDimensionAuto(line.Dimension3, 3)
+      const d4 = this.#resolveDimensionAuto(line.Dimension4, 4)
+      const d5 = this.#resolveDimensionAuto(line.Dimension5, 5)
+      const selectedDim = [d1, d2, d3, d4, d5]
+        .filter(d => d.valid)
+        .map(d => d.tooltip)
+        .join('')
+
+      const fullName  = itemSAP.FullName ?? `${itemSAP.ItemCode}`
+      const quantity  = Number(line.Quantity) || 0
+      const unitPrice = Number(line.UnitPrice) || 0
+      const discount  = Number(line.Discount) || 0
+      const taxEntry  = line.TaxCode ? { TaxCode: line.TaxCode } : this.#resolveTaxForLine(line)
+      const taxRate   = Number(line.ImpTarifa ?? 0)
+
+      const apLine = {
+        RowId:          line.RowId,
+        TableId:        this.#idItemTable++,
+        ItemCode:       fullName.split('-')[0],
+        InvtItem:       itemSAP.InvntItem ?? '',
+        SapAccountCode: selectedAcc ? selectedAcc.AcctCode : '',
+        SapAccountName: selectedAcc ? `${selectedAcc.FormatCode}-${selectedAcc.AcctName}` : '',
+        ItemCodeXML:    line.Code,
+        ItemNameXML:    line.Detail,
+        ItemNameEdited: line.Detail,
+        LineCurr:       line.DocCur,
+        Quantity:       quantity,
+        UnitPrice:      unitPrice,
+        Disc:           discount,
+        TaxCode:        taxEntry.TaxCode,
+        TaxRate:        String(taxRate),
+        TaxAmount:      0,
+        LineTotal:      0,
+        WhsCode:        line.DfltWH ?? '',
+        Dimension1:     d1.valid ? line.Dimension1 : '',
+        Dimension2:     d2.valid ? line.Dimension2 : '',
+        Dimension3:     d3.valid ? line.Dimension3 : '',
+        Dimension4:     d4.valid ? line.Dimension4 : '',
+        Dimension5:     d5.valid ? line.Dimension5 : '',
+        SelectedDimensions: selectedDim,
+        IsSelected:     false,
+        XmlUndMed:          line.XmlUndMed          ?? '',
+        XmlUndMedComercial: line.XmlUndMedComercial ?? '',
+        XmlCodType:         line.XmlCodType         ?? '',
+        ProjectCode:    '',
+        ProjectName:    '',
+        BaseLine:       line.BaseLine,
+        BaseEntry:      line.BaseEntry,
+        BaseType:       line.BaseType,
+        OpenQty:        line.OpenQty,
+        MedicineRegistration: line.MedicineRegistration,
+        PharmaceuticalForm:   line.PharmaceuticalForm,
+      }
+
+      // Cálculo de impuesto y total (consistente con confirmItemSelection)
+      apLine.TaxAmount = ((unitPrice * quantity) - discount) * (taxRate / 100)
+      apLine.LineTotal = ((unitPrice * quantity) - discount) + apLine.TaxAmount
+
+      this.#apInvoiceLines.push(apLine)
+      added++
+
+      // Marcar la línea XML como ya consumida (Available = 0)
+      const xmlLine = this.#xmlDoc?.DocReceptXMLLines?.find(l => l.RowId === line.RowId)
+      if (xmlLine) xmlLine.Available = 0
+
+      // Reflejar también en los cargos del XML si corresponde
+      const chargeLine = this.#xmlDoc2?.DocChargesXMLLines?.find(l => l.RowId === line.RowId)
+      if (chargeLine) chargeLine.Available = 0
+    })
+
+    if (added > 0) {
+      this.#renderXmlLinesTable()
+      this.#renderSapLinesTable()
+      this.#renderApInvoiceLinesHeader()
+      this.#calculateTotals()
+    } else {
+      showToast('No se encontraron líneas para cargar automáticamente', 'info')
+    }
+  }
+
+  // Mapea una línea del XML al shape DocReceptXMLInfoLines que espera MatchAutomatic
+  #toMatchAutoLine(x) {
+    return {
+      RowId:        x.RowId,
+      Code:         x.Code,
+      Detail:       x.Detail,
+      DocCur:       x.DocCur,
+      Quantity:     x.Quantity,
+      UnitPrice:    x.UnitPrice,
+      Discount:     x.Discount,
+      TaxAmount:    x.TaxAmount,
+      ImpTarifa:    x.ImpTarifa ?? 0,
+      TotalLine:    x.TotalLine,
+      TaxCode:      x.TaxCode,
+      Selected:     x.Selected,
+      IsMatchSelected: x.IsMatchSelected,
+      Available:    x.Available,
+      Dimension1:   x.Dimension1,
+      Dimension2:   x.Dimension2,
+      Dimension3:   x.Dimension3,
+      Dimension4:   x.Dimension4,
+      Dimension5:   x.Dimension5,
+      SelectedDimensions: x.SelectedDimensions,
+      IsSelected:   x.IsSelected,
+      XmlCodType:   x.XmlCodType,
+      XmlUndMed:    x.XmlUndMed,
+      XmlUndMedComercial: x.XmlUndMedComercial ?? '',
+      FormatCode:   x.FormatCode,
+      BaseLine:     x.BaseLine,
+      BaseEntry:    x.BaseEntry,
+      BaseType:     x.BaseType,
+      OpenQty:      x.OpenQty,
+      MedicineRegistration: x.MedicineRegistration,
+      PharmaceuticalForm:   x.PharmaceuticalForm,
+    }
+  }
+
+  // Valida una dimensión automática contra las dimensiones configuradas en SAP.
+  // Retorna { valid, name, tooltip } — replica AddDimensionsAtumatic del legacy.
+  #resolveDimensionAuto(prcCode, dimCode) {
+    if (!prcCode) return { valid: false, name: '', tooltip: '' }
+    const dim = this.#dimensionList.find(d => Number(d.DimCode) === Number(dimCode))
+    const cc  = dim?.CenterCost?.find(c => c.PrcCode === prcCode)
+    if (!cc) return { valid: false, name: '', tooltip: '' }
+    return { valid: true, name: cc.PrcName, tooltip: `Dimension ${dimCode}: ${cc.PrcName}; ` }
   }
 
   // ── Otros Cargos — panel lateral ──────────────────────

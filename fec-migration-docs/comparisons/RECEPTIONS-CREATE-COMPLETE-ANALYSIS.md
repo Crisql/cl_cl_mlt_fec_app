@@ -177,15 +177,38 @@ Botones por fila: **Eliminar** (delete), **Dimensiones** (add_circle_outline)
 3. Actualiza disponible en tabla XML
 4. Recalcula totales
 
-### Agregar automático
+### Agregar automático (match automático)
+**Legacy (Angular — `LinesComponent.AddAutomaticLines`):**
 - Lee `assets/data/CompanyUseMatchAuto.json` → si `UseMatchAuto: true`
 - Llama `POST /api/Documents/MatchAutomatic` con líneas XML y datos del form
 - Asigna automáticamente ítems, cuentas, almacenes, dimensiones
+
+**Rails (implementado — `documents_reception_create_controller.js`):**
+- Flag puente estático en `public/CompanyUseMatchAuto.json`, leído en la carga inicial
+  por `#loadMatchAutoFlag()` → `#useMatchAuto`.
+- Disparador en `switchTab()`: al abrir el tab **Líneas** por primera vez, si el flag
+  está activo, se ejecuta `#addAutomaticLines()` una sola vez (guard `#matchAutoRan`).
+- `#addAutomaticLines()` arma el payload `{ CardCode, CompanyId, POCL24, DocBaseType,
+  DocumentsLines }` (con `#toMatchAutoLine()`), hace `POST /api/Documents/MatchAutomatic`
+  vía `#apiFetch` (default `ApiAppUrl`), y por cada línea con `ItemCode` mapeado y
+  `Available > 0` construye la `apLine` (item, cuenta por `FormatCode`, dimensiones
+  validadas con `#resolveDimensionAuto()`, impuesto y totales), la agrega a la tabla SAP
+  y pone `Available = 0` en la línea XML (y en los cargos del XML si corresponde).
+- Resultado vacío → toast `info`; error de lectura → toast `error` (secciones 6/9 de CLAUDE.md).
 
 ### Eliminar línea
 - Restituye disponible en tabla XML
 - Si tenía `LineNum` de SAP → restituye cantidad en tabla SAP
 - Recalcula totales
+
+### Selección múltiple y confirmación de borrado (Rails)
+- Tablas XML y SAP del tab Líneas con columna `rowSelection` (patrón de Otros Cargos).
+- **Multi-agregar:** marcar varias líneas XML pendientes y presionar Agregar abre el panel
+  una sola vez con artículo/almacén/cuenta/proyecto/impuesto comunes; la cantidad usada es
+  el Disponible de cada línea (`#openItemSelectionForLines` / `confirmItemSelection`).
+- **Multi-eliminar:** marcar varias líneas SAP y eliminar las borra juntas.
+- **Confirmación:** todo borrado (1 o varias filas) en SAP y Otros Cargos pide confirmación
+  warning (`confirm` del alerts service, `#confirmDelete`).
 
 ---
 
@@ -249,7 +272,7 @@ Permite seleccionar una tolerancia alternativa para validar el total.
 | Tabla de líneas SAP | ❌ No existe | 0% | |
 | Tabla de líneas a SAP | ❌ No existe | 0% | |
 | Totales dinámicos | ❌ No existe | 0% | |
-| Tab Líneas con match automático | ❌ No existe | 0% | |
+| Tab Líneas con match automático | ✅ Implementado | 100% | `#addAutomaticLines()` + flag `public/CompanyUseMatchAuto.json`; cubierto por suite E2E «Match automático de líneas» |
 | Tab Otros Cargos | ❌ No existe | 0% | |
 | Modal selección moneda | ❌ No existe | 0% | |
 | Modal tolerancia | ❌ No existe | 0% | |

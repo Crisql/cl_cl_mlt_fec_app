@@ -43,6 +43,17 @@
 - Dropdown de impuestos, cuentas, proyectos por línea
 - Botón eliminar línea (restituye disponible en tabla XML)
 - Al cambiar a tab Líneas: bloquea CardCode
+- **Match automático** (paridad con `LinesComponent.AddAutomaticLines`):
+  - Flag puente estático `public/CompanyUseMatchAuto.json` (`UseMatchAuto`), leído por `#loadMatchAutoFlag()`
+  - Al abrir el tab Líneas por primera vez (`switchTab`, guard `#matchAutoRan`) se ejecuta `#addAutomaticLines()`
+  - `POST /api/Documents/MatchAutomatic` → agrega las líneas ya mapeadas (item, cuenta por `FormatCode`, dimensiones, impuesto, totales) y deja la línea XML en Disponible 0
+  - Cubierto por la suite E2E «Match automático de líneas» (6 pruebas)
+- **Selección múltiple en las tablas** (patrón de Otros Cargos):
+  - Tablas XML (pendientes) y SAP (agregadas) con columna `rowSelection`
+  - Multi-agregar: marcar varias líneas XML pendientes → panel único con artículo/almacén/cuenta/proyecto/impuesto comunes; cantidad = Disponible de cada línea (campo Cantidad oculto en multi); se agregan todas juntas (`#openItemSelectionForLines`)
+  - Multi-eliminar: marcar varias líneas SAP → se eliminan juntas
+- **Confirmación de borrado** (`confirm` del alerts service, tipo warning): toda eliminación (1 o varias filas) en las tablas SAP, Otros Cargos (líneas) y Otros Cargos (cargos) pide confirmación con mensaje según la cantidad (`#confirmDelete`). Reemplaza el borrado directo anterior.
+  - Cubierto por la suite E2E «Selección múltiple y eliminación» (7 pruebas)
 
 ### Tab Otros Cargos
 - Visible cuando `xmlDoc2.DocChargesXMLLines.length > 0`
