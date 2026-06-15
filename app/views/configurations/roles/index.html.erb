@@ -26,58 +26,70 @@
   </div>
 
   <%# ---------------------------------------------------------------- %>
-  <%# MODAL: Crear / Editar Rol %>
+  <%# PANEL LATERAL: Crear / Editar Rol %>
   <%# ---------------------------------------------------------------- %>
-  <div data-roles-target="modal"
+  <%# Backdrop %>
+  <div data-roles-target="panelBackdrop"
        data-testid="role-modal"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
+       data-action="click->roles#closeModal"
+       class="hidden fixed inset-0 z-40 bg-black/40">
+  </div>
 
-      <%# Header del modal %>
-      <div class="px-6 pt-5 pb-3 border-b border-gray-100">
-        <h4 data-testid="role-modal-title"
-            class="text-base font-semibold text-gray-800">Rol</h4>
-      </div>
+  <%# Panel lateral %>
+  <div data-roles-target="panel"
+       data-testid="role-panel"
+       class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
 
-      <%# Cuerpo del modal %>
-      <div class="px-6 py-4">
-        <label class="block text-sm font-medium text-gray-700 mb-1">
-          Nombre del Rol <span class="text-red-500">*</span>
-        </label>
-        <input type="text"
-               data-roles-target="nameInput"
-               data-testid="role-name-input"
-               data-action="input->roles#onNameInput"
-               placeholder="Nombre del rol"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-        <p data-roles-target="nameError"
-           data-testid="role-name-error"
-           class="hidden mt-1 text-xs text-red-500">
-          El nombre del rol es requerido
-        </p>
-      </div>
-
-      <%# Footer del modal %>
-      <div class="px-6 pb-5 flex gap-3">
-        <button type="button"
-                data-testid="btn-cancel-role"
-                data-action="click->roles#closeModal"
-                class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-          <span class="material-icons text-base">cancel</span>
-          Cancelar
-        </button>
-        <button type="button"
-                data-roles-target="submitBtn"
-                data-testid="btn-submit-role"
-                data-action="click->roles#onSubmit"
-                disabled
-                class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          <span data-roles-target="submitIcon" class="material-icons text-base">check</span>
-          <span data-roles-target="submitLabel">Crear</span>
-        </button>
-      </div>
-
+    <%# Header %>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 data-testid="role-modal-title"
+          class="text-base font-semibold text-gray-800">Rol</h3>
+      <button type="button"
+              data-action="click->roles#closeModal"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
     </div>
+
+    <%# Cuerpo scrolleable %>
+    <div class="flex-1 overflow-y-auto px-6 py-5">
+      <label class="block text-sm font-medium text-gray-700 mb-1">
+        Nombre del Rol <span class="text-red-500">*</span>
+      </label>
+      <input type="text"
+             data-roles-target="nameInput"
+             data-testid="role-name-input"
+             data-action="input->roles#onNameInput"
+             placeholder="Nombre del rol"
+             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      <p data-roles-target="nameError"
+         data-testid="role-name-error"
+         class="hidden mt-1 text-xs text-red-500">
+        El nombre del rol es requerido
+      </p>
+    </div>
+
+    <%# Footer %>
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-testid="btn-cancel-role"
+              data-action="click->roles#closeModal"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>
+        Cancelar
+      </button>
+      <button type="button"
+              data-roles-target="submitBtn"
+              data-testid="btn-submit-role"
+              data-action="click->roles#onSubmit"
+              disabled
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span data-roles-target="submitIcon" class="material-icons text-base">check</span>
+        <span data-roles-target="submitLabel">Crear</span>
+      </button>
+    </div>
+
   </div>
 
 

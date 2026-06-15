@@ -21,7 +21,8 @@ import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'contr
 export default class extends TabulatorController {
   static targets = [
     ...TabulatorController.targets,
-    'modal',
+    'panel',
+    'panelBackdrop',
     'nameInput',
     'nameError',
     'submitBtn',
@@ -161,7 +162,7 @@ export default class extends TabulatorController {
     this.#resetModal();
     this.submitIconTarget.textContent  = 'check';
     this.submitLabelTarget.textContent = 'Crear';
-    this.#openModal();
+    this.#openPanel();
   }
 
   #editRole(role) {
@@ -178,7 +179,7 @@ export default class extends TabulatorController {
     this.submitBtnTarget.disabled      = false;
     this.submitIconTarget.textContent  = 'autorenew';
     this.submitLabelTarget.textContent = 'Modificar';
-    this.#openModal();
+    this.#openPanel();
   }
 
   onNameInput() {
@@ -208,13 +209,17 @@ export default class extends TabulatorController {
   }
 
   closeModal() {
-    this.modalTarget.classList.add('hidden');
+    this.panelTarget.classList.add('translate-x-full');
+    this.panelBackdropTarget.classList.add('hidden');
+    document.body.style.overflow = '';
   }
 
   // ── Helpers de UI ─────────────────────────────────────────────────────────
 
-  #openModal() {
-    this.modalTarget.classList.remove('hidden');
+  #openPanel() {
+    this.panelBackdropTarget.classList.remove('hidden');
+    this.panelTarget.classList.remove('translate-x-full');
+    document.body.style.overflow = 'hidden';
     this.nameInputTarget.focus();
   }
 
