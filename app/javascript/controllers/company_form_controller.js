@@ -83,6 +83,9 @@ export default class extends Controller {
     'btnReloadSap',
     'btnSaveSap',
 
+    // Loaders de sección
+    'loaderGeneral', 'loaderAdditional', 'loaderAtv', 'loaderAttachments', 'loaderActivityCodes', 'loaderSap',
+
     // Botón registrar
     'btnRegisterContainer', 'btnRegister',
 
@@ -155,6 +158,9 @@ export default class extends Controller {
 
   #setupMode() {
     if (this.#isEditing) {
+      // Edit: mostrar loaders de sección mientras carga
+      this.#showSectionLoaders();
+
       // Edit: mostrar botones "Actualizar" por sección
       this.btnSaveGeneralContainerTarget.classList.remove('hidden');
       this.btnSaveAdditionalContainerTarget.classList.remove('hidden');
@@ -264,10 +270,29 @@ export default class extends Controller {
       this.#renderActivityCodes();
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener la información', message: err.message });
+    } finally {
+      this.#hideSectionLoaders();
     }
   }
 
-  #fillForms(data) {
+
+  #showSectionLoaders() {
+    const loaders = [
+      this.loaderGeneralTarget, this.loaderAdditionalTarget, this.loaderAtvTarget,
+      this.loaderAttachmentsTarget, this.loaderActivityCodesTarget, this.loaderSapTarget,
+    ];
+    loaders.forEach(el => el.classList.remove('hidden'));
+  }
+
+  #hideSectionLoaders() {
+    const loaders = [
+      this.loaderGeneralTarget, this.loaderAdditionalTarget, this.loaderAtvTarget,
+      this.loaderAttachmentsTarget, this.loaderActivityCodesTarget, this.loaderSapTarget,
+    ];
+    loaders.forEach(el => el.classList.add('hidden'));
+  }
+
+    #fillForms(data) {
     this.comercialNameTarget.value      = data.EmsrNombreComercial || '';
     this.legalNameTarget.value          = data.EmsrNombre          || '';
     this.identificationTypeTarget.value = data.EmsrIdeTipo         || '01';
