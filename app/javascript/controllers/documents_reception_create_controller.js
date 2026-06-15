@@ -482,6 +482,7 @@ export default class extends Controller {
     this.#initApInvoiceLinesTable()
     this.#initOcApLinesTable()
     this.#initOcChargesTable()
+    this.#setupOcTooltip()
   }
 
   #initXmlLinesTable() {
@@ -855,13 +856,15 @@ export default class extends Controller {
             data.TaxAmount = net * (Number(taxObj.TaxRate) / 100)
             data.LineTotal = net + data.TaxAmount
             cell.getRow().update(data)
+            this.#renderApInvoiceLinesHeader()
+            this.#calculateTotals()
           },
         },
         { title: 'Monto',       field: 'LineTotal',      hozAlign: 'right', width: 130,
           formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
         { title: 'Acciones',    field: '_actions',       hozAlign: 'center', width: 100,
           formatter: () => `
-            <button type="button" data-action-type="dim" data-tooltip="Ajuste de dimensiones"
+            <button type="button" data-action-type="dim" data-tooltip="Ajustar dimensiones"
                     class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors">
               <span class="material-icons text-base">tune</span>
             </button>
@@ -918,13 +921,14 @@ export default class extends Controller {
             const taxAmount = net * (Number(taxObj.TaxRate) / 100)
             data.LineTotal  = Number((net + taxAmount).toFixed(2))
             cell.getRow().update(data)
+            this.#calculateTotals()
           },
         },
         { title: 'Monto Cargo',    field: 'LineTotal',   hozAlign: 'right', width: 140,
           formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
         { title: 'Acciones',       field: '_actions',    hozAlign: 'center', width: 100,
           formatter: () => `
-            <button type="button" data-action-type="dim" data-tooltip="Ajuste de dimensiones"
+            <button type="button" data-action-type="dim" data-tooltip="Ajustar dimensiones"
                     class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors">
               <span class="material-icons text-base">tune</span>
             </button>
@@ -948,6 +952,44 @@ export default class extends Controller {
           },
         },
       ],
+    })
+  }
+
+  #setupOcTooltip() {
+    if (!document.getElementById('cl-tabulator-tooltip')) {
+      const tip = document.createElement('div')
+      tip.id = 'cl-tabulator-tooltip'
+      tip.style.cssText = [
+        'position:fixed', 'z-index:9999', 'pointer-events:none',
+        'background:#1f2937', 'color:#fff', 'padding:2px 8px',
+        'border-radius:4px', 'font-size:12px', 'white-space:nowrap',
+        'opacity:0', 'transition:opacity 0.15s',
+      ].join(';')
+      document.body.appendChild(tip)
+    }
+    const tip = document.getElementById('cl-tabulator-tooltip')
+    ;[this.ocApLinesTableTarget, this.ocChargesTableTarget].forEach(container => {
+      let activeBtn = null
+      container.addEventListener('mouseover', (e) => {
+        const btn = e.target.closest('[data-tooltip]')
+        if (btn && btn !== activeBtn) {
+          activeBtn = btn
+          tip.textContent = btn.dataset.tooltip
+          tip.style.opacity = '1'
+        } else if (!btn) {
+          activeBtn = null
+          tip.style.opacity = '0'
+        }
+      })
+      container.addEventListener('mousemove', (e) => {
+        if (!activeBtn) return
+        tip.style.left = (e.clientX + 10) + 'px'
+        tip.style.top  = (e.clientY - 32) + 'px'
+      })
+      container.addEventListener('mouseleave', () => {
+        activeBtn = null
+        tip.style.opacity = '0'
+      })
     })
   }
 
@@ -975,7 +1017,10 @@ export default class extends Controller {
   }
 
   #renderSapLinesTable() {
-    this.#sapLinesTabulator?.setData([...this.#apInvoiceLines])
+    // Excluir líneas que provienen de Otros Cargos — esas se gestionan en su propio tab
+    const ocIds = new Set(this.#ocApLines.map(l => l.TableId))
+    const lines = this.#apInvoiceLines.filter(l => !ocIds.has(l.TableId))
+    this.#sapLinesTabulator?.setData(lines)
   }
 
   #renderApInvoiceLinesHeader() {
@@ -1088,9 +1133,22 @@ export default class extends Controller {
     btnMap[tab].classList.remove('text-gray-500', 'border-transparent')
     btnMap[tab].classList.add('text-blue-600', 'border-blue-600')
 
-    // Al cambiar a Líneas: bloquear CardCode y RefDocType/Entry si POCL24
+    // Al cambiar a Líneas: bloquear CardCode y reforzar redraw de tablas
     if (tab === 'lineas') {
       this.inputCardCodeTarget.disabled = true
+      requestAnimationFrame(() => {
+        this.#xmlLinesTabulator?.redraw(true)
+        this.#sapLinesTabulator?.redraw(true)
+      })
+    }
+
+    // Al cambiar a Otros Cargos: redraw de tablas del panel
+    if (tab === 'otros-cargos') {
+      requestAnimationFrame(() => {
+        this.#otrosCargosTabulator?.redraw(true)
+        this.#ocApLinesTabulator?.redraw(true)
+        this.#ocChargesTabulator?.redraw(true)
+      })
     }
   }
 
