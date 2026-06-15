@@ -31,6 +31,7 @@ export default class extends Controller {
     'testCredentialsIcon',
     'testCredentialsLabel',
     'btnUpdate',
+    'cardLoader',
   ];
 
   // ── Estado interno ─────────────────────────────────────────────────────────
@@ -59,12 +60,25 @@ export default class extends Controller {
   // ── Inicialización ────────────────────────────────────────────────────────
 
   async #onLoad() {
+    this.#showCardLoader();
     this.#resetCredentialState();
     this.#readSelectedCompanyFromStorage();
-    await Promise.all([
-      this.#loadInitialData(),
-      this.#loadAssignableCompanies(),
-    ]);
+    try {
+      await Promise.all([
+        this.#loadInitialData(),
+        this.#loadAssignableCompanies(),
+      ]);
+    } finally {
+      this.#hideCardLoader();
+    }
+  }
+
+  #showCardLoader() {
+    this.cardLoaderTarget?.classList.remove('hidden');
+  }
+
+  #hideCardLoader() {
+    this.cardLoaderTarget?.classList.add('hidden');
   }
 
   #readSelectedCompanyFromStorage() {
