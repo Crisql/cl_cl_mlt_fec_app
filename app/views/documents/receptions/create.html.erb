@@ -802,18 +802,30 @@
            class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800">
       </div>
 
-      <div>
+      <div class="relative">
         <label class="block text-xs font-medium text-gray-600 mb-1">Artículo SAP <span class="text-red-500">*</span></label>
-        <select data-documents-reception-create-target="itemSelectItem"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-        </select>
+        <input type="text"
+               data-documents-reception-create-target="itemInputItem"
+               data-action="input->documents-reception-create#onItemItemInput focus->documents-reception-create#onItemItemFocus"
+               placeholder="Buscar por código o nombre"
+               autocomplete="off"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="hidden" data-documents-reception-create-target="itemSelectItem">
+        <div data-documents-reception-create-target="itemItemList"
+             class="hidden absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"></div>
       </div>
 
-      <div>
+      <div class="relative">
         <label class="block text-xs font-medium text-gray-600 mb-1">Almacén <span class="text-red-500">*</span></label>
-        <select data-documents-reception-create-target="itemSelectWarehouse"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-        </select>
+        <input type="text"
+               data-documents-reception-create-target="itemInputWarehouse"
+               data-action="input->documents-reception-create#onItemWarehouseInput focus->documents-reception-create#onItemWarehouseFocus"
+               placeholder="Buscar almacén"
+               autocomplete="off"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="hidden" data-documents-reception-create-target="itemSelectWarehouse">
+        <div data-documents-reception-create-target="itemWarehouseList"
+             class="hidden absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"></div>
       </div>
 
       <div>
@@ -823,20 +835,52 @@
                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
-      <div>
+      <div class="relative">
         <label class="block text-xs font-medium text-gray-600 mb-1">Cuenta SAP</label>
-        <select data-documents-reception-create-target="itemSelectAccount"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-          <option value="">-- Sin cuenta --</option>
-        </select>
+        <input type="text"
+               data-documents-reception-create-target="itemInputAccount"
+               data-action="input->documents-reception-create#onItemAccountInput focus->documents-reception-create#onItemAccountFocus"
+               placeholder="Buscar cuenta"
+               autocomplete="off"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="hidden" data-documents-reception-create-target="itemSelectAccount">
+        <div data-documents-reception-create-target="itemAccountList"
+             class="hidden absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"></div>
       </div>
 
-      <div>
+      <div class="relative">
         <label class="block text-xs font-medium text-gray-600 mb-1">Proyecto</label>
-        <select data-documents-reception-create-target="itemSelectProject"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-          <option value="">-- Sin proyecto --</option>
-        </select>
+        <input type="text"
+               data-documents-reception-create-target="itemInputProject"
+               data-action="input->documents-reception-create#onItemProjectInput focus->documents-reception-create#onItemProjectFocus"
+               placeholder="Buscar proyecto"
+               autocomplete="off"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="hidden" data-documents-reception-create-target="itemSelectProject">
+        <div data-documents-reception-create-target="itemProjectList"
+             class="hidden absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto text-sm"></div>
+      </div>
+
+      <%# Dimensiones — acordeón colapsable %>
+      <div>
+        <button type="button"
+                data-action="click->documents-reception-create#toggleItemDimensions"
+                class="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700">
+          <span data-documents-reception-create-target="itemDimIcon"
+                class="material-icons text-sm transition-transform duration-200">chevron_right</span>
+          Dimensiones
+        </button>
+        <div data-documents-reception-create-target="itemDimBody" class="hidden mt-3 space-y-2">
+          <% (1..5).each do |i| %>
+            <div class="hidden"
+                 data-documents-reception-create-target="itemDimRow<%= i %>">
+              <label class="block text-xs font-medium text-gray-600 mb-1">Dimensión <%= i %></label>
+              <select data-documents-reception-create-target="itemDim<%= i %>"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              </select>
+            </div>
+          <% end %>
+        </div>
       </div>
 
     </div>

@@ -832,52 +832,63 @@ search() { this.table?.setData(); }
 
 
 
-## 18. Escritura de archivos — usar script Python obligatorio
+## 18. Edición de archivos — regla CRÍTICA (SIEMPRE Python via Bash)
 
-**Problema:** La herramienta `Edit` trabaja contra el snapshot del archivo en el contexto de la sesión.
-Si ese snapshot está desactualizado o incompleto, escribe sobre datos incorrectos y **trunca el archivo**.
+**Usar SIEMPRE Python via Bash para editar cualquier archivo del proyecto.** El tool `Edit` tiene dos problemas conocidos:
 
-**Regla:** Para cualquier modificación de archivo (especialmente archivos >200 líneas), usar un script Python ejecutado vía bash.
+1. **Trunca archivos largos** (> ~1400 líneas) — pérdida silenciosa de contenido.
+2. **Falla con archivos CRLF** (`.erb`, `.html`, archivos de Windows) — los cambios aparecen aplicados en el editor pero git no los detecta como modificados, causando que los cambios nunca se commiteen.
 
-### Patrón obligatorio
+### Regla obligatoria — sin excepciones
+
+**Usar SIEMPRE Python via Bash para editar cualquier archivo, sin excepción.**
+
+El tool `Edit` está prohibido para cualquier modificación de archivos del proyecto.
+
+> No existe ningún caso donde `Edit` sea preferible a Python. Python es más seguro, predecible y siempre produce cambios detectables por git.
+
+### Patrón Python para editar cualquier archivo
 
 ```python
-# Siempre: leer del disco real → modificar en memoria → escribir completo
-with open('/path/to/file', 'r', encoding='utf-8') as f:
+with open('ruta/al/archivo', 'r', encoding='utf-8') as f:
     content = f.read()
 
-# Modificación — usar replace() con count=1 para reemplazar primera ocurrencia
-content = content.replace('old_string', 'new_string', 1)
+# Reemplazo quirúrgico — usar el texto exacto como aparece en el archivo
+content = content.replace(
+    'código original exacto (multilínea con \n si aplica)',
+    'código nuevo exacto'
+)
 
-# Para múltiples cambios, hacer todos antes de escribir
-content = content.replace('old_A', 'new_A', 1)
-content = content.replace('old_B', 'new_B', 1)
+with open('ruta/al/archivo', 'w', encoding='utf-8') as f:
+    f.write(content)
 
-with open('/path/to/file', 'w', encoding='utf-8') as f:
+# Siempre verificar que el reemplazo ocurrió
+print("Occurrences replaced:", content.count('nuevo fragmento clave'))
+```
+
+### Para archivos ERB/HTML con CRLF — leer binario y normalizar
+
+```python
+# Si el archivo puede tener CRLF, leer en modo texto es suficiente
+# Python convierte CRLF → \n automáticamente en modo 'r'
+# Al escribir en modo 'w', guarda como LF (correcto para git con eol=lf)
+with open('app/views/modulo/index.html.erb', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+content = content.replace('texto viejo', 'texto nuevo')
+
+with open('app/views/modulo/index.html.erb', 'w', encoding='utf-8') as f:
     f.write(content)
 ```
 
-Ejecutar en bash (rutas dentro del sandbox Linux):
-```bash
-python3 /sessions/<id>/mnt/outputs/patch.py
-```
+### Archivos conocidos que superan el límite
 
-### Por qué funciona
+| Archivo | Líneas aprox. |
+|---------|--------------|
+| `inventory_output_controller.js` | ~1432 |
+| `sales_document_controller.js` | >1000 |
+| `business_partners_controller.js` | ~2578 |
+| `authenticated.html.erb` | ~278 (CRLF — siempre Python) |
 
-| Aspecto | `Edit` tool | Script Python |
-|---|---|---|
-| Fuente de lectura | Snapshot del contexto (puede ser stale) | Disco real (siempre actualizado) |
-| Escritura | Parcial si hay error de matching | Archivo completo atomicamente |
-| Múltiples cambios | Un `Edit` call por cambio (riesgo acumulado) | Todos en memoria, una escritura |
 
-### Cuándo aplica
-
-- Archivos ERB (`.html.erb`) de más de 200 líneas
-- Controllers JS grandes (`*_controller.js`)
-- Cualquier archivo donde se hayan detectado truncaciones previas
-
-### ⚠️ Señales de que ocurrió truncación
-
-- El archivo termina abruptamente en medio de un bloque HTML/JS
-- Rails lanza error de sintaxis ERB en líneas que antes funcionaban
-- El `wc -l` del archivo es menor al esperado
+---

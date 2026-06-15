@@ -57,8 +57,14 @@ export default class extends Controller {
     'previewBackdrop', 'previewPanel', 'previewBody',
     // Item selection panel
     'itemPanelBackdrop', 'itemPanel', 'itemPanelLineInfo',
-    'itemSelectItem', 'itemSelectWarehouse', 'itemQuantity',
-    'itemSelectAccount', 'itemSelectProject',
+    'itemInputItem', 'itemSelectItem', 'itemItemList',
+    'itemInputWarehouse', 'itemSelectWarehouse', 'itemWarehouseList',
+    'itemQuantity',
+    'itemInputAccount', 'itemSelectAccount', 'itemAccountList',
+    'itemInputProject', 'itemSelectProject', 'itemProjectList',
+    'itemDimIcon', 'itemDimBody',
+    'itemDimRow1', 'itemDimRow2', 'itemDimRow3', 'itemDimRow4', 'itemDimRow5',
+    'itemDim1', 'itemDim2', 'itemDim3', 'itemDim4', 'itemDim5',
     // Otros Cargos panel
     'ocPanelBackdrop', 'ocPanel', 'ocPanelLineInfo',
     'ocQuantityRow', 'ocQuantity',
@@ -328,41 +334,7 @@ export default class extends Controller {
       refSelect.appendChild(opt)
     })
 
-    // Item selector (modal)
-    const itemSel = this.itemSelectItemTarget
-    this.#itemSAPList.forEach(item => {
-      const opt = document.createElement('option')
-      opt.value       = item.ItemCode
-      opt.textContent = item.FullName || `${item.ItemCode} - ${item.ItemName}`
-      itemSel.appendChild(opt)
-    })
-
-    // Warehouse selector (modal)
-    const whSel = this.itemSelectWarehouseTarget
-    this.#warehouseList.forEach(wh => {
-      const opt = document.createElement('option')
-      opt.value       = wh.WhCode
-      opt.textContent = `${wh.WhCode} — ${wh.WhName}`
-      whSel.appendChild(opt)
-    })
-
-    // Account selector (modal)
-    const accSel = this.itemSelectAccountTarget
-    this.#accountList.forEach(acc => {
-      const opt = document.createElement('option')
-      opt.value       = acc.AcctCode
-      opt.textContent = `${acc.FormatCode} - ${acc.AcctName}`
-      accSel.appendChild(opt)
-    })
-
-    // Project selector (modal)
-    const prjSel = this.itemSelectProjectTarget
-    this.#projectList.forEach(prj => {
-      const opt = document.createElement('option')
-      opt.value       = prj.Code
-      opt.textContent = `${prj.Code} - ${prj.Name}`
-      prjSel.appendChild(opt)
-    })
+    // Item panel — autocomplete fields usan listas en memoria, no necesitan poblar selects
 
     // OC panel — autocomplete fields usan listas en memoria, no necesitan poblar selects
 
@@ -374,6 +346,25 @@ export default class extends Controller {
       opt.value       = f.ExpenseCode
       opt.textContent = `${f.ExpenseCode} - ${f.Name}`
       freightSel.appendChild(opt)
+    })
+
+    // Item panel — Dimensiones
+    this.#dimensionList.forEach(dim => {
+      const code = dim.DimCode  // 1-5
+      const itemRowTarget = this[`itemDimRow${code}Target`]
+      const itemSelTarget = this[`itemDim${code}Target`]
+      if (!itemRowTarget || !itemSelTarget) return
+      const itemLabel = itemRowTarget.querySelector('label')
+      if (itemLabel) itemLabel.textContent = dim.DimName || `Dimensión ${code}`
+      const blankOpt = document.createElement('option')
+      blankOpt.value = ''; blankOpt.textContent = 'Ninguna'
+      itemSelTarget.appendChild(blankOpt)
+      dim.CenterCost?.forEach(cc => {
+        const opt = document.createElement('option')
+        opt.value = cc.PrcCode; opt.textContent = `${cc.PrcCode} - ${cc.PrcName}`
+        itemSelTarget.appendChild(opt)
+      })
+      itemRowTarget.classList.remove('hidden')
     })
 
     // OC panel — Dimensiones (solo las configuradas en SAP)
@@ -584,12 +575,26 @@ export default class extends Controller {
           cellEdited: (cell) => this.#onSapLineCellEdited(cell) },
         { title: 'Monto',      field: 'LineTotal',      hozAlign: 'right', width: 130,
           formatter: (cell) => this.#fmtMoney(cell.getValue(), this.#docCurrency) },
-        { title: 'Acciones',   field: '_delete',        hozAlign: 'center', width: 80,
-          formatter: () => `<button type="button" title="Eliminar"
-                              class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors">
-                              <span class="material-icons text-base">delete</span>
-                            </button>`,
-          cellClick: (_e, cell) => this.#removeSapLineByTableId(cell.getRow().getData().TableId),
+        { title: 'Acciones',   field: '_actions',       hozAlign: 'center', width: 110,
+          formatter: () => `
+            <button type="button" data-action-type="dim" data-tooltip="Ajustar dimensiones"
+                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors">
+              <span class="material-icons text-base">tune</span>
+            </button>
+            <button type="button" data-action-type="delete" data-tooltip="Eliminar"
+                    class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors">
+              <span class="material-icons text-base">delete</span>
+            </button>`,
+          cellClick: (_e, cell) => {
+            const btn  = _e.target.closest('[data-action-type]')
+            if (!btn) return
+            const data = cell.getRow().getData()
+            if (btn.dataset.actionType === 'dim') {
+              this.#openDimEditPanel('item', data.TableId, data)
+            } else {
+              this.#removeSapLineByTableId(data.TableId)
+            }
+          },
         },
       ],
     })
@@ -1270,6 +1275,27 @@ export default class extends Controller {
   onOcTaxCodeInput()  { this.#renderOcAutocomplete({ listTarget: this.ocTaxCodeListTarget, inputTarget: this.ocInputTaxCodeTarget, hiddenTarget: this.ocSelectTaxCodeTarget, items: this.#taxCodeList, labelFn: t => `${t.TaxCode} (${t.TaxRate}%)`, valueFn: t => t.TaxCode }) }
   onOcTaxCodeFocus()  { this.#closeAllOcDropdowns(this.ocTaxCodeListTarget); this.#renderOcAutocomplete({ listTarget: this.ocTaxCodeListTarget, inputTarget: this.ocInputTaxCodeTarget, hiddenTarget: this.ocSelectTaxCodeTarget, items: this.#taxCodeList, labelFn: t => `${t.TaxCode} (${t.TaxRate}%)`, valueFn: t => t.TaxCode }) }
 
+  // ── Item panel — autocomplete handlers ────────────────────
+  #closeAllItemDropdowns(except = null) {
+    const lists = ['itemItemList', 'itemWarehouseList', 'itemAccountList', 'itemProjectList']
+    lists.forEach(name => {
+      const t = this[`${name}Target`]
+      if (t !== except) t.classList.add('hidden')
+    })
+  }
+
+  onItemItemInput()      { this.#renderOcAutocomplete({ listTarget: this.itemItemListTarget, inputTarget: this.itemInputItemTarget, hiddenTarget: this.itemSelectItemTarget, items: this.#itemSAPList, labelFn: i => i.FullName || `${i.ItemCode} - ${i.ItemName}`, valueFn: i => i.ItemCode }) }
+  onItemItemFocus()      { this.#closeAllItemDropdowns(this.itemItemListTarget); this.#renderOcAutocomplete({ listTarget: this.itemItemListTarget, inputTarget: this.itemInputItemTarget, hiddenTarget: this.itemSelectItemTarget, items: this.#itemSAPList, labelFn: i => i.FullName || `${i.ItemCode} - ${i.ItemName}`, valueFn: i => i.ItemCode }) }
+
+  onItemWarehouseInput() { this.#renderOcAutocomplete({ listTarget: this.itemWarehouseListTarget, inputTarget: this.itemInputWarehouseTarget, hiddenTarget: this.itemSelectWarehouseTarget, items: this.#warehouseList, labelFn: w => `${w.WhCode} — ${w.WhName}`, valueFn: w => w.WhCode }) }
+  onItemWarehouseFocus() { this.#closeAllItemDropdowns(this.itemWarehouseListTarget); this.#renderOcAutocomplete({ listTarget: this.itemWarehouseListTarget, inputTarget: this.itemInputWarehouseTarget, hiddenTarget: this.itemSelectWarehouseTarget, items: this.#warehouseList, labelFn: w => `${w.WhCode} — ${w.WhName}`, valueFn: w => w.WhCode }) }
+
+  onItemAccountInput()   { this.#renderOcAutocomplete({ listTarget: this.itemAccountListTarget, inputTarget: this.itemInputAccountTarget, hiddenTarget: this.itemSelectAccountTarget, items: this.#accountList, labelFn: a => `${a.FormatCode} - ${a.AcctName}`, valueFn: a => a.AcctCode }) }
+  onItemAccountFocus()   { this.#closeAllItemDropdowns(this.itemAccountListTarget); this.#renderOcAutocomplete({ listTarget: this.itemAccountListTarget, inputTarget: this.itemInputAccountTarget, hiddenTarget: this.itemSelectAccountTarget, items: this.#accountList, labelFn: a => `${a.FormatCode} - ${a.AcctName}`, valueFn: a => a.AcctCode }) }
+
+  onItemProjectInput()   { this.#renderOcAutocomplete({ listTarget: this.itemProjectListTarget, inputTarget: this.itemInputProjectTarget, hiddenTarget: this.itemSelectProjectTarget, items: this.#projectList, labelFn: p => `${p.Code} - ${p.Name}`, valueFn: p => p.Code }) }
+  onItemProjectFocus()   { this.#closeAllItemDropdowns(this.itemProjectListTarget); this.#renderOcAutocomplete({ listTarget: this.itemProjectListTarget, inputTarget: this.itemInputProjectTarget, hiddenTarget: this.itemSelectProjectTarget, items: this.#projectList, labelFn: p => `${p.Code} - ${p.Name}`, valueFn: p => p.Code }) }
+
   // Artículo SAP
   onOcItemInput()  { this.#renderOcAutocomplete({ listTarget: this.ocItemListTarget, inputTarget: this.ocInputItemTarget, hiddenTarget: this.ocSelectItemTarget, items: this.#itemSAPList, labelFn: i => i.FullName || `${i.ItemCode} - ${i.ItemName}`, valueFn: i => i.ItemCode }) }
   onOcItemFocus()  { this.#closeAllOcDropdowns(this.ocItemListTarget); this.#renderOcAutocomplete({ listTarget: this.ocItemListTarget, inputTarget: this.ocInputItemTarget, hiddenTarget: this.ocSelectItemTarget, items: this.#itemSAPList, labelFn: i => i.FullName || `${i.ItemCode} - ${i.ItemName}`, valueFn: i => i.ItemCode }) }
@@ -1436,6 +1462,21 @@ export default class extends Controller {
     this.itemPanelTarget.classList.add('translate-x-full')
     this.itemPanelBackdropTarget.classList.add('hidden')
     document.body.style.overflow = ''
+    // Reset autocomplete inputs
+    this.itemInputItemTarget.value       = ''
+    this.itemSelectItemTarget.value      = ''
+    this.itemInputWarehouseTarget.value  = ''
+    this.itemSelectWarehouseTarget.value = ''
+    this.itemInputAccountTarget.value    = ''
+    this.itemSelectAccountTarget.value   = ''
+    this.itemInputProjectTarget.value    = ''
+    this.itemSelectProjectTarget.value   = ''
+    this.#closeAllItemDropdowns()
+    // Reset dimensiones
+    ;[this.itemDim1Target, this.itemDim2Target, this.itemDim3Target, this.itemDim4Target, this.itemDim5Target]
+      .forEach(el => { el.value = '' })
+    this.itemDimBodyTarget.classList.add('hidden')
+    this.itemDimIconTarget.style.transform = 'rotate(0deg)'
   }
 
   confirmItemSelection() {
@@ -1477,8 +1518,12 @@ export default class extends Controller {
       TaxAmount:      0,
       LineTotal:      0,
       WhsCode:        whsCode,
-      Dimension1: '', Dimension2: '', Dimension3: '', Dimension4: '', Dimension5: '',
-      SelectedDimensions: '',
+      Dimension1:  this.itemDim1Target.value,
+      Dimension2:  this.itemDim2Target.value,
+      Dimension3:  this.itemDim3Target.value,
+      Dimension4:  this.itemDim4Target.value,
+      Dimension5:  this.itemDim5Target.value,
+      SelectedDimensions: [this.itemDim1Target.value, this.itemDim2Target.value, this.itemDim3Target.value, this.itemDim4Target.value, this.itemDim5Target.value].filter(Boolean).join(', '),
       IsSelected:     false,
       XmlUndMed:      line.XmlUndMed      ?? '',
       XmlUndMedComercial: line.XmlUndMedComercial ?? '',
@@ -1581,9 +1626,11 @@ export default class extends Controller {
     this.#dimEditContext = { type, id }
 
     // Info de la fila
-    const label = type === 'sap'
+    const label = type === 'item'
       ? `${rowData.ItemCodeXML} — ${rowData.ItemNameEdited}`
-      : `${rowData.ExpenseCode} — ${rowData.Remarks}`
+      : type === 'sap'
+        ? `${rowData.ItemCodeXML} — ${rowData.ItemNameEdited}`
+        : `${rowData.ExpenseCode} — ${rowData.Remarks}`
     this.dimEditLineInfoTarget.textContent = label
 
     // Poblar selects desde #dimensionList y pre-seleccionar valores actuales
@@ -1610,7 +1657,7 @@ export default class extends Controller {
       }
 
       // Pre-seleccionar valor actual
-      const currentVal = type === 'sap'
+      const currentVal = (type === 'item' || type === 'sap')
         ? rowData[`Dimension${code}`]
         : rowData[`DistributionRule${code > 1 ? code : ''}`]
       selEl.value = currentVal ?? ''
@@ -1630,7 +1677,15 @@ export default class extends Controller {
     const dims = [1,2,3,4,5].map(i => this[`dimEdit${i}Target`]?.value ?? '')
     const selectedDimensions = dims.filter(Boolean).join(', ')
 
-    if (type === 'sap') {
+    if (type === 'item') {
+      const line = this.#apInvoiceLines.find(l => l.TableId === id)
+      if (line) {
+        line.Dimension1 = dims[0]; line.Dimension2 = dims[1]; line.Dimension3 = dims[2]
+        line.Dimension4 = dims[3]; line.Dimension5 = dims[4]
+        line.SelectedDimensions = selectedDimensions
+        this.#renderSapLinesTable()
+      }
+    } else if (type === 'sap') {
       const line = this.#ocApLines.find(l => l.TableId === id)
       if (line) {
         line.Dimension1 = dims[0]; line.Dimension2 = dims[1]; line.Dimension3 = dims[2]
@@ -1657,6 +1712,13 @@ export default class extends Controller {
     this.dimEditPanelTarget.classList.add('translate-x-full')
     this.dimEditBackdropTarget.classList.add('hidden')
     document.body.style.overflow = ''
+  }
+
+  toggleItemDimensions() {
+    const body   = this.itemDimBodyTarget
+    const icon   = this.itemDimIconTarget
+    const hidden = body.classList.toggle('hidden')
+    icon.style.transform = hidden ? 'rotate(0deg)' : 'rotate(90deg)'
   }
 
   toggleOcDimensions() {
