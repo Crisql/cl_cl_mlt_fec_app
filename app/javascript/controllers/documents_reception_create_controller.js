@@ -1286,6 +1286,17 @@ export default class extends Controller {
   onOcProjectInput()  { this.#renderOcAutocomplete({ listTarget: this.ocProjectListTarget, inputTarget: this.ocInputProjectTarget, hiddenTarget: this.ocSelectProjectTarget, items: this.#projectList, labelFn: p => `${p.Code} - ${p.Name}`, valueFn: p => p.Code }) }
   onOcProjectFocus()  { this.#closeAllOcDropdowns(this.ocProjectListTarget); this.#renderOcAutocomplete({ listTarget: this.ocProjectListTarget, inputTarget: this.ocInputProjectTarget, hiddenTarget: this.ocSelectProjectTarget, items: this.#projectList, labelFn: p => `${p.Code} - ${p.Name}`, valueFn: p => p.Code }) }
 
+  onCardCodeFocus() {
+    const filterValue = this.inputCardCodeTarget.value.toLowerCase()
+    const filtered    = filterValue
+      ? this.#supplierList.filter(s =>
+          s.CardCode?.toLowerCase().includes(filterValue) ||
+          s.CardName?.toLowerCase().includes(filterValue)
+        )
+      : this.#supplierList.slice(0, 20)
+    this.#renderSupplierAutocomplete(filtered)
+  }
+
   onCardCodeInput() {
     const filterValue = this.inputCardCodeTarget.value.toLowerCase()
     const filtered    = this.#supplierList.filter(s =>
