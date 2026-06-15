@@ -1,6 +1,39 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
+ * Scrollbar global — fondo transparente, barra gris tenue y delgada
+ * Aplica a toda la app (WebKit/Blink + Firefox).
+ * ------------------------------------------------------------------------- */
+* {
+  scrollbar-width: thin;                          /* Firefox: barra delgada */
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;  /* thumb gris / track transparente */
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);     /* gray-400 @ 50% */
+  border-radius: 9999px;
+  border: 2px solid transparent;                  /* afina la barra visible */
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.7);     /* gray-500 @ 70% al hover */
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
  * Loader de Tabulator — spinner circular limpio
  * El CSS del CDN de Tabulator se carga DESPUÉS de este archivo, por eso se usa
  * !important para ganar la cascada y eliminar la caja (borde/fondo) por defecto.
