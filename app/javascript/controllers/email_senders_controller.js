@@ -68,6 +68,7 @@ export default class extends TabulatorController {
     'assignCompanyInput', 'assignCompanyDropdown',
     'assignedList', 'availableList',
     'assignedCount', 'availableCount',
+    'assignLoader',
   ];
 
   static values = { ...TabulatorController.values };
@@ -409,6 +410,7 @@ export default class extends TabulatorController {
       showToast('Seleccione una compañía antes de guardar.', 'warning');
       return;
     }
+    this.#showAssignLoader();
     try {
       await this.#apiFetch(`/api/EmailConfig/EmailInboxAssignment?_companyId=${this.#selectedCompanyId}`, {
         method: 'POST',
@@ -418,6 +420,8 @@ export default class extends TabulatorController {
       showToast('Bandejas asignadas exitosamente.', 'success');
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar', message: err.message || 'No se pudieron guardar las asignaciones.' });
+    } finally {
+      this.#hideAssignLoader();
     }
   }
 
@@ -484,6 +488,7 @@ export default class extends TabulatorController {
 
   async #loadInboxesByCompany(companyId) {
     this.#selectedCompanyId = companyId;
+    this.#showAssignLoader();
     try {
       const data = await this.#apiFetch(
         `/api/CompanyEmailConfig/GetEmailInboxesByCompanyId?_companyId=${companyId}`,
@@ -494,7 +499,17 @@ export default class extends TabulatorController {
       this.#renderAssignmentLists();
     } catch (err) {
       showToast(err.message || 'Error al obtener las bandejas de la compañía.', 'error');
+    } finally {
+      this.#hideAssignLoader();
     }
+  }
+
+  #showAssignLoader() {
+    if (this.hasAssignLoaderTarget) this.assignLoaderTarget.classList.remove('hidden');
+  }
+
+  #hideAssignLoader() {
+    if (this.hasAssignLoaderTarget) this.assignLoaderTarget.classList.add('hidden');
   }
 
   // ── Métodos privados: panel lateral ──────────────────────────────────────

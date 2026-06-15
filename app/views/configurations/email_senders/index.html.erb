@@ -135,7 +135,24 @@
     </div>
 
     <%# Panel dual estilo permisos: Disponibles | indicador | Asignadas %>
-    <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
+    <div class="relative flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
+
+      <%# Loader sobre los paneles drag&drop — visible al cargar bandejas de una compañía %>
+      <div data-email-senders-target="assignLoader"
+           data-testid="assign-loader"
+           class="hidden absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-white/60">
+        <div class="fec-table-spinner" role="status" aria-label="Cargando bandejas">
+          <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
+            <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
+            <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
+                    stroke-linecap="round" stroke-dasharray="80 200">
+              <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                                from="0 25 25" to="360 25 25" dur="0.8s" repeatCount="indefinite"></animateTransform>
+            </circle>
+          </svg>
+        </div>
+      </div>
+
       <div class="grid grid-cols-[1fr_auto_1fr] gap-6 flex-1 min-h-0">
 
         <%# Lista: Bandejas Disponibles %>
