@@ -94,15 +94,16 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>
           </div>
-          <input type="email"
+          <input type="text"
                  id="loginUser"
                  data-login-target="email"
                  data-testid="email"
                  placeholder="Correo electrónico"
                  maxlength="450"
-                 required
+                 autocomplete="email"
+                 inputmode="email"
                  class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                 data-action="keydown.enter->login#login">
+                 data-action="keydown.enter->login#login input->login#validateEmail">
           <p class="text-red-500 text-sm mt-1 hidden" data-login-target="emailError">
             Ingrese un correo electrónico válido
           </p>
@@ -123,7 +124,7 @@
                  minlength="8"
                  maxlength="30"
                  class="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                 data-action="keydown.enter->login#login"
+                 data-action="keydown.enter->login#login input->login#validatePassword"
                  type="password">
           <button type="button"
                   class="absolute inset-y-0 right-0 pr-3 flex items-center"

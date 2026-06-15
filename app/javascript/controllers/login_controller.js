@@ -8,6 +8,7 @@ import { notifySessionOpened } from 'vendor/clavisco/session-sync'
 // Vendor: vendor/clavisco/login maneja OAuth2 y storage
 // Custom: recover password, change password, form switching, validaciones UI
 export default class extends Controller {
+  #hasSubmitted = false
   static targets = [
     'email', 'password', 'emailError', 'passwordError',
     'submitButton', 'buttonText', 'buttonLoading', 'eyeIcon',
@@ -42,6 +43,10 @@ export default class extends Controller {
   // -------------------------------------------------------------------------
 
   async login() {
+    // Chrome autocomplete dispara keydown.enter ANTES de poblar el valor;
+    // un tick de espera garantiza que el autofill ya está confirmado.
+    await new Promise(r => setTimeout(r, 0))
+    this.#hasSubmitted = true
     const email    = this.emailTarget.value.trim()
     const password = this.passwordTarget.value
 
@@ -53,7 +58,11 @@ export default class extends Controller {
       return
     }
 
-    if (!password || password.length < this.minPasswordLengthValue) {
+    if (!password) {
+      this.passwordTarget.focus()
+      return
+    }
+    if (password.length < this.minPasswordLengthValue) {
       this.#showError(this.passwordErrorTarget, `La contraseña debe tener un mínimo de ${this.minPasswordLengthValue} caracteres`)
       return
     }
@@ -93,6 +102,26 @@ export default class extends Controller {
   // -------------------------------------------------------------------------
   // Toggle password visibility
   // -------------------------------------------------------------------------
+
+  validateEmail() {
+    if (!this.#hasSubmitted) return
+    const email = this.emailTarget.value.trim()
+    if (!email || !this.#isValidEmail(email)) {
+      this.#showError(this.emailErrorTarget, 'Ingrese un correo electrónico válido')
+    } else {
+      this.#hideError(this.emailErrorTarget)
+    }
+  }
+
+  validatePassword() {
+    if (!this.#hasSubmitted) return
+    const password = this.passwordTarget.value
+    if (!password || password.length < this.minPasswordLengthValue) {
+      this.#showError(this.passwordErrorTarget, `La contraseña debe tener un mínimo de ${this.minPasswordLengthValue} caracteres`)
+    } else {
+      this.#hideError(this.passwordErrorTarget)
+    }
+  }
 
   togglePassword() {
     const input = this.passwordTarget
