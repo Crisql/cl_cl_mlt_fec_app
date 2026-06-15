@@ -364,7 +364,7 @@ export default class extends Controller {
   #fillSapConnectionsSelect(connections) {
     const select  = this.sapConnectionIdTarget;
     const current = select.value;
-    select.innerHTML = '<option value="">-- seleccionar --</option>';
+    select.innerHTML = '';
     connections.forEach(c => {
       const opt = document.createElement('option');
       opt.value = String(c.Id);
@@ -762,7 +762,6 @@ export default class extends Controller {
       row.setAttribute('data-testid', 'xml-tolerance-row');
       row.innerHTML = `
         <select class="w-40 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="">-- moneda --</option>
           ${this.#currenciesList.map(c =>
             `<option value="${this.#esc(c.Code)}" ${c.Code === item.CurrencyCode ? 'selected' : ''}>${this.#esc(c.Code)} — ${this.#esc(c.Name)}</option>`
           ).join('')}
@@ -819,7 +818,6 @@ export default class extends Controller {
         <input type="text" placeholder="Moneda XML" value="${this.#esc(item.XmlCurrencyCode)}"
                class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <select class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="">-- Moneda SAP --</option>
           ${this.#currenciesList.map(c =>
             `<option value="${this.#esc(c.Code)}" ${c.Code === item.MappedCurrencyCode ? 'selected' : ''}>${this.#esc(c.Code)} — ${this.#esc(c.Name)}</option>`
           ).join('')}
