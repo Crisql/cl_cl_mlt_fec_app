@@ -36,6 +36,7 @@ export default class extends Controller {
     'actividadEmisorWrap', 'labelCodigoActividad', 'codigoActividadInterno', 'activityAutocomplete',
     'titleAccDatosCliente', 'rcprNombre', 'rcprIdeTipo', 'rcprIdeNumero',
     'actividadReceptorWrap', 'codigoActividadExterno', 'registroFiscalWrap', 'registroFiscal8707',
+    'actividadEmisorRequiredMark', 'actividadReceptorRequiredMark', 'identificacionRequiredMark',
     'otrasSenasExtranjeroWrap', 'otrasSenasExtranjero',
     'ubicacionSection', 'provincia', 'canton', 'distrito', 'barrio', 'otrasSenas',
     'emailSimpleWrap', 'email', 'telefonoWrap', 'telefono', 'emailCCWrap', 'emailCC',
@@ -279,6 +280,17 @@ export default class extends Controller {
         defaultCond = '09'
         break
     }
+
+    // Actividad receptor: visible para FEC (requerido), FE, ND, NC (opcional)
+    this.#showTarget(this.actividadReceptorWrapTarget, [DOC_TYPE.FEC, DOC_TYPE.FE, DOC_TYPE.ND, DOC_TYPE.NC].includes(t))
+
+    // Asteriscos requeridos dinámicos
+    const actEmisorReq = [DOC_TYPE.FE, DOC_TYPE.FEE, DOC_TYPE.TE].includes(t)
+    const actReceptorReq = t === DOC_TYPE.FEC
+    const idNumeroReq = [DOC_TYPE.FE, DOC_TYPE.FEE, DOC_TYPE.FEC, DOC_TYPE.REP].includes(t)
+    this.actividadEmisorRequiredMarkTarget.classList.toggle('hidden', !actEmisorReq)
+    this.actividadReceptorRequiredMarkTarget.classList.toggle('hidden', !actReceptorReq)
+    this.identificacionRequiredMarkTarget.classList.toggle('hidden', !idNumeroReq)
 
     this.#fillSelect(this.rcprIdeTipoTarget, this.#identificationTypeList, 'Id', 'Name')
     this.rcprIdeTipoTarget.value = (t === DOC_TYPE.FE || t === DOC_TYPE.FEC) ? '01' : ''
@@ -1241,10 +1253,25 @@ export default class extends Controller {
     if (!this.#items.length) errors.push('Debe agregar al menos un ítem')
     const isNote = [DOC_TYPE.ND, DOC_TYPE.NC].includes(this.#docType)
     if (!isNote && this.#docType !== DOC_TYPE.REP && !this.rcprNombreTarget.value.trim()) errors.push('El nombre del cliente es requerido')
-    if ([DOC_TYPE.FE, DOC_TYPE.FEC].includes(this.#docType)) {
+    // Tipo de identificación — requerido para todos
+    if (!this.rcprIdeTipoTarget.value) errors.push('Seleccione el tipo de identificación')
+
+    // Identificación — requerida para FE, FEE, FEC, REP
+    if ([DOC_TYPE.FE, DOC_TYPE.FEE, DOC_TYPE.FEC, DOC_TYPE.REP].includes(this.#docType)) {
       const num = this.rcprIdeNumeroTarget.value; const cfg = ID_LENGTH[this.rcprIdeTipoTarget.value]
-      if (!this.rcprIdeTipoTarget.value) errors.push('Seleccione el tipo de identificación')
+      if (!num.trim()) errors.push('La identificación es requerida')
       else if (cfg && (num.length < cfg.min || num.length > cfg.max)) errors.push(`La identificación debe tener entre ${cfg.min} y ${cfg.max} dígitos`)
+    }
+
+    // Actividad económica del emisor — requerida para FE, FEE, TE
+    if ([DOC_TYPE.FE, DOC_TYPE.FEE, DOC_TYPE.TE].includes(this.#docType)) {
+      const actInterno = (this.codigoActividadInternoTarget.dataset.code || this.codigoActividadInternoTarget.value || '').trim()
+      if (!actInterno) errors.push('El código de actividad económica del emisor es requerido')
+    }
+
+    // Actividad económica del receptor — requerida para FEC
+    if (this.#docType === DOC_TYPE.FEC && !this.codigoActividadExternoTarget.value.trim()) {
+      errors.push('El código de actividad económica del receptor es requerido')
     }
     if (this.condicionVentaTarget.value === '99' && !this.condicionVentaOtrosTarget.value.trim()) errors.push('Indique el detalle de la condición de venta')
     const refRequired = [DOC_TYPE.ND, DOC_TYPE.NC, DOC_TYPE.FEC, DOC_TYPE.REP].includes(this.#docType)
@@ -1271,7 +1298,7 @@ export default class extends Controller {
     let emsrProv = isFEC ? this.provinciaTarget.value : '0'
     let emsrCanton = isFEC ? this.cantonTarget.value : '0'
     let emsrDist = isFEC ? this.distritoTarget.value : '0'
-    let emsrBarrio = isFEC ? (this.barrioTarget.value || null) : null
+    let emsrBarrio = isFEC ? (this.barrioTarget.selectedOptions[0]?.text === '-- Seleccione --' ? null : this.barrioTarget.selectedOptions[0]?.text || null) : null
     let emsrSenas = isFEC ? (this.otrasSenasTarget.value || null) : null
     if (isFEC && (idTipo === '05' || idTipo === '06') && emsrProv === '0') {
       emsrProv = ''; emsrCanton = ''; emsrDist = ''; emsrBarrio = ''; emsrSenas = ''
@@ -1313,7 +1340,7 @@ export default class extends Controller {
       RcprUbProvincia: !isFEC ? this.provinciaTarget.value : '',
       RcprUbCanton: !isFEC ? this.cantonTarget.value : '',
       RcprUbDistrito: !isFEC ? this.distritoTarget.value : '',
-      RcprUbBarrio: !isFEC ? this.barrioTarget.value : '',
+      RcprUbBarrio: !isFEC ? (this.barrioTarget.selectedOptions[0]?.text === '-- Seleccione --' ? null : this.barrioTarget.selectedOptions[0]?.text || null) : '',
       RcprUbOtrasSenas: !isFEC ? (this.otrasSenasTarget.value || null) : null,
       RcprTlfCodigoPais: 506,
       RcprTlfNumTelefono: !isFEC ? (this.telefonoTarget.value || '') : '',
@@ -1562,6 +1589,8 @@ export default class extends Controller {
     const clMessage = response.headers.get('cl-message')
     const decoded = clMessage ? (() => { try { return decodeURIComponent(clMessage) } catch { return clMessage } })() : null
     if (!response.ok) { const text = await response.text().catch(() => response.statusText); throw new Error(decoded || text || `HTTP ${response.status}`) }
+    const hasBody = response.status !== 204 && response.headers.get('content-length') !== '0' && response.headers.get('content-type')?.includes('application/json')
+    if (!hasBody) return { json: { Data: [], Message: decoded || null }, headers: response.headers }
     const json = await response.json()
     if (decoded && !json.Message) json.Message = decoded
     return { json, headers: response.headers }

@@ -83,7 +83,7 @@
         </div>
         <div class="lg:col-span-2" data-documents-create-target="actividadEmisorWrap">
           <label class="block text-xs font-medium text-gray-600 mb-1">
-            Código de la Actividad Económica del <span data-documents-create-target="labelCodigoActividad">Emisor</span>
+            Código de la Actividad Económica del <span data-documents-create-target="labelCodigoActividad">Emisor</span> <span data-documents-create-target="actividadEmisorRequiredMark" class="text-red-500 hidden">*</span>
           </label>
           <div class="relative">
             <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
@@ -122,19 +122,19 @@
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Identificación</label>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Identificación <span class="text-red-500">*</span></label>
           <select data-documents-create-target="rcprIdeTipo" data-testid="field-id-tipo"
                   data-action="change->documents-create#onIdentificationTypeChange"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Identificación</label>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Identificación <span data-documents-create-target="identificacionRequiredMark" class="text-red-500 hidden">*</span></label>
           <input type="text" inputmode="numeric" data-documents-create-target="rcprIdeNumero" data-testid="field-id-numero"
                  data-action="input->documents-create#onlyDigits"
                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div data-documents-create-target="actividadReceptorWrap">
-          <label class="block text-xs font-medium text-gray-600 mb-1">Código de Actividad Económica</label>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Código de Actividad Económica <span data-documents-create-target="actividadReceptorRequiredMark" class="text-red-500 hidden">*</span></label>
           <input type="text" inputmode="numeric" maxlength="6" data-documents-create-target="codigoActividadExterno" data-testid="field-actividad-externo"
                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
@@ -293,3 +293,4 @@
   <%= render 'panels' %>
   <%= render 'modals' %>
 </div>
+                                                                                                                                                                                                                                                                                                                                                             
