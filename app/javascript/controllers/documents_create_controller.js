@@ -199,6 +199,13 @@ export default class extends Controller {
       ])
       this.#pharmaceuticalForms = pharma?.Data ?? pharma ?? []
       this.#activityCodes = activity?.Data ?? activity ?? []
+      if (this.#activityCodes.length === 1) {
+        const a = this.#activityCodes[0]
+        const code = a.Code ?? a.code ?? ''
+        const name = a.Name ?? a.Description ?? a.name ?? ''
+        this.codigoActividadInternoTarget.value = `${code} - ${name}`
+        this.codigoActividadInternoTarget.dataset.code = code
+      }
       this.#provinces = provinces?.Provinces ?? []
       this.#country = country?.Country ?? []
       this.#impuestoTypes = (impuesto?.ImpuestoType ?? []).filter(t => t.active)
@@ -404,7 +411,6 @@ export default class extends Controller {
   onCustomerSearchKeydown(event) { if (event.key === 'Tab') this.openCustomerModal() }
   openCustomerModal() {
     this.#openPanel(this.customerPanelTarget, this.customerBackdropTarget)
-    this.customerSearchInputTarget.value = this.rcprNombreTarget.value || ''
     if (!this.#customerTabulator) {
       this.#initCustomerTabulator()
     } else {
@@ -450,11 +456,7 @@ export default class extends Controller {
       ajaxURL: '/api/Customer',
       ajaxRequestFunc: (_url, _cfg, params) => this.#fetchCustomerPage(params),
       ajaxResponse: (_url, _params, response) => response,
-      rowFormatter: (row) => {
-        const el = row.getElement()
-        if (row.getData()._cl_placeholder) { el.style.cssText = 'height:0;overflow:hidden;border:none;padding:0;pointer-events:none' }
-        else { el.style.cursor = 'pointer' }
-      },
+      rowFormatter: (row) => { row.getElement().style.cursor = 'pointer' },
       columns,
     })
     // Event delegation: un solo listener en el contenedor estable evita duplicados por re-render
@@ -487,10 +489,7 @@ export default class extends Controller {
       const total    = parseInt(headers.get('cl-sl-pagination-records-count') ?? '0') || json.Data.length
       this.#customerTotalRecords = total
       const lastPage = Math.max(1, Math.ceil(total / size))
-      // Tabulator caps last_page to 1 when data.length < pageSize; pad with placeholders to preserve page count.
-      const data = [...json.Data]
-      while (data.length < size) data.push({ _cl_placeholder: true })
-      return { data, last_page: lastPage }
+      return { data: json.Data, last_page: lastPage }
     } catch (err) {
       showToast(`Error al buscar clientes: ${err.message}`, 'error')
       return { data: [], last_page: 1 }
@@ -749,11 +748,7 @@ export default class extends Controller {
       ajaxURL: '/api/Item',
       ajaxRequestFunc: (_url, _cfg, params) => this.#fetchProductPage(params),
       ajaxResponse: (_url, _params, response) => response,
-      rowFormatter: (row) => {
-        const el = row.getElement()
-        if (row.getData()._cl_placeholder) { el.style.cssText = 'height:0;overflow:hidden;border:none;padding:0;pointer-events:none' }
-        else { el.style.cursor = 'pointer' }
-      },
+      rowFormatter: (row) => { row.getElement().style.cursor = 'pointer' },
       columns: [
         { title: 'Código',      field: 'CodTipo',     widthGrow: 1, formatter: (cell) => { const d = cell.getRow().getData(); return d.CodTipo ?? d.ItemCode ?? d.Code ?? '' } },
         { title: 'Descripción', field: 'Descripcion', widthGrow: 3, formatter: (cell) => { const d = cell.getRow().getData(); return d.Descripcion ?? d.ItemName ?? d.Description ?? '' } },
@@ -766,7 +761,7 @@ export default class extends Controller {
       if (!rowEl) return
       const rows = this.#productTabulator?.getRows() ?? []
       const row  = rows.find(r => r.getElement() === rowEl)
-      if (row && !row.getData()._cl_placeholder) this.#selectProduct(row.getData())
+      if (row) this.#selectProduct(row.getData())
     })
   }
 
@@ -790,10 +785,7 @@ export default class extends Controller {
       const total    = parseInt(headers.get('cl-sl-pagination-records-count') ?? '0') || json.Data.length
       this.#productTotalRecords = total
       const lastPage = Math.max(1, Math.ceil(total / size))
-      // Tabulator caps last_page to 1 when data.length < pageSize; pad with placeholders to preserve page count.
-      const data = [...json.Data]
-      while (data.length < size) data.push({ _cl_placeholder: true })
-      return { data, last_page: lastPage }
+      return { data: json.Data, last_page: lastPage }
     } catch (err) {
       showToast(`Error al buscar productos: ${err.message}`, 'error')
       return { data: [], last_page: 1 }
