@@ -50,6 +50,10 @@ export default class extends Controller {
     'customerBackdrop', 'customerPanel', 'customerSearchInput', 'customerTable',
     'productBackdrop', 'productPanel', 'productSearchInput', 'productTable',
     'itemBackdrop', 'itemPanel', 'itemPanelTitle', 'itemCabys', 'itemCabysLoading', 'cabysAutocomplete',
+    'repPaymentBackdrop', 'repPaymentPanel', 'repPaymentPanelTitle', 'repPaymentDesc', 'repPaymentMonto',
+    'repPaymentTaxType', 'repPaymentTaxOtroWrap', 'repPaymentTaxOtro', 'repPaymentTaxOtroRequired', 'repPaymentTaxOtroCount',
+    'repPaymentCodigoTarifaWrap', 'repPaymentCodigoTarifa', 'repPaymentTaxRate',
+    'repPaymentSubTotal', 'repPaymentTaxAmount', 'repPaymentTotal',
     'itemCode', 'itemProductType', 'itemTipoTransaccion', 'itemDescription', 'itemPriceLabel',
     'itemPrice', 'itemQuantity', 'itemDiscount', 'itemUnit', 'unitAutocomplete', 'itemCommercialUnit',
     'itemDiscountCode', 'itemDiscountCodeOtroWrap', 'itemDiscountCodeOtro',
@@ -136,6 +140,7 @@ export default class extends Controller {
     this.#fillSelect(this.itemTipoTransaccionTarget, TipoTransaccion, 'Id', 'Value')
     this.#fillSelect(this.itemDiscountCodeTarget, CodigoDescuentoList, 'Id', 'Value', '-- Ninguno --')
     this.#fillSelect(this.itemCodigoTarifaTarget, CodigoTarifaList, 'Id', 'Value', '-- Seleccione --')
+    this.#fillSelect(this.repPaymentCodigoTarifaTarget, CodigoTarifaList, 'Id', 'Value')
     this.#fillSelect(this.surtidoTipoTarget, ProductType, 'Id', 'Value')
     this.#fillSelect(this.exoTipoDocTarget, ExonerationDocType, 'Id', 'Value')
     this.#fillSelect(this.exoInstitucionTarget, InstExoList, 'Id', 'Value', '-- Ninguna --')
@@ -205,6 +210,7 @@ export default class extends Controller {
     this.#hideLoading()
 
     this.#fillSelect(this.itemTaxTypeTarget, this.#impuestoTypes, 'value', 'annotation')
+    this.#fillSelect(this.repPaymentTaxTypeTarget, this.#impuestoTypes, 'value', 'annotation')
     this.#fillSelect(this.provinciaTarget, this.#provinces, 'ProvinceId', 'ProvinceName', '-- Seleccione --')
     this.#unitOptions = this.#unitProducto
     const pf = this.#pharmaceuticalForms.map(f => ({
@@ -817,8 +823,9 @@ export default class extends Controller {
 
   // ── Ítems (panel) ─────────────────────────────────────────
   openAddItem() {
+    if (this.#docType === DOC_TYPE.REP) { this.openRepPayment(); return }
     this.#editingItemId = null
-    this.itemPanelTitleTarget.textContent = (this.#docType === DOC_TYPE.REP) ? 'Agregar pago' : 'Agregar Ítem'
+    this.itemPanelTitleTarget.textContent = 'Agregar Ítem'
     this.#resetItemForm()
     this.#openPanel(this.itemPanelTarget, this.itemBackdropTarget)
   }
@@ -829,11 +836,11 @@ export default class extends Controller {
     this.itemCodeTarget.value = ''
     this.itemDescriptionTarget.value = ''
     this.itemTipoTransaccionTarget.value = '01'
-    this.itemQuantityTarget.value = (this.#docType === DOC_TYPE.REP) ? '1' : ''
-    this.itemQuantityTarget.disabled = (this.#docType === DOC_TYPE.REP)
+    this.itemQuantityTarget.value = ''
+    this.itemQuantityTarget.disabled = false
     this.itemPriceTarget.value = ''
     this.itemPriceTarget.disabled = false
-    this.itemPriceLabelTarget.innerHTML = (this.#docType === DOC_TYPE.REP) ? 'Monto de pago <span class="text-red-500">*</span>' : 'Precio <span class="text-red-500">*</span>'
+    this.itemPriceLabelTarget.innerHTML = 'Precio <span class="text-red-500">*</span>'
     this.itemDiscountTarget.value = '0'
     this.itemDiscountCodeTarget.value = ''
     this.itemDiscountCodeOtroTarget.value = ''
@@ -1110,6 +1117,7 @@ export default class extends Controller {
     const item = this.#items.find(i => i.id === id)
     if (!item) return
     this.#editingItemId = id
+    if (this.#docType === DOC_TYPE.REP) { this.#loadRepPaymentForEdit(item); return }
     this.itemPanelTitleTarget.textContent = 'Editar Ítem'
     this.#surtidos = (item.Surtidos ?? []).map(s => ({ ...s }))
     this.itemCabysTarget.value = item.Cabys
@@ -1125,7 +1133,7 @@ export default class extends Controller {
     this.itemFormaFarmaceuticaTarget.value = item.FormaFarmaceutica ?? ''
     this.itemVinTarget.value = item.NumeroVINoSerie ?? ''
     this.itemQuantityTarget.value = item.Cantidad
-    this.itemQuantityTarget.disabled = (this.#docType === DOC_TYPE.REP)
+    this.itemQuantityTarget.disabled = false
     this.itemPriceTarget.value = item.PrecioDigitado
     this.itemDiscountTarget.value = item.DescuentoPct
     this.itemDiscountCodeTarget.value = item.CodigoDescuento ?? ''
@@ -1177,15 +1185,24 @@ export default class extends Controller {
       placeholder: 'Sin ítems agregados',
       locale: TABULATOR_LOCALE,
       langs: TABULATOR_LANGS,
-      columns: [
+      columns: this.#docType === DOC_TYPE.REP ? [
+        { title: 'Descripción', field: 'Descripcion',    widthGrow: 4 },
+        { title: 'Monto',       field: 'PrecioUnitario', widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Impuesto',    field: 'ImpuestoNeto',   widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Total',       field: 'MontoTotalLinea',widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Acciones', field: 'id', width: 90, hozAlign: 'center',
+          formatter: () =>
+            `<button type="button" data-action-type="edit" data-tooltip="Actualizar" class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer"><span class="material-icons text-base">edit</span></button>` +
+            `<button type="button" data-action-type="delete" data-tooltip="Eliminar" class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors cursor-pointer"><span class="material-icons text-base">delete</span></button>` },
+      ] : [
         { title: 'Código', field: 'CodTipo', widthGrow: 1,
           formatter: (cell) => { const d = cell.getRow().getData(); return d.Regalia ? `${d.CodTipo || ''} <span class="text-amber-600">*</span>` : (d.CodTipo || '') } },
-        { title: 'Descripción', field: 'Descripcion', widthGrow: 3 },
-        { title: 'Cantidad',   field: 'Cantidad',        widthGrow: 1, hozAlign: 'right' },
-        { title: 'Precio',     field: 'PrecioUnitario',  widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
-        { title: 'Descuento',  field: 'MontoDescuento',  widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
-        { title: 'Impuesto',   field: 'ImpuestoNeto',    widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
-        { title: 'Total',      field: 'MontoTotalLinea', widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Descripción', field: 'Descripcion',   widthGrow: 3 },
+        { title: 'Cantidad',    field: 'Cantidad',       widthGrow: 1, hozAlign: 'right' },
+        { title: 'Precio',      field: 'PrecioUnitario', widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Descuento',   field: 'MontoDescuento', widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Impuesto',    field: 'ImpuestoNeto',   widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Total',       field: 'MontoTotalLinea',widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
         { title: 'Acciones', field: 'id', width: 90, hozAlign: 'center',
           formatter: () =>
             `<button type="button" data-action-type="edit" data-tooltip="Actualizar" class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer"><span class="material-icons text-base">edit</span></button>` +
@@ -1649,6 +1666,148 @@ export default class extends Controller {
   }
 
   closeSuccessModal() { this.successModalTarget.classList.add('hidden'); window.location.reload() }
+
+
+  // ── REP: panel de pago ───────────────────────────────────────────────────
+  openRepPayment() {
+    this.#editingItemId = null
+    this.repPaymentPanelTitleTarget.textContent = 'Agregar pago'
+    this.#resetRepPaymentForm()
+    this.#openPanel(this.repPaymentPanelTarget, this.repPaymentBackdropTarget)
+  }
+
+  closeRepPayment() {
+    this.#closePanel(this.repPaymentPanelTarget, this.repPaymentBackdropTarget)
+  }
+
+  #loadRepPaymentForEdit(item) {
+    this.repPaymentPanelTitleTarget.textContent = 'Editar pago'
+    this.repPaymentDescTarget.value = item.Descripcion ?? ''
+    this.repPaymentMontoTarget.value = item.PrecioDigitado ?? item.PrecioUnitario ?? ''
+    this.repPaymentTaxTypeTarget.value = item.ImpCodigo ?? ''
+    this.repPaymentTaxOtroTarget.value = item.ImpTipoOtro ?? ''
+    this.repPaymentCodigoTarifaTarget.value = item.CodigoTarifa ?? ''
+    this.repPaymentTaxRateTarget.value = item.ImpTarifa ?? 0
+    this.onRepPaymentTaxTypeChange()
+    this.recalcRepPayment()
+    this.#openPanel(this.repPaymentPanelTarget, this.repPaymentBackdropTarget)
+  }
+
+  #resetRepPaymentForm() {
+    this.repPaymentDescTarget.value = ''
+    this.repPaymentMontoTarget.value = ''
+    this.repPaymentTaxTypeTarget.value = ''
+    this.repPaymentTaxOtroTarget.value = ''
+    this.repPaymentCodigoTarifaTarget.value = ''
+    this.repPaymentTaxRateTarget.value = '0'
+    this.repPaymentTaxOtroWrapTarget.classList.add('hidden')
+    this.repPaymentCodigoTarifaWrapTarget.classList.add('hidden')
+    this.repPaymentTaxRateTarget.readOnly = true
+    this.repPaymentTaxRateTarget.classList.add('bg-gray-50', 'cursor-default')
+    this.repPaymentSubTotalTarget.textContent = this.#fmt(0)
+    this.repPaymentTaxAmountTarget.textContent = this.#fmt(0)
+    this.repPaymentTotalTarget.textContent = this.#fmt(0)
+  }
+
+  onRepPaymentTaxTypeChange() {
+    const code = this.repPaymentTaxTypeTarget.value
+    const isIVA = code === '01'
+    this.#showTarget(this.repPaymentTaxOtroWrapTarget, code === '99')
+    this.repPaymentTaxOtroRequiredTarget.classList.toggle('hidden', code !== '99')
+    if (code !== '99') { this.repPaymentTaxOtroTarget.value = ''; this.repPaymentTaxOtroCountTarget.textContent = '0' }
+    this.#showTarget(this.repPaymentCodigoTarifaWrapTarget, isIVA)
+    const rateEditable = code === '99'
+    this.repPaymentTaxRateTarget.readOnly = !rateEditable
+    this.repPaymentTaxRateTarget.classList.toggle('bg-gray-50', !rateEditable)
+    this.repPaymentTaxRateTarget.classList.toggle('cursor-default', !rateEditable)
+    if (isIVA && !this.repPaymentCodigoTarifaTarget.value) {
+      this.repPaymentCodigoTarifaTarget.value = '08'
+      this.onRepPaymentCodigoTarifaChange()
+      return
+    }
+    this.recalcRepPayment()
+  }
+
+  recalcRepPayment() {
+    const monto = Number(this.repPaymentMontoTarget.value) || 0
+    const taxRate = Number(this.repPaymentTaxRateTarget.value) || 0
+    const impMonto = monto * (taxRate / 100)
+    const total = monto + impMonto
+    this.repPaymentSubTotalTarget.textContent = this.#fmt(monto)
+    this.repPaymentTaxAmountTarget.textContent = this.#fmt(impMonto)
+    this.repPaymentTotalTarget.textContent = this.#fmt(total)
+  }
+
+  onRepPaymentCodigoTarifaChange() {
+    const sel = CodigoTarifaList.find(c => c.Id === this.repPaymentCodigoTarifaTarget.value)
+    if (sel) this.repPaymentTaxRateTarget.value = String(sel.Rate)
+    this.recalcRepPayment()
+  }
+
+  onRepPaymentTaxOtroInput() {
+    const len = this.repPaymentTaxOtroTarget.value.length
+    this.repPaymentTaxOtroCountTarget.textContent = String(len)
+  }
+
+  saveRepPayment() {
+    const desc = this.repPaymentDescTarget.value.trim()
+    if (!desc) { showToast('La descripción es requerida', 'warning'); return }
+    const monto = Number(this.repPaymentMontoTarget.value) || 0
+    if (monto <= 0) { showToast('El monto de pago debe ser mayor a 0', 'warning'); return }
+    if (!this.repPaymentTaxTypeTarget.value) { showToast('El tipo de impuesto es requerido', 'warning'); return }
+    if (this.repPaymentTaxTypeTarget.value === '99') {
+      const otros = this.repPaymentTaxOtroTarget.value.trim()
+      if (!otros) { showToast('El detalle del impuesto es requerido cuando el tipo es Otros', 'warning'); return }
+      if (otros.length < 5) { showToast('El detalle del impuesto debe tener al menos 5 caracteres', 'warning'); return }
+    }
+    const taxRate = Number(this.repPaymentTaxRateTarget.value) || 0
+    if (this.repPaymentTaxTypeTarget.value === '99' && taxRate < 0) { showToast('El % de impuesto debe ser 0 o mayor', 'warning'); return }
+    const impMonto = parseFloat((monto * (taxRate / 100)).toFixed(5))
+    const lineTotal = parseFloat((monto + impMonto).toFixed(5))
+    const item = {
+      id: this.#editingItemId ?? ++this.#idItemSeq,
+      Cabys: '',
+      CodTipo: '',
+      Descripcion: desc,
+      ProductType: '02',
+      TipoTransaccion: '01',
+      Cantidad: 1,
+      PrecioUnitario: monto,
+      PrecioDigitado: monto,
+      DescuentoPct: 0,
+      CodigoDescuento: '',
+      CodigoDescuentoOtro: '',
+      UnidadMedida: 'Sp',
+      UnidadMedidaComercial: '',
+      RegistroMedicamento: '',
+      FormaFarmaceutica: '',
+      NumeroVINoSerie: '',
+      ImpCodigo: this.repPaymentTaxTypeTarget.value,
+      ImpTipoOtro: this.repPaymentTaxOtroTarget.value,
+      BebidaJabon: '',
+      CodigoTarifa: this.repPaymentCodigoTarifaTarget.value,
+      ImpTarifa: taxRate,
+      IVACobradoFabrica: '',
+      ImpuestoAsumidoEmisorFabrica: 0,
+      BaseImponible: monto,
+      ImpCantidadUnidadMedida: 0,
+      ImpVolumenUnidadConsumo: 0,
+      MontoTotal: monto,
+      MontoDescuento: 0,
+      SubTotal: monto,
+      ImpMonto: impMonto,
+      ImpuestoNeto: impMonto,
+      MontoTotalLinea: lineTotal,
+      Regalia: false,
+      Exoneracion: { ETipoDocumento: '00', ETipoDocumentoOTRO: '', ENumeroDocumento: '', EFechaEmision: this.#today(), EArticulo: 0, EInciso: 0, ENombreInstitucion: '', ENombreInstitucionOtros: '', ETarifaExonerada: 0, EMontoExoneracion: 0 },
+      Surtidos: [],
+    }
+    if (this.#editingItemId != null) { const idx = this.#items.findIndex(i => i.id === this.#editingItemId); if (idx !== -1) this.#items[idx] = item }
+    else this.#items.push(item)
+    this.#renderItems()
+    this.#recalcTotals()
+    this.closeRepPayment()
+  }
 
   #openPanel(panel, backdrop) { backdrop.classList.remove('hidden'); panel.classList.remove('translate-x-full'); document.body.style.overflow = 'hidden' }
   #closePanel(panel, backdrop) { panel.classList.add('translate-x-full'); backdrop.classList.add('hidden'); document.body.style.overflow = '' }
