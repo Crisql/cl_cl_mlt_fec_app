@@ -6,7 +6,7 @@ import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'contr
 import {
   DOC_TYPE, DocTypes, IdentificationType, ForeignNonResidentIdentification,
   IdentificationTypeFEC, ID_LENGTH, CondicionVenta, CondicionVentaFE, CondicionVentaREP,
-  TipoDocRefList, TipoDocRefNotesList, CodigoRefList, PaymentMethod, CurrencyATV,
+  TipoDocRefList, TipoDocRefNotesList, TipoDocRefREPList, CodigoRefList, PaymentMethod, CurrencyATV,
   CURRENCY_SYMBOL, ProductType, ExonerationDocType, TipoTransaccion, CodigoDescuentoList,
   CodigoTarifaList, InstExoList,
 } from 'controllers/create_document_constants'
@@ -37,6 +37,7 @@ export default class extends Controller {
     'titleAccDatosCliente', 'rcprNombre', 'rcprIdeTipo', 'rcprIdeNumero',
     'actividadReceptorWrap', 'codigoActividadExterno', 'registroFiscalWrap', 'registroFiscal8707',
     'actividadEmisorRequiredMark', 'actividadReceptorRequiredMark', 'identificacionRequiredMark',
+    'ubicacionRequiredMark',
     'otrasSenasExtranjeroWrap', 'otrasSenasExtranjero',
     'ubicacionSection', 'provincia', 'canton', 'distrito', 'barrio', 'otrasSenas',
     'emailSimpleWrap', 'email', 'telefonoWrap', 'telefono', 'emailCCWrap', 'emailCC',
@@ -272,6 +273,7 @@ export default class extends Controller {
         this.titleTarget.textContent = 'Recibo Electronico de Pago'
         this.#identificationTypeList = [...ForeignNonResidentIdentification]
         this.#conditionSaleList = [...CondicionVentaREP]
+        this.#docTypeRefList = [...TipoDocRefREPList]
         this.#showTarget(this.ubicacionSectionTarget, false)
         this.#showTarget(this.actividadReceptorWrapTarget, false)
         this.#showTarget(this.actividadEmisorWrapTarget, false)
@@ -295,6 +297,7 @@ export default class extends Controller {
     this.actividadEmisorRequiredMarkTarget.classList.toggle('hidden', !actEmisorReq)
     this.actividadReceptorRequiredMarkTarget.classList.toggle('hidden', !actReceptorReq)
     this.identificacionRequiredMarkTarget.classList.toggle('hidden', !idNumeroReq)
+    this.#updateUbicacionRequired()
 
     this.#fillSelect(this.rcprIdeTipoTarget, this.#identificationTypeList, 'Id', 'Name')
     this.rcprIdeTipoTarget.value = (t === DOC_TYPE.FE || t === DOC_TYPE.FEC) ? '01' : ''
@@ -518,9 +521,18 @@ export default class extends Controller {
     this.otrasSenasExtranjeroTarget.disabled = !isForeign
     this.otrasSenasExtranjeroTarget.classList.toggle('bg-gray-50', !isForeign)
     if (!isForeign) this.otrasSenasExtranjeroTarget.value = ''
+    this.#updateUbicacionRequired()
   }
 
   // ── Ubicación ─────────────────────────────────────────────
+  #updateUbicacionRequired() {
+    const isFEC = this.#docType === DOC_TYPE.FEC
+    const idTipo = this.rcprIdeTipoTarget.value
+    // Requerida en todos excepto REP (oculto) y FEC con extranjero (05) o no-contribuyente (06)
+    const req = this.#docType !== DOC_TYPE.REP && !(isFEC && (idTipo === '05' || idTipo === '06'))
+    this.ubicacionRequiredMarkTargets.forEach(el => el.classList.toggle('hidden', !req))
+  }
+
   onProvinciaChange() {
     const pid = this.provinciaTarget.value
     const cantones = this.#uniqueBy(this.#country.filter(c => c.ProvinceId === pid), 'CantonId').map(c => ({ Id: c.CantonId, Name: c.CantonName }))
@@ -574,29 +586,49 @@ export default class extends Controller {
     } else { this.#references = this.#references.filter(r => r.id !== id); this.#renderReferences() }
   }
   setReferenceToday(event) { const ref = this.#references.find(r => r.id === Number(event.currentTarget.dataset.id)); if (ref) { ref.fechaEmision = this.#today(); this.#renderReferences() } }
-  onReferenceField(event) { const ref = this.#references.find(r => r.id === Number(event.target.dataset.id)); if (ref) ref[event.target.dataset.field] = event.target.value }
+  onReferenceField(event) {
+    const ref = this.#references.find(r => r.id === Number(event.target.dataset.id))
+    if (!ref) return
+    ref[event.target.dataset.field] = event.target.value
+    // Re-renderizar cuando cambia tipoDoc o codigo para mostrar/ocultar campos condicionales
+    if (event.target.dataset.field === 'tipoDoc' || event.target.dataset.field === 'codigo') {
+      this.#renderReferences()
+    }
+  }
   #renderReferences() {
     const list = this.referenceListTarget; list.innerHTML = ''
     const required = [DOC_TYPE.ND, DOC_TYPE.NC, DOC_TYPE.FEC, DOC_TYPE.REP].includes(this.#docType)
     this.#references.forEach(ref => {
-      const reqMark = required ? ' <span class="text-red-500">*</span>' : ''
+      const reqMark  = required ? ' <span class="text-red-500">*</span>' : ''
+      // Campos internos requeridos solo cuando tipoDoc está seleccionado y ≠ '13'
+      const skipCond  = ref.tipoDoc === '13'
+      const innerReq  = !!ref.tipoDoc && !skipCond
+      const numReq    = innerReq ? ' <span class="text-red-500">*</span>' : ''
+      const fechaReq  = innerReq ? ' <span class="text-red-500">*</span>' : ''
+      const innerReqM = innerReq ? ' <span class="text-red-500">*</span>' : ''
+      const showTipoOtro  = ref.tipoDoc === '99'
+      const showCodigoOtro = ref.codigo === '99'
       const card = document.createElement('div')
       card.className = 'border border-gray-200 rounded-lg p-4'; card.dataset.refId = ref.id
       card.innerHTML = `
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div><label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Documento${reqMark}</label>
             <select data-id="${ref.id}" data-field="tipoDoc" data-action="change->documents-create#onReferenceField" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">${this.#optionsHtml(this.#docTypeRefList, 'Id', 'Value', ref.tipoDoc, '-- Seleccione --')}</select></div>
-          <div><label class="block text-xs font-medium text-gray-600 mb-1">Número${reqMark}</label>
+          ${showTipoOtro ? `<div><label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Documento OTRO${reqMark}</label>
+            <input type="text" maxlength="100" value="${ref.tipoDocOtro || ''}" data-id="${ref.id}" data-field="tipoDocOtro" data-action="input->documents-create#onReferenceField" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></div>` : ''}
+          <div><label class="block text-xs font-medium text-gray-600 mb-1">Número${numReq}</label>
             <input type="text" value="${ref.numero}" data-id="${ref.id}" data-field="numero" data-action="input->documents-create#onReferenceField" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
-          <div><label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Emisión</label>
+          <div><label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Emisión${fechaReq}</label>
             <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
               <input type="date" value="${(ref.fechaEmision || '').split('T')[0]}" data-id="${ref.id}" data-field="fechaEmision" data-action="change->documents-create#onReferenceField" class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
               <button type="button" data-id="${ref.id}" data-action="click->documents-create#setReferenceToday" class="self-stretch flex items-center px-2 border-l border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0" title="Hoy"><span class="material-icons text-base leading-none">today</span></button>
             </div></div>
-          <div><label class="block text-xs font-medium text-gray-600 mb-1">Código${reqMark}</label>
+          <div><label class="block text-xs font-medium text-gray-600 mb-1">Código${innerReqM}</label>
             <select data-id="${ref.id}" data-field="codigo" data-action="change->documents-create#onReferenceField" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">${this.#optionsHtml(this.#codeRefList, 'Id', 'Value', ref.codigo, '-- Seleccione --')}</select></div>
-          <div class="lg:col-span-2"><label class="block text-xs font-medium text-gray-600 mb-1">Razón${reqMark}</label>
-            <input type="text" value="${ref.razon}" data-id="${ref.id}" data-field="razon" data-action="input->documents-create#onReferenceField" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+          ${showCodigoOtro ? `<div><label class="block text-xs font-medium text-gray-600 mb-1">Código OTRO${innerReqM}</label>
+            <input type="text" maxlength="100" value="${ref.codigoOtro || ''}" data-id="${ref.id}" data-field="codigoOtro" data-action="input->documents-create#onReferenceField" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></div>` : ''}
+          <div class="${showTipoOtro || showCodigoOtro ? '' : 'lg:col-span-2'}"><label class="block text-xs font-medium text-gray-600 mb-1">Razón${innerReqM}</label>
+            <input type="text" maxlength="180" value="${ref.razon}" data-id="${ref.id}" data-field="razon" data-action="input->documents-create#onReferenceField" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
         </div>
         <div class="flex justify-end mt-2">
           <button type="button" data-id="${ref.id}" data-action="click->documents-create#removeReference" ${this.#references.length <= 1 ? 'disabled' : ''} class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Eliminar referencia"><span class="material-icons text-base">delete</span></button>
@@ -1321,13 +1353,39 @@ export default class extends Controller {
     if (this.#docType === DOC_TYPE.FEC && !this.codigoActividadExternoTarget.value.trim()) {
       errors.push('El código de actividad económica del receptor es requerido')
     }
-    if (this.condicionVentaTarget.value === '99' && !this.condicionVentaOtrosTarget.value.trim()) errors.push('Indique el detalle de la condición de venta')
-    const refRequired = [DOC_TYPE.ND, DOC_TYPE.NC, DOC_TYPE.FEC, DOC_TYPE.REP].includes(this.#docType)
-    if (refRequired) {
-      const r = this.#references[0]
-      if (!r.tipoDoc || !r.codigo || !r.razon) errors.push('Complete los datos de referencia')
-      if (this.#docType === DOC_TYPE.REP && !r.numero) errors.push('El número de referencia es requerido')
+
+    // Ubicación — requerida en todos los comprobantes excepto REP y FEC con id 05/06
+    const _isFECUbic = this.#docType === DOC_TYPE.FEC
+    const _idTipoUbic = this.rcprIdeTipoTarget.value
+    if (this.#docType !== DOC_TYPE.REP && !(_isFECUbic && (_idTipoUbic === '05' || _idTipoUbic === '06'))) {
+      if (!this.provinciaTarget.value) errors.push('La provincia es requerida')
+      if (!this.cantonTarget.value)    errors.push('El cantón es requerido')
+      if (!this.distritoTarget.value)  errors.push('El distrito es requerido')
+      if (!this.otrasSenasTarget.value.trim()) errors.push('La dirección es requerida')
     }
+    if (this.condicionVentaTarget.value === '99' && !this.condicionVentaOtrosTarget.value.trim()) errors.push('Indique el detalle de la condición de venta')
+    // tipoDoc es obligatorio para ND, NC, FEC, REP
+    const refRequired = [DOC_TYPE.ND, DOC_TYPE.NC, DOC_TYPE.FEC, DOC_TYPE.REP].includes(this.#docType)
+    this.#references.forEach((r, idx) => {
+      const lbl = this.#references.length > 1 ? ` (ref. ${idx + 1})` : ''
+      if (refRequired && !r.tipoDoc) { errors.push(`Seleccione el tipo de documento de referencia${lbl}`); return }
+      // Campos internos: requeridos solo cuando tipoDoc está seleccionado (cualquier doc type)
+      if (!r.tipoDoc) return
+      if (r.tipoDoc === '99' && !r.tipoDocOtro?.trim()) errors.push(`Indique el tipo de documento OTRO de referencia${lbl}`)
+      // REP: número y fechaEmision siempre requeridos (condición 1)
+      if (this.#docType === DOC_TYPE.REP) {
+        if (!r.numero?.trim())  errors.push(`El número de referencia es requerido${lbl}`)
+        if (!r.fechaEmision)    errors.push(`La fecha de emisión de referencia es requerida${lbl}`)
+      }
+      // Resto requeridos cuando tipoDoc ≠ '13' (facturación mes vencido)
+      if (r.tipoDoc !== '13') {
+        if (this.#docType !== DOC_TYPE.REP && !r.numero?.trim()) errors.push(`El número de referencia es requerido${lbl}`)
+        if (this.#docType !== DOC_TYPE.REP && !r.fechaEmision)   errors.push(`La fecha de emisión de referencia es requerida${lbl}`)
+        if (!r.codigo) errors.push(`Seleccione el código de referencia${lbl}`)
+        if (r.codigo === '99' && !r.codigoOtro?.trim()) errors.push(`Indique el código OTRO de referencia${lbl}`)
+        if (!r.razon?.trim()) errors.push(`La razón de referencia es requerida${lbl}`)
+      }
+    })
     const sumMedios = this.#mediosPago.reduce((s, m) => s + (Number(m.monto) || 0), 0)
     if (Math.abs(sumMedios - this.#total) > 0.005) errors.push('La suma de los medios de pago debe ser igual al total')
     return errors

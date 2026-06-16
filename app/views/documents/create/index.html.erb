@@ -156,19 +156,19 @@
       <%= render 'section', key: 'ubicacion', title: 'Datos de Ubicación' do %>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Provincia</label>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Provincia <span data-documents-create-target="ubicacionRequiredMark" class="text-red-500 hidden">*</span></label>
             <select data-documents-create-target="provincia" data-testid="field-provincia"
                     data-action="change->documents-create#onProvinciaChange"
                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Cantón</label>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Cantón <span data-documents-create-target="ubicacionRequiredMark" class="text-red-500 hidden">*</span></label>
             <select data-documents-create-target="canton" data-testid="field-canton"
                     data-action="change->documents-create#onCantonChange"
                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Distrito</label>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Distrito <span data-documents-create-target="ubicacionRequiredMark" class="text-red-500 hidden">*</span></label>
             <select data-documents-create-target="distrito" data-testid="field-distrito"
                     data-action="change->documents-create#onDistritoChange"
                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
@@ -179,7 +179,7 @@
                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
           </div>
           <div class="lg:col-span-2">
-            <label class="block text-xs font-medium text-gray-600 mb-1">Dirección</label>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Dirección <span data-documents-create-target="ubicacionRequiredMark" class="text-red-500 hidden">*</span></label>
             <input type="text" data-documents-create-target="otrasSenas" data-testid="field-direccion"
                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>

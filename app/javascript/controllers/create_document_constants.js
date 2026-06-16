@@ -102,6 +102,8 @@ export const TipoDocRefList = [
   { Id: '99', Value: 'Otros' },
 ]
 
+export const TipoDocRefREPList = TipoDocRefList.filter(d => ['01','02','03','04','07','08','10'].includes(d.Id))
+
 export const TipoDocRefNotesList = [
   ...TipoDocRefList,
   { Id: '09', Value: 'Devolución mercadería' },
