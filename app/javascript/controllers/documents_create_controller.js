@@ -42,8 +42,8 @@ export default class extends Controller {
     'emailSimpleWrap', 'email', 'telefonoWrap', 'telefono', 'emailCCWrap', 'emailCC',
     'emailMultiWrap', 'btnAddEmail', 'emailList',
     'btnAddReference', 'referenceList',
-    'titleAccItems', 'btnAddItem', 'btnAddItemLabel', 'itemsBody',
-    'btnAddMedioPago', 'medioPagoList',
+    'titleAccItems', 'btnAddItem', 'btnAddItemLabel', 'itemsTable',
+    'btnAddMedioPago', 'medioPagoTable',
     'totalSubtotal', 'totalImpuestos', 'totalDescuento', 'totalTotal',
     'accordionPanel',
     'customerBackdrop', 'customerPanel', 'customerSearchInput', 'customerTable',
@@ -85,6 +85,8 @@ export default class extends Controller {
   #customerTabulator = null
   #customerTotalRecords = 0
   #productTabulator = null
+  #itemsTabulator = null
+  #medioPagoTabulator = null
   #productTotalRecords = 0
   #terminalSucList = []
 
@@ -170,6 +172,8 @@ export default class extends Controller {
     if (this.#cabysTooltipEl) this.#cabysTooltipEl.remove()
     this.#customerTabulator?.destroy()
     this.#productTabulator?.destroy()
+    this.#itemsTabulator?.destroy()
+    this.#medioPagoTabulator?.destroy()
     document.body.style.overflow = ''
   }
 
@@ -608,23 +612,48 @@ export default class extends Controller {
   removeMedioPago(event) { const id = Number(event.currentTarget.dataset.id); if (this.#mediosPago.length <= 1) return; this.#mediosPago = this.#mediosPago.filter(m => m.id !== id); this.#renderMediosPago() }
   onMedioPagoField(event) { const m = this.#mediosPago.find(x => x.id === Number(event.target.dataset.id)); if (m) { const f = event.target.dataset.field; m[f] = f === 'monto' ? Number(event.target.value) : event.target.value } }
   #renderMediosPago() {
-    const list = this.medioPagoListTarget; list.innerHTML = ''
-    this.#mediosPago.forEach(m => {
-      const card = document.createElement('div')
-      card.className = 'grid grid-cols-1 sm:grid-cols-3 gap-3 items-end border border-gray-200 rounded-lg p-3'
-      card.innerHTML = `
-        <div><label class="block text-xs font-medium text-gray-600 mb-1">Medio de Pago</label>
-          <select data-id="${m.id}" data-field="tipo" data-action="change->documents-create#onMedioPagoField" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">${this.#optionsHtml(PaymentMethod, 'Id', 'Value', m.tipo)}</select></div>
-        <div><label class="block text-xs font-medium text-gray-600 mb-1">Detalle</label>
-          <input type="text" maxlength="100" value="${m.otros}" data-id="${m.id}" data-field="otros" data-action="input->documents-create#onMedioPagoField" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
-        <div class="flex items-end gap-2">
-          <div class="flex-1"><label class="block text-xs font-medium text-gray-600 mb-1">Monto</label>
-            <input type="number" min="0" step="0.01" value="${m.monto}" data-id="${m.id}" data-field="monto" data-action="input->documents-create#onMedioPagoField" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
-          <button type="button" data-id="${m.id}" data-action="click->documents-create#removeMedioPago" ${this.#mediosPago.length <= 1 ? 'disabled' : ''} class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed mb-1" title="Eliminar"><span class="material-icons text-base">delete</span></button>
-        </div>`
-      list.appendChild(card)
-    })
+    if (!this.#medioPagoTabulator) { this.#initMedioPagoTabulator() }
+    else { this.#medioPagoTabulator.replaceData(this.#mediosPago) }
     this.btnAddMedioPagoTarget.disabled = this.#mediosPago.length >= MAX_MEDIO_PAGO
+  }
+
+  #initMedioPagoTabulator() {
+    const paymentLabels = Object.fromEntries(PaymentMethod.map(p => [p.Id, p.Value]))
+    this.#medioPagoTabulator = new Tabulator(this.medioPagoTableTarget, {
+      data: this.#mediosPago,
+      layout: 'fitColumns',
+      columnDefaults: { headerSort: false },
+      locale: TABULATOR_LOCALE,
+      langs: TABULATOR_LANGS,
+      columns: [
+        { title: 'Medio de Pago', field: 'tipo', widthGrow: 2,
+          editor: 'list', editorParams: { values: PaymentMethod.map(p => ({ label: p.Value, value: p.Id })) },
+          formatter: 'lookup', formatterParams: paymentLabels },
+        { title: 'Detalle', field: 'otros', widthGrow: 2, editor: 'input', editorParams: { elementAttributes: { maxlength: '100' } } },
+        { title: 'Monto', field: 'monto', widthGrow: 1, hozAlign: 'right',
+          editor: 'number', editorParams: { min: 0, step: 0.01 },
+          formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: '', field: 'id', width: 50, hozAlign: 'center',
+          formatter: () => `<button type="button" data-action-type="delete" data-tooltip="Eliminar" class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors cursor-pointer"><span class="material-icons text-base">delete</span></button>` },
+      ],
+      cellEdited: (cell) => {
+        const d = cell.getRow().getData()
+        const m = this.#mediosPago.find(x => x.id === d.id)
+        if (!m) return
+        const field = cell.getField()
+        m[field] = field === 'monto' ? Number(cell.getValue()) : cell.getValue()
+      },
+    })
+    this.medioPagoTableTarget.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action-type="delete"]')
+      if (!btn || this.#mediosPago.length <= 1) return
+      const rowEl = btn.closest('.tabulator-row')
+      if (!rowEl) return
+      const tRow = (this.#medioPagoTabulator?.getRows() ?? []).find(r => r.getElement() === rowEl)
+      if (!tRow) return
+      const id = tRow.getData().id
+      this.removeMedioPago({ currentTarget: { dataset: { id } } })
+    })
   }
 
   // ── Búsqueda de producto ──────────────────────────────────
@@ -1104,24 +1133,43 @@ export default class extends Controller {
   removeItem(event) { const id = Number(event.currentTarget.dataset.id); this.#items = this.#items.filter(i => i.id !== id); this.#renderItems(); this.#recalcTotals() }
 
   #renderItems() {
-    const tbody = this.itemsBodyTarget; tbody.innerHTML = ''
-    if (!this.#items.length) { tbody.innerHTML = '<tr><td colspan="8" class="px-3 py-4 text-center text-xs text-gray-400">Sin ítems agregados</td></tr>'; return }
-    this.#items.forEach(item => {
-      const tr = document.createElement('tr')
-      tr.className = 'border-b border-gray-100'
-      tr.innerHTML = `
-        <td class="px-3 py-2 text-xs text-gray-700">${item.CodTipo}${item.Regalia ? ' <span class="text-amber-600">*</span>' : ''}</td>
-        <td class="px-3 py-2 text-xs text-gray-700">${item.Descripcion}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${item.Cantidad}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmt(item.PrecioUnitario)}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmt(item.MontoDescuento)}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmt(item.ImpuestoNeto)}</td>
-        <td class="px-3 py-2 text-xs text-right text-gray-700">${this.#fmt(item.MontoTotalLinea)}</td>
-        <td class="px-3 py-2 text-center whitespace-nowrap">
-          <button type="button" data-id="${item.id}" data-action="click->documents-create#editItem" data-tooltip="Actualizar" class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors"><span class="material-icons text-base">edit</span></button>
-          <button type="button" data-id="${item.id}" data-action="click->documents-create#removeItem" data-tooltip="Eliminar" class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors"><span class="material-icons text-base">delete</span></button>
-        </td>`
-      tbody.appendChild(tr)
+    if (!this.#itemsTabulator) { this.#initItemsTabulator(); return }
+    this.#itemsTabulator.replaceData(this.#items)
+  }
+
+  #initItemsTabulator() {
+    this.#itemsTabulator = new Tabulator(this.itemsTableTarget, {
+      data: this.#items,
+      layout: 'fitColumns',
+      columnDefaults: { headerSort: false },
+      placeholder: 'Sin ítems agregados',
+      locale: TABULATOR_LOCALE,
+      langs: TABULATOR_LANGS,
+      columns: [
+        { title: 'Código', field: 'CodTipo', widthGrow: 1,
+          formatter: (cell) => { const d = cell.getRow().getData(); return d.Regalia ? `${d.CodTipo || ''} <span class="text-amber-600">*</span>` : (d.CodTipo || '') } },
+        { title: 'Descripción', field: 'Descripcion', widthGrow: 3 },
+        { title: 'Cantidad',   field: 'Cantidad',        widthGrow: 1, hozAlign: 'right' },
+        { title: 'Precio',     field: 'PrecioUnitario',  widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Descuento',  field: 'MontoDescuento',  widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Impuesto',   field: 'ImpuestoNeto',    widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Total',      field: 'MontoTotalLinea', widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Acciones', field: 'id', width: 90, hozAlign: 'center',
+          formatter: () =>
+            `<button type="button" data-action-type="edit" data-tooltip="Actualizar" class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer"><span class="material-icons text-base">edit</span></button>` +
+            `<button type="button" data-action-type="delete" data-tooltip="Eliminar" class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors cursor-pointer"><span class="material-icons text-base">delete</span></button>` },
+      ],
+    })
+    this.itemsTableTarget.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action-type]')
+      if (!btn) return
+      const rowEl = btn.closest('.tabulator-row')
+      if (!rowEl) return
+      const tRow = (this.#itemsTabulator?.getRows() ?? []).find(r => r.getElement() === rowEl)
+      if (!tRow) return
+      const id = tRow.getData().id
+      if (btn.dataset.actionType === 'edit')   this.editItem({ currentTarget: { dataset: { id } } })
+      if (btn.dataset.actionType === 'delete') this.removeItem({ currentTarget: { dataset: { id } } })
     })
   }
 
