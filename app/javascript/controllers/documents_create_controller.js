@@ -92,6 +92,7 @@ export default class extends Controller {
   #productTabulator = null
   #itemsTabulator = null
   #medioPagoTabulator = null
+  #tableBuilt = { items: false, medioPago: false }
   #productTotalRecords = 0
   #terminalSucList = []
 
@@ -180,6 +181,7 @@ export default class extends Controller {
     this.#productTabulator?.destroy()
     this.#itemsTabulator?.destroy()
     this.#medioPagoTabulator?.destroy()
+    this.#tableBuilt = { items: false, medioPago: false }
     document.body.style.overflow = ''
   }
 
@@ -649,9 +651,18 @@ export default class extends Controller {
   addMedioPago() { if (this.#mediosPago.length < MAX_MEDIO_PAGO) { this.#mediosPago.push(this.#newMedioPago()); this.#renderMediosPago() } }
   removeMedioPago(event) { const id = Number(event.currentTarget.dataset.id); if (this.#mediosPago.length <= 1) return; this.#mediosPago = this.#mediosPago.filter(m => m.id !== id); this.#renderMediosPago() }
   onMedioPagoField(event) { const m = this.#mediosPago.find(x => x.id === Number(event.target.dataset.id)); if (m) { const f = event.target.dataset.field; m[f] = f === 'monto' ? Number(event.target.value) : event.target.value } }
+  // Difiere una operación hasta que la tabla termine de construirse (evita
+  // 'Cannot read properties of null (reading verticalFillMode)' en Tabulator).
+  #whenBuilt(table, key, fn) {
+    if (this.#tableBuilt[key]) { fn(); return }
+    table.on('tableBuilt', () => { this.#tableBuilt[key] = true; fn() })
+  }
+
   #renderMediosPago() {
     if (!this.#medioPagoTabulator) { this.#initMedioPagoTabulator() }
-    else { this.#medioPagoTabulator.replaceData(this.#mediosPago) }
+    else if (this.medioPagoTableTarget.isConnected) {
+      this.#whenBuilt(this.#medioPagoTabulator, 'medioPago', () => this.#medioPagoTabulator.replaceData(this.#mediosPago))
+    }
     this.btnAddMedioPagoTarget.disabled = this.#mediosPago.length >= MAX_MEDIO_PAGO
   }
 
@@ -660,6 +671,7 @@ export default class extends Controller {
     this.#medioPagoTabulator = new Tabulator(this.medioPagoTableTarget, {
       data: this.#mediosPago,
       layout: 'fitColumns',
+      renderVertical: 'basic',
       columnDefaults: { headerSort: false },
       locale: TABULATOR_LOCALE,
       langs: TABULATOR_LANGS,
@@ -668,7 +680,7 @@ export default class extends Controller {
           editor: 'list', editorParams: { values: PaymentMethod.map(p => ({ label: p.Value, value: p.Id })) },
           formatter: 'lookup', formatterParams: paymentLabels },
         { title: 'Detalle', field: 'otros', widthGrow: 2, editor: 'input', editorParams: { elementAttributes: { maxlength: '100' } } },
-        { title: 'Monto', field: 'monto', widthGrow: 1, hozAlign: 'right',
+        { title: 'Monto', field: 'monto', widthGrow: 1, hozAlign: 'left',
           editor: 'number', editorParams: { min: 0, step: 0.01 },
           formatter: (cell) => this.#fmt(cell.getValue()) },
         { title: '', field: 'id', width: 50, hozAlign: 'center',
@@ -682,6 +694,7 @@ export default class extends Controller {
         m[field] = field === 'monto' ? Number(cell.getValue()) : cell.getValue()
       },
     })
+    this.#medioPagoTabulator.on('tableBuilt', () => { this.#tableBuilt.medioPago = true })
     this.medioPagoTableTarget.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action-type="delete"]')
       if (!btn || this.#mediosPago.length <= 1) return
@@ -744,7 +757,7 @@ export default class extends Controller {
       columns: [
         { title: 'Código',      field: 'CodTipo',     widthGrow: 1, formatter: (cell) => { const d = cell.getRow().getData(); return d.CodTipo ?? d.ItemCode ?? d.Code ?? '' } },
         { title: 'Descripción', field: 'Descripcion', widthGrow: 3, formatter: (cell) => { const d = cell.getRow().getData(); return d.Descripcion ?? d.ItemName ?? d.Description ?? '' } },
-        { title: 'Precio',      field: 'Precio',      widthGrow: 1, hozAlign: 'right', formatter: (cell) => { const d = cell.getRow().getData(); return this.#fmt(d.Precio ?? d.Price ?? 0) } },
+        { title: 'Precio',      field: 'Precio',      widthGrow: 1, hozAlign: 'left', formatter: (cell) => { const d = cell.getRow().getData(); return this.#fmt(d.Precio ?? d.Price ?? 0) } },
       ],
     })
     // Event delegation: un solo listener en el contenedor estable evita duplicados por re-render
@@ -1174,22 +1187,26 @@ export default class extends Controller {
 
   #renderItems() {
     if (!this.#itemsTabulator) { this.#initItemsTabulator(); return }
-    this.#itemsTabulator.replaceData(this.#items)
+    if (this.itemsTableTarget.isConnected) {
+      this.#whenBuilt(this.#itemsTabulator, 'items', () => this.#itemsTabulator.replaceData(this.#items))
+    }
   }
 
   #initItemsTabulator() {
     this.#itemsTabulator = new Tabulator(this.itemsTableTarget, {
       data: this.#items,
       layout: 'fitColumns',
+      renderVertical: 'basic',
+      autoResize: false,
       columnDefaults: { headerSort: false },
       placeholder: 'Sin ítems agregados',
       locale: TABULATOR_LOCALE,
       langs: TABULATOR_LANGS,
       columns: this.#docType === DOC_TYPE.REP ? [
         { title: 'Descripción', field: 'Descripcion',    widthGrow: 4 },
-        { title: 'Monto',       field: 'PrecioUnitario', widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
-        { title: 'Impuesto',    field: 'ImpuestoNeto',   widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
-        { title: 'Total',       field: 'MontoTotalLinea',widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Monto',       field: 'PrecioUnitario', widthGrow: 1, hozAlign: 'left', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Impuesto',    field: 'ImpuestoNeto',   widthGrow: 1, hozAlign: 'left', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Total',       field: 'MontoTotalLinea',widthGrow: 1, hozAlign: 'left', formatter: (cell) => this.#fmt(cell.getValue()) },
         { title: 'Acciones', field: 'id', width: 90, hozAlign: 'center',
           formatter: () =>
             `<button type="button" data-action-type="edit" data-tooltip="Actualizar" class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer"><span class="material-icons text-base">edit</span></button>` +
@@ -1198,17 +1215,18 @@ export default class extends Controller {
         { title: 'Código', field: 'CodTipo', widthGrow: 1,
           formatter: (cell) => { const d = cell.getRow().getData(); return d.Regalia ? `${d.CodTipo || ''} <span class="text-amber-600">*</span>` : (d.CodTipo || '') } },
         { title: 'Descripción', field: 'Descripcion',   widthGrow: 3 },
-        { title: 'Cantidad',    field: 'Cantidad',       widthGrow: 1, hozAlign: 'right' },
-        { title: 'Precio',      field: 'PrecioUnitario', widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
-        { title: 'Descuento',   field: 'MontoDescuento', widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
-        { title: 'Impuesto',    field: 'ImpuestoNeto',   widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
-        { title: 'Total',       field: 'MontoTotalLinea',widthGrow: 1, hozAlign: 'right', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Cantidad',    field: 'Cantidad',       widthGrow: 1, hozAlign: 'left' },
+        { title: 'Precio',      field: 'PrecioUnitario', widthGrow: 1, hozAlign: 'left', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Descuento',   field: 'MontoDescuento', widthGrow: 1, hozAlign: 'left', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Impuesto',    field: 'ImpuestoNeto',   widthGrow: 1, hozAlign: 'left', formatter: (cell) => this.#fmt(cell.getValue()) },
+        { title: 'Total',       field: 'MontoTotalLinea',widthGrow: 1, hozAlign: 'left', formatter: (cell) => this.#fmt(cell.getValue()) },
         { title: 'Acciones', field: 'id', width: 90, hozAlign: 'center',
           formatter: () =>
             `<button type="button" data-action-type="edit" data-tooltip="Actualizar" class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer"><span class="material-icons text-base">edit</span></button>` +
             `<button type="button" data-action-type="delete" data-tooltip="Eliminar" class="p-1.5 text-red-600 rounded hover:bg-red-50 transition-colors cursor-pointer"><span class="material-icons text-base">delete</span></button>` },
       ],
     })
+    this.#itemsTabulator.on('tableBuilt', () => { this.#tableBuilt.items = true })
     this.itemsTableTarget.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action-type]')
       if (!btn) return
