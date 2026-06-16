@@ -169,6 +169,45 @@ del cursor — nunca queda dentro del stacking context de la celda.
 - **No usar** `<div class="relative group">` + `<span class="...group-hover:opacity-100...">` en tablas Tabulator — el `overflow:hidden` de las celdas recorta esos tooltips
 - Para tooltips **fuera de Tabulator** (formularios, toolbar) sí se puede usar el patrón CSS puro con `group-hover`
 
+### Tooltips en botones deshabilitados — mensaje específico obligatorio
+
+Los botones que se inhabilitan en función del estado de la fila **deben incluir `data-tooltip` con una razón específica y accionable**. Nunca usar mensajes genéricos.
+
+| ❌ Incorrecto | ✅ Correcto |
+|---|---|
+| `"Esta opción no está disponible"` | `"El correo debe tener detalle para ver esta opción"` |
+| `"No disponible"` | `"El documento debe estar en estado Abierto para anularlo"` |
+| `"Acción no permitida"` | `"Solo se puede reenviar si el estado del correo es Error"` |
+
+**Regla:** el tooltip del botón deshabilitado debe responder implícitamente a la pregunta *¿cuándo SÍ podré usarlo?*
+
+```js
+// ✅ CORRECTO — tooltip explica la condición
+const tooltip = hasDetail
+  ? 'Ver detalle del correo'
+  : 'El correo debe tener detalle para usar esta opción';
+
+return `<button type="button"
+                data-action-type="view-detail"
+                data-tooltip="${tooltip}"
+                ${hasDetail ? '' : 'disabled'}
+                class="...">
+  <span class="material-icons text-base">lists</span>
+</button>`;
+
+// ❌ INCORRECTO — tooltip genérico o ausente en botón deshabilitado
+return `<button type="button"
+                data-action-type="view-detail"
+                ${hasDetail ? 'data-tooltip="Ver detalle"' : ''}
+                ${hasDetail ? '' : 'disabled'}
+                class="...">
+  <span class="material-icons text-base">lists</span>
+</button>`;
+```
+
+**Importante:** `data-tooltip` debe estar **siempre** presente en el botón, habilitado o no.
+El tooltip del estado habilitado describe la acción; el del deshabilitado explica la condición.
+
 ---
 
 ## 3. Columnas de tabla estándar
@@ -482,7 +521,25 @@ getTableConfig() {
 | Toolbar dentro del cuerpo | `flex-shrink-0` |
 | Div contenedor de la tabla | `flex-1 min-h-0` |
 | Div target de Tabulator | `class="h-full"` |
-| Config Tabulator | `height: '100%'` |
+| Config Tabulator | `height: '100%'`, `maxHeight: undefined` |
+
+### ⚠️ `maxHeight` debe sobreescribirse explícitamente
+
+El `TabulatorController` base inyecta `maxHeight: "500px"` desde su Stimulus value.
+Aunque el child declare `height: '100%'`, la tabla quedará limitada a 500px si no se anula:
+
+```js
+getTableConfig() {
+  return {
+    ...super.getTableConfig(),
+    height: '100%',
+    maxHeight: undefined,  // ← obligatorio para tablas de altura relativa
+    // ...
+  };
+}
+```
+
+Sin `maxHeight: undefined`, la tabla ignora el contenedor flex y se corta a 500px.
 
 ```html
 <div data-controller="mi-modulo" class="p-6 flex flex-col h-full">
@@ -943,4 +1000,4 @@ git show HEAD:app/javascript/controllers/mi_controller.js > app/javascript/contr
 ```
 
 
----
+---                                                                                                                                                                                                                                                                                                                           

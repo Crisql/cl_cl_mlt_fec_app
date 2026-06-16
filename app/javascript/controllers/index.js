@@ -29,6 +29,7 @@ import DocumentsCreateController          from 'controllers/documents_create_con
 import MailParserController               from 'controllers/mail_parser_controller'
 import ReceptionLogsController           from 'controllers/reception_logs_controller'
 import EmailSendersController             from 'controllers/email_senders_controller'
+import DocumentsEmailsController          from 'controllers/documents_emails_controller'
 import SessionSyncController             from 'controllers/session_sync_controller'
 import UsersController                  from 'controllers/users_controller'
 import UsersRegisterController          from 'controllers/users_register_controller'
@@ -60,6 +61,7 @@ application.register('documents-create',           DocumentsCreateController)
 application.register('mail-parser',     MailParserController)
 application.register('reception-logs',  ReceptionLogsController)
 application.register('email-senders',   EmailSendersController)
+application.register('documents-emails',  DocumentsEmailsController)
 application.register('session-sync',    SessionSyncController)
 application.register('users',           UsersController)
 application.register('users-register',  UsersRegisterController)

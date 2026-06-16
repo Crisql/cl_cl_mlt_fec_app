@@ -1,0 +1,158 @@
+<% content_for :page_title, "Reporte de Correos" %>
+
+<div data-controller="documents-emails"
+     class="p-6 flex flex-col h-full">
+
+  <%# ── Filtros ──────────────────────────────────────────────────────────── %>
+  <div class="flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+
+      <%# Fecha de Inicio %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Inicio</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-documents-emails-target="inputInitialDate"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->documents-emails#todayInitial"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+      <%# Fecha Final %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha Final</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-documents-emails-target="inputEndDate"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->documents-emails#todayEnd"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+      <%# Tipo de documento %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de documento</label>
+        <select data-documents-emails-target="selectDocType"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="01" selected>FE</option>
+          <option value="02">ND</option>
+          <option value="03">NC</option>
+          <option value="04">TE</option>
+          <option value="08">FEC</option>
+          <option value="09">FEE</option>
+          <option value="10">REP</option>
+        </select>
+      </div>
+
+      <%# Estado del correo %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Estado del correo</label>
+        <select data-documents-emails-target="selectEmailStatus"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="All" selected>Todos</option>
+          <option value="1">Listo</option>
+          <option value="2">Procesando</option>
+          <option value="3">Error</option>
+          <option value="4">Enviado</option>
+        </select>
+      </div>
+
+      <%# Clave del documento %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Clave del documento</label>
+        <input type="text"
+               data-documents-emails-target="inputDocClave"
+               placeholder="Clave del documento"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Email To %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Email To</label>
+        <input type="text"
+               data-documents-emails-target="inputEmailTo"
+               placeholder="Email To"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Email CC %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Email CC</label>
+        <input type="text"
+               data-documents-emails-target="inputEmailCC"
+               placeholder="Email CC"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# ID Receptor %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">ID receptor</label>
+        <input type="text"
+               data-documents-emails-target="inputRcprId"
+               placeholder="ID receptor"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Nombre Receptor %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del receptor</label>
+        <input type="text"
+               data-documents-emails-target="inputRcprNombre"
+               placeholder="Nombre del receptor"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <%# Consultar %>
+      <div class="flex items-end">
+        <button type="button"
+                data-action="click->documents-emails#search"
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors w-full justify-center">
+          <span class="material-icons text-base">filter_alt</span>
+          Consultar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <%# ── Tabla ────────────────────────────────────────────────────────────── %>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div data-documents-emails-target="table" class="h-full"></div>
+  </div>
+
+  <%# ── Panel lateral — Detalle del correo ─────────────────────────────────── %>
+  <div data-documents-emails-target="panelBackdrop"
+       data-action="click->documents-emails#closePanel"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-documents-emails-target="panel"
+       class="fixed top-0 right-0 h-full w-full max-w-xl bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Detalle del correo</h3>
+      <button type="button" data-action="click->documents-emails#closePanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-6 py-5">
+      <pre data-documents-emails-target="panelContent"
+           class="text-sm text-red-800 whitespace-pre-wrap break-words font-mono bg-red-50 rounded-lg p-4 border border-red-200"></pre>
+    </div>
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end flex-shrink-0">
+      <button type="button" data-action="click->documents-emails#closePanel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>Cerrar
+      </button>
+    </div>
+  </div>
+
+</div>

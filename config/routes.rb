@@ -54,6 +54,9 @@ Rails.application.routes.draw do
     # Reemplaza la ruta Angular /createDocument/:docType
     get ':type/create', to: 'create#index', as: :create_document,
         constraints: { type: /01|02|03|08|10/ }
+
+    # Reporte de correos enviados
+    get 'emails', to: 'emails#index', as: :emails
   end
 
   get 'documents-reports',   to: 'documents/reports#index',              as: :documents_reports
