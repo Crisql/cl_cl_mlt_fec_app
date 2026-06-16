@@ -67,7 +67,9 @@ class ProxyController < ApplicationController
 
     # Reenviar headers de paginación al cliente
     response.each_header do |key, value|
-      if key.downcase.start_with?('cl-sl-pagination', 'cl-dba-pagination') || key.downcase == 'cl-message'
+      if key.downcase.start_with?('cl-sl-pagination', 'cl-dba-pagination') ||
+         key.downcase == 'cl-message' ||
+         key.downcase == 'content-disposition'
         self.response.headers[key] = value
       end
     end

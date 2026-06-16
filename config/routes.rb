@@ -47,6 +47,7 @@ Rails.application.routes.draw do
   namespace :documents do
     get 'issued',                 to: 'issued#index',      as: :issued
     get 'receptions',             to: 'receptions#index',  as: :receptions
+    get 'receptions/logs',        to: 'receptions_logs#index', as: :receptions_logs
     get 'receptions/:id/create',  to: 'receptions#create', as: :create_reception
 
     # Creacion de documentos electronicos (FE 01, ND 02, NC 03, FEC 08, REP 10)

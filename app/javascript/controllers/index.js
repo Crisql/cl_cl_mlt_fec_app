@@ -27,6 +27,7 @@ import DocumentsReceptionsController      from 'controllers/documents_receptions
 import DocumentsReceptionCreateController from 'controllers/documents_reception_create_controller'
 import DocumentsCreateController          from 'controllers/documents_create_controller'
 import MailParserController               from 'controllers/mail_parser_controller'
+import ReceptionLogsController           from 'controllers/reception_logs_controller'
 import EmailSendersController             from 'controllers/email_senders_controller'
 import SessionSyncController             from 'controllers/session_sync_controller'
 import UsersController                  from 'controllers/users_controller'
@@ -57,6 +58,7 @@ application.register('documents-receptions',       DocumentsReceptionsController
 application.register('documents-reception-create', DocumentsReceptionCreateController)
 application.register('documents-create',           DocumentsCreateController)
 application.register('mail-parser',     MailParserController)
+application.register('reception-logs',  ReceptionLogsController)
 application.register('email-senders',   EmailSendersController)
 application.register('session-sync',    SessionSyncController)
 application.register('users',           UsersController)

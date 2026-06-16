@@ -19,7 +19,7 @@ export default [
       { key: 'accept_documents',    label: 'Aceptación Documentos',       route: '/documents/receptions',       requiredPermission: 'Documents_Reception_ViewDocuments' },
       { key: 'accept_documents_gt', label: 'Aceptación Documentos GT',    route: '/documents/gt/receptions',    requiredPermission: 'S_AcceptDocsGT' },
       { key: 'reception_documents', label: 'Recepción Documentos',        route: '/reception_documents',        requiredPermission: 'S_ReceptDocs' },
-      { key: 'mailParser',          label: 'Logs de Correo de Recepción', route: '/mailParser',                 requiredPermission: 'S_MailParserLogs' },
+      { key: 'mailParser',          label: 'Logs de Correo de Recepción', route: '/documents/receptions/logs', requiredPermission: 'S_MailParserLogs' },
       { key: 'email_report',        label: 'Reporte de correos',          route: '/email_report',               requiredPermission: 'S_EmailReport' },
       { key: 'createFE',            label: 'Creación FE',                 route: '/documents/01/create',        requiredPermission: 'S_CreateDocsFE' },
       { key: 'createND',            label: 'Creación ND',                 route: '/documents/02/create',        requiredPermission: 'S_CreateDocsND' },

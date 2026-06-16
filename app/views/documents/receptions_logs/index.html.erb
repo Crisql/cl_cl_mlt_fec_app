@@ -1,0 +1,56 @@
+<% content_for :page_title, "Logs de Correo de Recepción" %>
+
+<div data-controller="reception-logs"
+     class="p-6 flex flex-col h-full">
+
+  <%# ── Filtros ──────────────────────────────────────────────────────────── %>
+  <div class="mb-4 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+    <div class="flex flex-wrap items-end gap-4">
+
+      <%# StartDate %>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-600">Fecha de Inicio</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-reception-logs-target="inputStartDate"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->reception-logs#todayStart"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+      <%# EndDate %>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-600">Fecha Final</label>
+        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+          <input type="date"
+                 data-reception-logs-target="inputEndDate"
+                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
+          <button type="button"
+                  data-action="click->reception-logs#todayEnd"
+                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors flex-shrink-0">
+            Hoy
+          </button>
+        </div>
+      </div>
+
+      <%# Botón Consultar %>
+      <button type="button"
+              data-action="click->reception-logs#search"
+              class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <span class="material-icons text-base">filter_alt</span>
+        Consultar
+      </button>
+
+    </div>
+  </div>
+
+  <%# ── Tabla ────────────────────────────────────────────────────────────── %>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div data-reception-logs-target="table" class="h-full"></div>
+  </div>
+
+</div>
