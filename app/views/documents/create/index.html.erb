@@ -198,8 +198,12 @@
         </div>
         <div data-documents-create-target="telefonoWrap">
           <label class="block text-xs font-medium text-gray-600 mb-1">Teléfono</label>
-          <input type="number" data-documents-create-target="telefono" data-testid="field-telefono"
+          <input type="text" inputmode="numeric" maxlength="20" data-documents-create-target="telefono" data-testid="field-telefono"
+                 data-action="input->documents-create#onTelefonoInput"
                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <p class="mt-1 text-xs text-gray-400">
+            <span data-documents-create-target="telefonoCharCount">0</span> / 20 dígitos &middot; mín. 8
+          </p>
         </div>
         <div data-documents-create-target="emailCCWrap">
           <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail de Copia</label>

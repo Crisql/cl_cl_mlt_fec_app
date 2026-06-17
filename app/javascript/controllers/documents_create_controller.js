@@ -40,7 +40,7 @@ export default class extends Controller {
     'ubicacionRequiredMark',
     'otrasSenasExtranjeroWrap', 'otrasSenasExtranjero',
     'ubicacionSection', 'provincia', 'canton', 'distrito', 'barrio', 'otrasSenas',
-    'emailSimpleWrap', 'email', 'telefonoWrap', 'telefono', 'emailCCWrap', 'emailCC',
+    'emailSimpleWrap', 'email', 'telefonoWrap', 'telefono', 'telefonoCharCount', 'emailCCWrap', 'emailCC',
     'emailMultiWrap', 'btnAddEmail', 'emailList',
     'btnAddReference', 'referenceList',
     'titleAccItems', 'btnAddItem', 'btnAddItemLabel', 'itemsTable',
@@ -541,6 +541,11 @@ export default class extends Controller {
   #updateUbicacionRequired() {
     // Ubicación es opcional (condición 2): no se muestran asteriscos de requerido
     // Los campos aplican solo si el receptor tiene domicilio en el país
+  }
+
+  onTelefonoInput() {
+    const len = this.telefonoTarget.value.trim().length
+    this.telefonoCharCountTarget.textContent = len
   }
 
   onProvinciaChange() {
@@ -1384,6 +1389,14 @@ export default class extends Controller {
       errors.push('El código de actividad económica del receptor es requerido')
     }
 
+    // Teléfono — opcional, pero si se digita debe ser numérico entre 8 y 20 caracteres
+    const telVal = this.telefonoTarget.value.trim()
+    if (telVal) {
+      if (!/^\d+$/.test(telVal))          errors.push('El teléfono debe contener solo números')
+      else if (telVal.length < 8)         errors.push('El teléfono debe tener al menos 8 dígitos')
+      else if (telVal.length > 20)        errors.push('El teléfono no puede superar 20 dígitos')
+    }
+
     // Ubicación — opcional (condición 2: aplica solo si el receptor tiene domicilio en el país)
     if (this.condicionVentaTarget.value === '99' && !this.condicionVentaOtrosTarget.value.trim()) errors.push('Indique el detalle de la condición de venta')
     // tipoDoc es obligatorio para ND, NC, FEC, REP
@@ -1626,7 +1639,6 @@ export default class extends Controller {
       ImpVolumenUnidadConsumo: i.ImpVolumenUnidadConsumo || null,
       ImpImpuestoUnidad: null,
       // Legacy siempre envía el array (vacío si no hay surtidos)
-      OldPrice: i.PrecioDigitado ?? null,
       DetalleSurtido: (i.Surtidos ?? []).map((s, si) => ({
         Id: si + 1,
         CodigoCABYSSurtido: s.Cabys || '',
