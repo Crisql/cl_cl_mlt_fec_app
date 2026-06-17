@@ -262,6 +262,12 @@ export default class extends Controller {
     let defaultCond = '01'
 
     switch (t) {
+      case DOC_TYPE.FEE:
+        this.titleTarget.textContent = 'Factura Electrónica de Exportación'
+        this.#identificationTypeList = [...ForeignNonResidentIdentification]
+        this.#conditionSaleList = [...CondicionVentaFE]
+        this.#showTarget(this.ubicacionSectionTarget, false)
+        break
       case DOC_TYPE.FE:
         this.titleTarget.textContent = 'Factura Electrónica'
         this.#identificationTypeList = [...IdentificationType]
@@ -533,11 +539,8 @@ export default class extends Controller {
 
   // ── Ubicación ─────────────────────────────────────────────
   #updateUbicacionRequired() {
-    const isFEC = this.#docType === DOC_TYPE.FEC
-    const idTipo = this.rcprIdeTipoTarget.value
-    // Requerida en todos excepto REP (oculto) y FEC con extranjero (05) o no-contribuyente (06)
-    const req = this.#docType !== DOC_TYPE.REP && !(isFEC && (idTipo === '05' || idTipo === '06'))
-    this.ubicacionRequiredMarkTargets.forEach(el => el.classList.toggle('hidden', !req))
+    // Ubicación es opcional (condición 2): no se muestran asteriscos de requerido
+    // Los campos aplican solo si el receptor tiene domicilio en el país
   }
 
   onProvinciaChange() {
@@ -1381,15 +1384,7 @@ export default class extends Controller {
       errors.push('El código de actividad económica del receptor es requerido')
     }
 
-    // Ubicación — requerida en todos los comprobantes excepto REP y FEC con id 05/06
-    const _isFECUbic = this.#docType === DOC_TYPE.FEC
-    const _idTipoUbic = this.rcprIdeTipoTarget.value
-    if (this.#docType !== DOC_TYPE.REP && !(_isFECUbic && (_idTipoUbic === '05' || _idTipoUbic === '06'))) {
-      if (!this.provinciaTarget.value) errors.push('La provincia es requerida')
-      if (!this.cantonTarget.value)    errors.push('El cantón es requerido')
-      if (!this.distritoTarget.value)  errors.push('El distrito es requerido')
-      if (!this.otrasSenasTarget.value.trim()) errors.push('La dirección es requerida')
-    }
+    // Ubicación — opcional (condición 2: aplica solo si el receptor tiene domicilio en el país)
     if (this.condicionVentaTarget.value === '99' && !this.condicionVentaOtrosTarget.value.trim()) errors.push('Indique el detalle de la condición de venta')
     // tipoDoc es obligatorio para ND, NC, FEC, REP
     const refRequired = [DOC_TYPE.ND, DOC_TYPE.NC, DOC_TYPE.FEC, DOC_TYPE.REP].includes(this.#docType)
@@ -1470,11 +1465,11 @@ export default class extends Controller {
       RcprIdeNumero: !isFEC ? this.rcprIdeNumeroTarget.value : '',
       RcprIdentificacionExtranjero: '',
       RcprNombreComercial: null,
-      RcprUbProvincia: !isFEC ? this.provinciaTarget.value : '',
-      RcprUbCanton: !isFEC ? this.cantonTarget.value : '',
-      RcprUbDistrito: !isFEC ? this.distritoTarget.value : '',
-      RcprUbBarrio: !isFEC ? (this.barrioTarget.selectedOptions[0]?.text === '-- Seleccione --' ? null : this.barrioTarget.selectedOptions[0]?.text || null) : '',
-      RcprUbOtrasSenas: !isFEC ? (this.otrasSenasTarget.value || null) : null,
+      RcprUbProvincia: (!isFEC && this.#docType !== DOC_TYPE.FEE) ? this.provinciaTarget.value : '',
+      RcprUbCanton: (!isFEC && this.#docType !== DOC_TYPE.FEE) ? this.cantonTarget.value : '',
+      RcprUbDistrito: (!isFEC && this.#docType !== DOC_TYPE.FEE) ? this.distritoTarget.value : '',
+      RcprUbBarrio: (!isFEC && this.#docType !== DOC_TYPE.FEE) ? (this.barrioTarget.selectedOptions[0]?.text === '-- Seleccione --' ? null : this.barrioTarget.selectedOptions[0]?.text || null) : null,
+      RcprUbOtrasSenas: (!isFEC && this.#docType !== DOC_TYPE.FEE) ? (this.otrasSenasTarget.value || null) : null,
       RcprTlfCodigoPais: 506,
       RcprTlfNumTelefono: !isFEC ? (this.telefonoTarget.value || '') : '',
       RcprCorreoElectronico: !isFEC ? (correos?.trim() ? correos : null) : null,
