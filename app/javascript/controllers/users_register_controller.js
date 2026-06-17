@@ -146,7 +146,7 @@ export default class extends Controller {
     try {
       await this.#apiFetch('/api/User', { method: 'POST', body: JSON.stringify(payload) });
       showToast('Usuario registrado exitosamente', 'success');
-      window.location.href = '/configurations/users';
+      Turbo.visit('/configurations/users');
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al registrar usuario', message: err.message });
       this.submitBtnTarget.disabled = false;

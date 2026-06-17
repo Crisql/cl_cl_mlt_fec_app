@@ -21,14 +21,18 @@
     <%# ---------------------------------------------------------------- %>
     <%# Shell protegida — auth-guard + menu + company-selector %>
     <%# ---------------------------------------------------------------- %>
-    <div data-controller="auth-guard menu company-selector session-sync"
-         data-menu-page-title-value="<%= content_for?(:page_title) ? yield(:page_title) : '' %>"
+    <div data-controller="auth-guard company-selector session-sync"
          class="flex h-screen overflow-hidden">
 
       <%# ============================================================= %>
       <%# SIDEBAR %>
       <%# ============================================================= %>
-      <aside data-menu-target="sidebar"
+      <%# Shell persistente — data-turbo-permanent conserva este nodo (y la instancia %>
+      <%# del MenuController + su estado #expandedGroups) entre visitas Turbo, igual %>
+      <%# que el app.component de Angular. No se re-renderiza al navegar. %>
+      <aside id="app-sidebar"
+             data-turbo-permanent
+             data-controller="menu"
              data-testid="sidebar"
              class="flex flex-col bg-gray-900 text-white transition-all duration-300 w-64 flex-shrink-0">
 
@@ -136,16 +140,17 @@
 
           <div class="flex items-center gap-3">
             <%# Toggle sidebar %>
-            <button data-action="click->menu#toggleSidebar"
+            <button type="button"
+                    data-menu-toggle
                     data-testid="menu-toggle"
                     class="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                     aria-label="Menú">
               <span class="material-icons text-xl">menu</span>
             </button>
 
-            <%# Título de página %>
-            <span data-menu-target="pageTitle"
-                  class="text-sm font-medium text-gray-700"></span>
+            <%# Título de página — renderizado en servidor. El toolbar SÍ se reemplaza %>
+            <%# en cada visita Turbo (no es permanente), así el título se actualiza solo. %>
+            <span class="text-sm font-medium text-gray-700"><%= content_for?(:page_title) ? yield(:page_title) : '' %></span>
           </div>
 
           <div class="flex items-center gap-2">

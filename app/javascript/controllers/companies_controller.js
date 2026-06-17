@@ -158,7 +158,7 @@ export default class extends TabulatorController {
   }
 
   navigateCreate() {
-    window.location.href = '/configurations/companies/new';
+    Turbo.visit('/configurations/companies/new');
   }
 
   // ── Event handlers de fila ─────────────────────────────────────────────────
@@ -189,7 +189,7 @@ export default class extends TabulatorController {
       showToast('Opción no disponible, ya que no posee los permisos.', 'info');
       return;
     }
-    window.location.href = `/configurations/companies/${company.Id}/edit`;
+    Turbo.visit(`/configurations/companies/${company.Id}/edit`);
   }
 
   // ── Render helpers (formatters Tabulator) ────────────────────────────────────

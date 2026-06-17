@@ -170,17 +170,24 @@ test.describe('Connections Lista — Acciones', () => {
     });
   });
 
-  test('Clic en Crear navega a /configurations/connections/new', async ({ page }) => {
+  test('Clic en Crear abre el panel lateral en modo creación', async ({ page }) => {
     await page.goto(LIST_URL);
     await page.click('[data-testid="btn-create"]');
-    await expect(page).toHaveURL(/\/configurations\/connections\/new/);
+    await expect(page.locator('[data-testid="connection-panel"]')).toBeVisible();
+    await expect(page.locator('[data-testid="panel-btn-submit"]')).toContainText('Crear');
+    await expect(page.locator('[data-testid="panel-input-server"]')).toHaveValue('');
+    // No navega — la URL sigue siendo la del listado
+    await expect(page).toHaveURL(/\/configurations\/connections$/);
   });
 
-  test('Clic en Editar navega a /configurations/connections/:id/edit', async ({ page }) => {
+  test('Clic en Editar abre el panel lateral en modo edición', async ({ page }) => {
     await page.goto(LIST_URL);
     await page.waitForSelector('[data-testid="connection-row-1"]');
     await page.click('[data-testid="btn-edit-1"]');
-    await expect(page).toHaveURL(/\/configurations\/connections\/1\/edit/);
+    await expect(page.locator('[data-testid="connection-panel"]')).toBeVisible();
+    await expect(page.locator('[data-testid="panel-btn-submit"]')).toContainText('Actualizar');
+    // No navega — la edición ocurre en el panel sobre el listado
+    await expect(page).toHaveURL(/\/configurations\/connections$/);
   });
 
   test('Sin permiso Update el botón Editar no está visible', async ({ page }) => {

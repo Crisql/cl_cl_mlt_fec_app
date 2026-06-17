@@ -97,7 +97,7 @@ export default class extends TabulatorController {
     this.#buildVisibleTabs();
 
     if (this.#visibleTabs.length === 0) {
-      window.location.href = '/home';
+      Turbo.visit('/home');
       return;
     }
 

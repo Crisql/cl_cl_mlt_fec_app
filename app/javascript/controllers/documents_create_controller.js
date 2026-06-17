@@ -1327,7 +1327,7 @@ export default class extends Controller {
     }
     if (!this.#terminalSucList.length) {
       showToast('No hay terminales/sucursales configuradas. Configure la numeración.', 'warning')
-      setTimeout(() => { window.location.href = '/configurations/numbering' }, 1500)
+      setTimeout(() => { Turbo.visit('/configurations/numbering') }, 1500)
       return
     }
     this.termSucSelectTarget.innerHTML = this.#terminalSucList

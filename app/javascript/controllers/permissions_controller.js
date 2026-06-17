@@ -100,7 +100,7 @@ export default class extends Controller {
     this.#setupTabsFromPermissions()
 
     if (this.#availableTabs.length === 0) {
-      window.location.href = '/home'
+      Turbo.visit('/home')
       return
     }
 

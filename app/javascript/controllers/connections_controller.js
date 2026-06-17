@@ -1,22 +1,22 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
- * ConnectionsController — Lista y búsqueda de conexiones SAP (Tabulator).
+ * ConnectionsController — Lista + búsqueda de conexiones SAP (Tabulator) y
+ * panel lateral de creación/edición.
  *
- * Replica: Angular ConnectionsComponent
- *   - GET /api/Connections?server=&apiUrl= (paginado vía headers)
- *   - Headers de paginación: cl-dba-pagination-page (0-indexed), cl-dba-pagination-page-size
- *   - Total de registros en header: cl-dba-pagination-records-count
- *   - Tabla Tabulator con paginación REMOTA
- *   - Columnas: ID, Servidor, Usuario, Motor de base de datos, URL API, URL Crystal API, Acciones
- *   - "Crear" → visible si permiso Configurations_Connections_Create
- *   - "Editar" por fila → visible si permiso Configurations_Connections_Update
+ * Replica: Angular ConnectionsComponent + CreateOrUpdateConnectionComponent.
+ *   - GET /api/Connections?server=&apiUrl=  (paginado vía headers)
+ *   - GET /api/Connections/:id              (cargar para editar)
+ *   - POST /api/Connections                 (crear)
+ *   - PATCH /api/Connections                (actualizar)
  *
- * Layout full-height: height "100%"; paginador al pie y scroll interno de filas
- * solo cuando se requiere.
+ * Crear/editar ya NO navega a otra vista: abre un panel lateral derecho
+ * (patrón de CLAUDE.md §8, copiado del panel "Nueva Conexión SAP" del form de
+ * compañías). Al guardar con éxito se cierra el panel y se refresca la tabla,
+ * sin recargar la página.
  *
  * Storage (fec-migration-docs/STORAGE-KEY-MAPPING.md):
  *   - localStorage.Session          → { access_token, ... }
@@ -28,12 +28,31 @@ export default class extends TabulatorController {
     'inputServer',
     'inputApiUrl',
     'btnCreate',
+    // Panel lateral
+    'panel', 'panelBackdrop', 'panelTitle',
+    'fServer', 'fServerError',
+    'fLicenseServer',
+    'fApiUrl', 'fApiUrlError',
+    'fCrystalApiUrl',
+    'fOdbcType',
+    'fDbEngine', 'fDbEngineError',
+    'fServerType',
+    'fDbUser', 'fDbUserError',
+    'fDbPass', 'fDbPassError', 'fDbPassRequired',
+    'fBoSuppLangs',
+    'fDst',
+    'fUseTrusted',
+    'togglePassIcon',
+    'submitBtn', 'submitIcon', 'submitLabel',
   ];
 
   static values = { ...TabulatorController.values };
 
   #permissions = [];
   #totalRecords = 0;        // total real del servidor (evita sobreestimación de Tabulator)
+  #connectionId = 0;        // 0 = crear; >0 = editar
+  #editMode = false;
+  #passVisible = false;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -95,7 +114,7 @@ export default class extends TabulatorController {
     if (canEdit) {
       columns.push({
         title: 'Acciones', field: 'Id', width: 100, hozAlign: 'center', headerSort: false,
-        formatter: () => this.#editButton(),
+        formatter: (cell) => this.#editButton(cell.getValue()),
         cellClick: (e, cell) => {
           if (e.target.closest('[data-action-type="edit"]')) {
             this.#onEditClick(cell.getRow().getData());
@@ -147,29 +166,198 @@ export default class extends TabulatorController {
     }
   }
 
-  // ── Acciones públicas ──────────────────────────────────────────────────────
+  // ── Acciones públicas — lista ────────────────────────────────────────────────
 
   search() {
     this.table.setData();   // recarga vía ajax y vuelve a la página 1
   }
 
-  goToNew() {
-    window.location.href = '/configurations/connections/new';
+  // ── Panel lateral — crear / editar ───────────────────────────────────────────
+
+  /** Abre el panel en modo creación. */
+  openCreatePanel() {
+    if (!this.#hasPerm('Configurations_Connections_Create')) {
+      showToast('No cuenta con permisos para realizar esta acción.', 'info');
+      return;
+    }
+
+    this.#editMode     = false;
+    this.#connectionId = 0;
+
+    this.#resetPanel();
+    this.panelTitleTarget.textContent  = 'Nueva Conexión SAP';
+    this.submitIconTarget.textContent  = 'check';
+    this.submitLabelTarget.textContent = 'Crear conexión';
+    this.fDbPassRequiredTarget.classList.remove('hidden');
+
+    this.#openPanel();
   }
 
-  #onEditClick(conn) {
+  /** Abre el panel en modo edición y carga los datos de la conexión. */
+  async #onEditClick(conn) {
     if (!this.#hasPerm('Configurations_Connections_Update')) {
       showToast('No cuenta con permisos para realizar esta acción.', 'info');
       return;
     }
-    window.location.href = `/configurations/connections/${conn.Id}/edit`;
+
+    this.#editMode     = true;
+    this.#connectionId = conn.Id;
+
+    this.#resetPanel();
+    this.panelTitleTarget.textContent  = 'Editar Conexión SAP';
+    this.submitIconTarget.textContent  = 'autorenew';
+    this.submitLabelTarget.textContent = 'Actualizar';
+    this.fDbPassRequiredTarget.classList.add('hidden');
+
+    this.#openPanel();
+
+    // Cargar la conexión completa (la fila de la tabla no trae DBPass ni todos los campos)
+    try {
+      const { json } = await this.#apiFetch(`/api/Connections/${this.#connectionId}`);
+      if (!json.Data) {
+        showToast(json.Message || 'No se encontró la conexión', 'error');
+        this.closePanel();
+        return;
+      }
+      this.#fillPanel(json.Data);
+    } catch (err) {
+      showToast(err.message || 'Error al cargar la conexión', 'error');
+      this.closePanel();
+    }
+  }
+
+  closePanel() {
+    this.panelTarget.classList.add('translate-x-full');
+    this.panelBackdropTarget.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  togglePassword() {
+    this.#passVisible = !this.#passVisible;
+    this.fDbPassTarget.type               = this.#passVisible ? 'text' : 'password';
+    this.togglePassIconTarget.textContent = this.#passVisible ? 'visibility' : 'visibility_off';
+  }
+
+  async savePanel() {
+    if (!this.#validatePanel()) return;
+
+    const payload  = this.#buildPayload();
+    const isCreate = !this.#editMode;
+
+    this.submitBtnTarget.disabled = true;
+    try {
+      const { json } = await this.#apiFetch('/api/Connections', {
+        method: isCreate ? 'POST' : 'PATCH',
+        body:   JSON.stringify(payload),
+      });
+
+      if (!json.Data) {
+        const action = isCreate ? 'crear' : 'actualizar';
+        showAlert({ type: ALERT_TYPES.ERROR, title: `Error al ${action} conexión`, message: json.Message || 'Error desconocido' });
+        return;
+      }
+
+      showToast(isCreate ? 'Conexión creada con éxito' : 'Conexión actualizada con éxito', 'success');
+      this.closePanel();
+      this.table.setData();   // refresca la lista sin recargar la página
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error', message: err.message });
+    } finally {
+      this.submitBtnTarget.disabled = false;
+    }
+  }
+
+  // ── Panel — helpers ──────────────────────────────────────────────────────────
+
+  #openPanel() {
+    this.panelBackdropTarget.classList.remove('hidden');
+    this.panelTarget.classList.remove('translate-x-full');
+    document.body.style.overflow = 'hidden';
+  }
+
+  #resetPanel() {
+    this.#passVisible = false;
+    this.fServerTarget.value        = '';
+    this.fLicenseServerTarget.value = '';
+    this.fApiUrlTarget.value        = '';
+    this.fCrystalApiUrlTarget.value = '';
+    this.fOdbcTypeTarget.value      = '';
+    this.fDbEngineTarget.value      = '';
+    this.fServerTypeTarget.value    = '';
+    this.fDbUserTarget.value        = '';
+    this.fDbPassTarget.value        = '';
+    this.fDbPassTarget.type         = 'password';
+    this.togglePassIconTarget.textContent = 'visibility_off';
+    this.fBoSuppLangsTarget.value   = '';
+    this.fDstTarget.value           = '';
+    this.fUseTrustedTarget.checked  = false;
+
+    [this.fServerErrorTarget, this.fApiUrlErrorTarget, this.fDbEngineErrorTarget,
+     this.fDbUserErrorTarget, this.fDbPassErrorTarget].forEach(e => e.classList.add('hidden'));
+  }
+
+  #fillPanel(conn) {
+    this.fServerTarget.value        = conn.Server        ?? '';
+    this.fLicenseServerTarget.value = conn.LicenseServer ?? '';
+    this.fApiUrlTarget.value        = conn.APIUrl        ?? '';
+    this.fCrystalApiUrlTarget.value = conn.CrystalAPIUrl ?? '';
+    this.fOdbcTypeTarget.value      = conn.ODBCType      ?? '';
+    this.fDbEngineTarget.value      = conn.DBEngine      ?? '';
+    this.fServerTypeTarget.value    = conn.ServerType    ?? '';
+    this.fDbUserTarget.value        = conn.DBUser        ?? '';
+    this.fDbPassTarget.value        = conn.DBPass        ?? '';
+    this.fBoSuppLangsTarget.value   = conn.BoSuppLangs   ?? '';
+    this.fDstTarget.value           = conn.DST           ?? '';
+    this.fUseTrustedTarget.checked  = conn.UseTrusted    ?? false;
+  }
+
+  #validatePanel() {
+    let valid = true;
+
+    const required = [
+      { target: this.fServerTarget,   error: this.fServerErrorTarget   },
+      { target: this.fApiUrlTarget,   error: this.fApiUrlErrorTarget   },
+      { target: this.fDbEngineTarget, error: this.fDbEngineErrorTarget },
+      { target: this.fDbUserTarget,   error: this.fDbUserErrorTarget   },
+    ];
+
+    if (!this.#editMode) {
+      required.push({ target: this.fDbPassTarget, error: this.fDbPassErrorTarget });
+    }
+
+    for (const { target, error } of required) {
+      const empty = !target.value.trim();
+      error.classList.toggle('hidden', !empty);
+      if (empty) valid = false;
+    }
+
+    if (!valid) showToast('Por favor complete todos los campos requeridos', 'warning');
+    return valid;
+  }
+
+  #buildPayload() {
+    return {
+      Id:            this.#editMode ? this.#connectionId : 0,
+      Server:        this.fServerTarget.value.trim(),
+      LicenseServer: this.fLicenseServerTarget.value.trim(),
+      APIUrl:        this.fApiUrlTarget.value.trim(),
+      CrystalAPIUrl: this.fCrystalApiUrlTarget.value.trim(),
+      ODBCType:      this.fOdbcTypeTarget.value.trim(),
+      DBEngine:      this.fDbEngineTarget.value.trim(),
+      ServerType:    this.fServerTypeTarget.value.trim(),
+      DBUser:        this.fDbUserTarget.value.trim(),
+      DBPass:        this.fDbPassTarget.value,
+      BoSuppLangs:   this.fBoSuppLangsTarget.value.trim(),
+      DST:           this.fDstTarget.value.trim(),
+      UseTrusted:    this.fUseTrustedTarget.checked,
+    };
   }
 
   // ── Render helpers ───────────────────────────────────────────────────────────
 
-  #editButton() {
+  #editButton(id) {
     return `
-      <button type="button" data-action-type="edit" data-tooltip="Editar"
+      <button type="button" data-action-type="edit" data-testid="btn-edit-${id}" data-tooltip="Editar"
               class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
         <span class="material-icons text-base">edit</span>
       </button>`;

@@ -990,7 +990,7 @@ export default class extends Controller {
       if (json.Error) throw new Error(json.Message);
 
       showToast('Compañía registrada exitosamente.', 'success');
-      setTimeout(() => { window.location.href = '/configurations/companies'; }, 1200);
+      setTimeout(() => { Turbo.visit('/configurations/companies'); }, 1200);
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al registrar compañía', message: err.message });
     }

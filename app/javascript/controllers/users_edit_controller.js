@@ -44,7 +44,7 @@ export default class extends Controller {
 
     if (!this.#userId) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error', message: 'No se proporcionó el ID del usuario.' });
-      window.location.href = '/configurations/users';
+      Turbo.visit('/configurations/users');
       return;
     }
 
@@ -61,7 +61,7 @@ export default class extends Controller {
 
       if (!userRes.Data) {
         showAlert({ type: ALERT_TYPES.ERROR, title: 'Error', message: 'No se encontró el usuario.' });
-        window.location.href = '/configurations/users';
+        Turbo.visit('/configurations/users');
         return;
       }
 
@@ -70,7 +70,7 @@ export default class extends Controller {
       this.#populateCompanies(companiesRes.Data || []);
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al cargar el usuario', message: err.message });
-      window.location.href = '/configurations/users';
+      Turbo.visit('/configurations/users');
     } finally {
       this.loadingOverlayTarget.classList.add('hidden');
     }
@@ -206,7 +206,7 @@ export default class extends Controller {
     try {
       await this.#apiFetch('/api/User', { method: 'PATCH', body: JSON.stringify(payload) });
       showToast('Usuario actualizado con éxito', 'success');
-      window.location.href = '/configurations/users';
+      Turbo.visit('/configurations/users');
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al actualizar usuario', message: err.message });
       this.submitBtnTarget.disabled = false;

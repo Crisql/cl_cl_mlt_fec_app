@@ -5,29 +5,44 @@ import { notifySessionClosed, thereAreMultipleContexts, clearSession } from 'ven
 import MENU_NODES from 'data/menu'
 
 /**
- * MenuController — Sidebar + Toolbar del layout protegido.
+ * MenuController — Sidebar del layout protegido.
+ *
+ * El <aside> que lo monta es `data-turbo-permanent`: Turbo conserva ese nodo DOM
+ * entre visitas y Stimulus NO reconecta este controller. Por eso `#expandedGroups`
+ * vive en memoria y los nodos padre expandidos sobreviven a la navegación —
+ * el mismo modelo de shell persistente que el app.component de Angular, sin
+ * necesidad de persistir el estado en storage.
+ *
+ * Implicaciones del montaje en el <aside>:
+ *  - `connect()` corre UNA sola vez por sesión de página (no en cada navegación).
+ *    Solo se vuelve a ejecutar tras un reload real (F5, cambio de empresa, login).
+ *  - El botón de toggle vive en el toolbar, FUERA del scope de este controller →
+ *    se enlaza con un listener delegado en `document` (sobrevive a los swaps de Turbo).
+ *  - El resaltado de la opción activa se recalcula en cada `turbo:load` porque el
+ *    menú ya no se re-renderiza al navegar.
  *
  * Responsabilidades:
- *  - Renderizar nodos del menú según permisos del usuario
+ *  - Renderizar nodos del menú según permisos del usuario (una sola vez)
  *  - Toggle collapse del sidebar
- *  - Navegación entre rutas
+ *  - Navegación entre rutas vía Turbo Drive (sin full reload)
+ *  - Resaltar la opción activa y abrir su grupo padre
  *  - Logout (limpia sesión y redirige a /login)
- *  - Mostrar username y título de página actual
+ *  - Mostrar username
  */
 export default class extends Controller {
-  static targets = ['sidebar', 'username', 'nav', 'pageTitle']
-
-  static values = {
-    pageTitle: { type: String, default: '' }
-  }
+  static targets = ['username', 'nav']
 
   // ---------------------------------------------------------------------------
   // Definición del menú — single source of truth en docs/menu.json
   // ---------------------------------------------------------------------------
   static MENU_NODES = MENU_NODES
 
-  // Estado interno de grupos expandidos
+  // Estado interno de grupos expandidos — sobrevive en memoria (aside permanente)
   #expandedGroups = new Set()
+
+  // Handlers enlazados (para poder removerlos en disconnect)
+  #onToggleClick = null
+  #onTurboLoad = null
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -35,9 +50,24 @@ export default class extends Controller {
 
   connect() {
     this.#setUsername()
-    this.#setPageTitle()
-    this.#loadPermissionsAndRender()
     this.#restoreCollapseState()
+    this.#loadPermissionsAndRender()
+
+    // Toggle del sidebar: el botón está en el toolbar (fuera de este scope).
+    // Listener delegado en document → resiste los reemplazos de body de Turbo.
+    this.#onToggleClick = (event) => {
+      if (event.target.closest('[data-menu-toggle]')) this.toggleSidebar()
+    }
+    document.addEventListener('click', this.#onToggleClick)
+
+    // El menú no se re-renderiza al navegar: refrescar el resaltado en cada visita.
+    this.#onTurboLoad = () => this.#highlightActive()
+    document.addEventListener('turbo:load', this.#onTurboLoad)
+  }
+
+  disconnect() {
+    if (this.#onToggleClick) document.removeEventListener('click', this.#onToggleClick)
+    if (this.#onTurboLoad) document.removeEventListener('turbo:load', this.#onTurboLoad)
   }
 
   // ---------------------------------------------------------------------------
@@ -45,7 +75,7 @@ export default class extends Controller {
   // ---------------------------------------------------------------------------
 
   toggleSidebar() {
-    const collapsed = this.sidebarTarget.dataset.collapsed === 'true'
+    const collapsed = this.element.dataset.collapsed === 'true'
     this.#setCollapsed(!collapsed)
     Storage.set('menuState', { isCollapsed: !collapsed })
   }
@@ -60,24 +90,19 @@ export default class extends Controller {
     this.usernameTarget.textContent = session?.UserEmail ?? ''
   }
 
-  #setPageTitle() {
-    if (!this.hasPageTitleTarget) return
-    this.pageTitleTarget.textContent = this.pageTitleValue
-  }
-
   #restoreCollapseState() {
     const state = Storage.get('menuState')
     if (state?.isCollapsed) this.#setCollapsed(true)
   }
 
   #setCollapsed(collapsed) {
-    if (!this.hasSidebarTarget) return
-    this.sidebarTarget.dataset.collapsed = String(collapsed)
+    // this.element ES el <aside> (el controller se monta directo sobre el sidebar).
+    this.element.dataset.collapsed = String(collapsed)
 
     if (collapsed) {
-      this.sidebarTarget.classList.replace('w-64', 'w-16')
+      this.element.classList.replace('w-64', 'w-16')
     } else {
-      this.sidebarTarget.classList.replace('w-16', 'w-64')
+      this.element.classList.replace('w-16', 'w-64')
     }
   }
 
@@ -154,6 +179,9 @@ export default class extends Controller {
       const el = this.#createNodeElement(node)
       this.navTarget.appendChild(el)
     })
+
+    // Tras el render inicial, resaltar la ruta actual y abrir su grupo padre.
+    this.#highlightActive()
   }
 
   #createNodeElement(node) {
@@ -201,6 +229,8 @@ export default class extends Controller {
       node.nodes.forEach(child => {
         const childBtn = document.createElement('button')
         childBtn.dataset.testid = `menu-item-${child.key}`
+        // data-route habilita el resaltado de la opción activa (#highlightActive)
+        if (child.route) childBtn.dataset.route = child.route
         childBtn.className = [
           'w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-400',
           'hover:bg-gray-700 hover:text-white transition-colors text-left'
@@ -214,6 +244,7 @@ export default class extends Controller {
       wrapper.appendChild(subList)
     } else {
       if (node.route) {
+        btn.dataset.route = node.route
         btn.addEventListener('click', () => this.#navigate(node))
       }
       wrapper.appendChild(btn)
@@ -227,11 +258,37 @@ export default class extends Controller {
     if (isOpen) {
       this.#expandedGroups.delete(key)
       subList.classList.add('hidden')
-      chevron.style.transform = ''
+      if (chevron) chevron.style.transform = ''
     } else {
       this.#expandedGroups.add(key)
       subList.classList.remove('hidden')
-      chevron.style.transform = 'rotate(90deg)'
+      if (chevron) chevron.style.transform = 'rotate(90deg)'
+    }
+  }
+
+  /**
+   * Resalta la opción cuya ruta coincide con la URL actual y, si está dentro de
+   * un grupo colapsado, lo expande. Se llama tras el render y en cada turbo:load.
+   */
+  #highlightActive() {
+    if (!this.hasNavTarget) return
+
+    const path = window.location.pathname
+    const ACTIVE = ['bg-gray-700', 'text-white']
+
+    // Limpiar resaltado previo
+    this.navTarget.querySelectorAll('[data-route]').forEach(b => b.classList.remove(...ACTIVE))
+
+    const active = this.navTarget.querySelector(`[data-route="${path}"]`)
+    if (!active) return
+    active.classList.add(...ACTIVE)
+
+    // Si la opción activa vive en un grupo colapsado, abrirlo.
+    const subList = active.closest('[data-group]')
+    if (subList && subList.classList.contains('hidden')) {
+      const key = subList.dataset.group
+      const chevron = this.navTarget.querySelector(`[data-chevron="${key}"]`)
+      this.#toggleGroup(key, subList, chevron)
     }
   }
 
@@ -240,7 +297,13 @@ export default class extends Controller {
       this.#logout()
       return
     }
-    if (node.route) {
+    if (!node.route) return
+
+    // Turbo Drive: navega sin full reload, así el <aside> permanente conserva
+    // su instancia y el estado de grupos expandidos. Fallback defensivo a location.
+    if (window.Turbo) {
+      window.Turbo.visit(node.route)
+    } else {
       window.location.href = node.route
     }
   }

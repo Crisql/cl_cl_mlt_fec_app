@@ -131,7 +131,7 @@ export default class extends Controller {
     this.#closeContextMenu()
     const company = SStore.get('CurrentCompany')
     if (!company?.companyId) return
-    window.location.href = `/configurations/companies/${company.companyId}/edit`
+    Turbo.visit(`/configurations/companies/${company.companyId}/edit`)
   }
 
   // ---------------------------------------------------------------------------

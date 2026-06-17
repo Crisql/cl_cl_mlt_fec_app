@@ -202,7 +202,7 @@ export default class extends Controller {
     }
     if (this.#docTypeXML === null) {
       showToast('Tipo de documento XML no especificado', 'error')
-      window.location.href = this.#getReturnUrl()
+      Turbo.visit(this.#getReturnUrl())
       return
     }
 
@@ -2553,7 +2553,7 @@ export default class extends Controller {
 
   closeSuccessModal() {
     this.successModalTarget.classList.add('hidden')
-    window.location.href = this.#getReturnUrl()
+    Turbo.visit(this.#getReturnUrl())
   }
 
   // ── Preview panel ──────────────────────────────────────

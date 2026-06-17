@@ -239,7 +239,7 @@ export default class extends TabulatorController {
       showToast('Sin clave de documento.', 'info');
       return;
     }
-    window.location.href = `/documents/issued?clave=${encodeURIComponent(rowData.DocClave)}`;
+    Turbo.visit(`/documents/issued?clave=${encodeURIComponent(rowData.DocClave)}`);
   }
 
   #emailStatusBadge(status) {
