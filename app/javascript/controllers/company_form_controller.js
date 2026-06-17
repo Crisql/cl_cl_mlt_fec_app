@@ -292,6 +292,9 @@ export default class extends Controller {
     loaders.forEach(el => el.classList.add('hidden'));
   }
 
+  #showLoader(loaderTarget) { loaderTarget?.classList.remove('hidden'); }
+  #hideLoader(loaderTarget) { loaderTarget?.classList.add('hidden'); }
+
     #fillForms(data) {
     this.comercialNameTarget.value      = data.EmsrNombreComercial || '';
     this.legalNameTarget.value          = data.EmsrNombre          || '';
@@ -722,6 +725,7 @@ export default class extends Controller {
       showToast('Revise los códigos de actividad (duplicados).', 'error');
       return;
     }
+    this.#showLoader(this.loaderActivityCodesTarget);
     try {
       await this.#apiFetch(`/api/Companies/${this.companyIdValue}/activity-codes`, {
         method: 'PUT',
@@ -730,6 +734,8 @@ export default class extends Controller {
       showToast('Códigos de actividad actualizados con éxito.', 'success');
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al actualizar códigos de actividad', message: err.message });
+    } finally {
+      this.#hideLoader(this.loaderActivityCodesTarget);
     }
   }
 
@@ -876,17 +882,21 @@ export default class extends Controller {
       showToast('Posee información errónea, verifique los datos generales.', 'error');
       return;
     }
+    this.#showLoader(this.loaderGeneralTarget);
     try {
       await this.#sendEditRequest(1);
       showToast('Datos generales actualizados con éxito.', 'success');
     } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar datos generales', message: err.message }); }
+    finally { this.#hideLoader(this.loaderGeneralTarget); }
   }
 
   async saveAdditionalData() {
+    this.#showLoader(this.loaderAdditionalTarget);
     try {
       await this.#sendEditRequest(5);
       showToast('Información adicional actualizada con éxito.', 'success');
     } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar información adicional', message: err.message }); }
+    finally { this.#hideLoader(this.loaderAdditionalTarget); }
   }
 
   async saveAtvData() {
@@ -902,17 +912,21 @@ export default class extends Controller {
       showToast('El token del usuario no coincide con la identificación de la compañía.', 'error');
       return;
     }
+    this.#showLoader(this.loaderAtvTarget);
     try {
       await this.#sendEditRequest(2);
       showToast('Datos de Hacienda actualizados con éxito.', 'success');
     } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar datos de Hacienda', message: err.message }); }
+    finally { this.#hideLoader(this.loaderAtvTarget); }
   }
 
   async saveAttData() {
+    this.#showLoader(this.loaderAttachmentsTarget);
     try {
       await this.#sendEditRequest(3);
       showToast('Adjuntos actualizados con éxito.', 'success');
     } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar adjuntos', message: err.message }); }
+    finally { this.#hideLoader(this.loaderAttachmentsTarget); }
   }
 
   async saveSapData() {
@@ -920,6 +934,7 @@ export default class extends Controller {
       showToast('Verifique los datos de factura proveedor (tolerancias requeridas, sin duplicados).', 'error');
       return;
     }
+    this.#showLoader(this.loaderSapTarget);
     try {
       await this.#sendEditRequest(4);
       await this.#apiFetch(`/api/Companies/${this.companyIdValue}/currency-map`, {
@@ -928,6 +943,7 @@ export default class extends Controller {
       });
       showToast('Datos de factura proveedor actualizados con éxito.', 'success');
     } catch (err) { showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar datos de factura proveedor', message: err.message }); }
+    finally { this.#hideLoader(this.loaderSapTarget); }
   }
 
   // ── Crear compañía ─────────────────────────────────────────────────────────
@@ -1021,9 +1037,12 @@ export default class extends Controller {
 
     const fd = new FormData();
     fd.append('company',           JSON.stringify(company));
-    fd.append('file',              this.#selectedCertFile        || new Blob([]));
-    fd.append('fileFEPrintFormat', this.#selectedPrintFormatFile || new Blob([]));
-    fd.append('fileLogo',          this.#selectedLogoFile        || new Blob([]));
+    // Sin archivo seleccionado → enviar literal "undefined" (FormData coacciona undefined → "undefined"),
+    // igual que el proyecto legacy. Un Blob vacío haría que el backend interprete que SÍ hay archivo
+    // y podría sobrescribir el certificado/logo/formato ya almacenado en el servidor.
+    fd.append('file',              this.#selectedCertFile        || undefined);
+    fd.append('fileFEPrintFormat', this.#selectedPrintFormatFile || undefined);
+    fd.append('fileLogo',          this.#selectedLogoFile        || undefined);
     return fd;
   }
 
