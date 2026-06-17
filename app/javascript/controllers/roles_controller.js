@@ -49,8 +49,7 @@ export default class extends TabulatorController {
     const company = SStore.get('CurrentCompany');
     this.#companyId = company?.companyId ? parseInt(company.companyId) : null;
 
-    super.connect();   // construye la tabla Tabulator (vacía)
-    this.#loadRoles();
+    super.connect();   // construye la tabla y dispara ajaxRequestFunc automáticamente
   }
 
   // ── Configuración Tabulator ─────────────────────────────────────────────────
@@ -58,6 +57,7 @@ export default class extends TabulatorController {
   getTableConfig() {
     return {
       ...super.getTableConfig(),
+      data: undefined,       // evita que el [] heredado suprima la carga vía ajaxRequestFunc
       height: '100%',        // llena el contenedor; scroll interno solo si se requiere
       maxHeight: undefined,  // anula el tope de 500px del config base
       movableRows: false,
@@ -72,6 +72,9 @@ export default class extends TabulatorController {
       dataLoaderLoading: TABULATOR_LOADING_HTML,
       columnDefaults: { headerSort: false },
       columns: this.getColumns(),
+      ajaxURL: '/api/Rol/GetRoles',
+      ajaxRequestFunc: () => this.#loadRoles(),
+      ajaxResponse:    (_url, _params, response) => response,
     };
   }
 
@@ -102,25 +105,17 @@ export default class extends TabulatorController {
 
   // ── API ───────────────────────────────────────────────────────────────────
 
+  // Invocado por ajaxRequestFunc — Tabulator muestra dataLoaderLoading automáticamente.
   async #loadRoles() {
-    // Carga client-side: Tabulator no dispara su loader de ajax, así que
-    // mostramos el spinner manualmente vía alert() durante el fetch.
-    this.table?.alert(TABULATOR_LOADING_HTML);
-    try {
-      const json = await this.#apiFetch(`/api/Rol/GetRoles?companyId=${this.#companyId}`);
+    const json = await this.#apiFetch(`/api/Rol/GetRoles?companyId=${this.#companyId}`);
 
-      if (json.Error || !json.Data) {
-        showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener los roles', message: json.Message || 'Error desconocido' });
-        return;
-      }
-
-      this.#roles = json.Data;
-      this.setData(this.#roles);
-    } catch (err) {
-      showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener los roles', message: err.message });
-    } finally {
-      this.table?.clearAlert();
+    if (json.Error || !json.Data) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener los roles', message: json.Message || 'Error desconocido' });
+      return [];
     }
+
+    this.#roles = json.Data;
+    return json.Data;
   }
 
   async #createRole(name) {
@@ -201,7 +196,7 @@ export default class extends TabulatorController {
         showToast('Se creó el rol correctamente!!!', 'success');
       }
       this.closeModal();
-      await this.#loadRoles();
+      this.table?.setData();   // recarga via ajaxRequestFunc (loader a nivel de tabla)
     } catch (err) {
       const action = this.#editingRole ? 'actualizar' : 'registrar';
       showAlert({ type: ALERT_TYPES.ERROR, title: `Se produjo un error al ${action} el rol`, message: err.message });

@@ -61,7 +61,9 @@ export default class extends TabulatorController {
     this.#userEmail  = session.UserEmail || '';
     this.#isClavisco = this.#userEmail.toLowerCase().includes('@clavisco.com');
 
+    // super.connect() dispara ajaxRequestFunc → #loadAssigns() automáticamente
     super.connect();
+    // #loadRoles() solo puebla el filtro — independiente de la tabla
     this.#loadRoles();
   }
 
@@ -70,6 +72,7 @@ export default class extends TabulatorController {
   getTableConfig() {
     return {
       ...super.getTableConfig(),
+      data: undefined,       // evita que el [] heredado suprima la carga vía ajaxRequestFunc
       height: '100%',
       maxHeight: undefined,
       movableRows: false,
@@ -84,6 +87,9 @@ export default class extends TabulatorController {
       dataLoaderLoading: TABULATOR_LOADING_HTML,
       columnDefaults: { headerSort: false },
       columns: this.getColumns(),
+      ajaxURL: '/api/Rol/GetRolUserCompAssign',
+      ajaxRequestFunc: () => this.#loadAssigns(),
+      ajaxResponse:    (_url, _params, response) => response,
     };
   }
 
@@ -114,7 +120,7 @@ export default class extends TabulatorController {
       const data = await this.#apiFetch(`/api/Rol/GetRoles?companyId=${this.#companyId}`);
       this.#roles = data.Data || [];
       this.#populateRoleFilter();
-      await this.#loadAssigns();
+      // No llama #loadAssigns() — ajaxRequestFunc ya lo disparó desde super.connect()
     } catch (err) {
       showToast(err.message || 'Error al cargar los roles.', 'error');
     }
@@ -132,23 +138,20 @@ export default class extends TabulatorController {
     });
   }
 
+  // Invocado por ajaxRequestFunc — Tabulator muestra dataLoaderLoading automáticamente.
   async #loadAssigns() {
-    const rolId = this.roleFilterTarget.value ?? 0;
-    try {
-      const data = await this.#apiFetch(
-        `/api/Rol/GetRolUserCompAssign?rolId=${rolId}&companyId=${this.#companyId}`
-      );
-      const rows = data.Data || [];
-      if (!rows.length) showToast(data.Message || 'No hay asignaciones.', 'warning');
-      this.table?.setData(rows);
-    } catch (err) {
-      showToast(err.message || 'Error al cargar las asignaciones.', 'error');
-    }
+    const rolId = this.roleFilterTarget?.value ?? 0;
+    const data = await this.#apiFetch(
+      `/api/Rol/GetRolUserCompAssign?rolId=${rolId}&companyId=${this.#companyId}`
+    );
+    const rows = data.Data || [];
+    if (!rows.length) showToast(data.Message || 'No hay asignaciones.', 'warning');
+    return rows;
   }
 
   // ── Eventos de filtro ─────────────────────────────────────────────────────
 
-  onRoleFilterChange() { this.#loadAssigns(); }
+  onRoleFilterChange() { this.table?.setData(); }  // re-dispara ajaxRequestFunc con el nuevo filtro
 
   // ── Panel lateral ─────────────────────────────────────────────────────────
 
@@ -328,7 +331,7 @@ export default class extends TabulatorController {
       });
       showToast('Asignación realizada correctamente.', 'success');
       this.closePanel();
-      await this.#loadRoles();
+      this.table?.setData();  // recarga via ajaxRequestFunc (loader a nivel de tabla)
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar la asignación', message: err.message });
     } finally {
