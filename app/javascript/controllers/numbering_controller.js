@@ -33,6 +33,9 @@ export default class extends TabulatorController {
     // Tablas
     'numberingTable', 'receptionTable',
 
+    // Loaders (vista completa para carga inicial combinada; por sección para reloads)
+    'viewLoader', 'numberingLoader', 'receptionLoader',
+
     // Panel Numeración
     'numberingPanel', 'numberingPanelBackdrop', 'numberingPanelTitle',
     'numNextNumber', 'numNextNumberError',
@@ -152,7 +155,12 @@ export default class extends TabulatorController {
 
   // ── Carga de datos ─────────────────────────────────────────────────────────
 
+  #showLoader(el) { el?.classList.remove('hidden'); }
+  #hideLoader(el) { el?.classList.add('hidden'); }
+
   async #loadInitialData() {
+    const loader = this.hasViewLoaderTarget ? this.viewLoaderTarget : null;
+    this.#showLoader(loader);
     try {
       const [numRes, sucRes, recRes] = await Promise.all([
         this.#apiFetch(`/api/Numbering?companyId=${this.#companyId}`),
@@ -172,10 +180,14 @@ export default class extends TabulatorController {
       }
     } catch (err) {
       showToast(err.message || 'Error al cargar la información de numeración.', 'error');
+    } finally {
+      this.#hideLoader(loader);
     }
   }
 
   async #reloadNum() {
+    const loader = this.hasNumberingLoaderTarget ? this.numberingLoaderTarget : null;
+    this.#showLoader(loader);
     try {
       const [numRes, sucRes] = await Promise.all([
         this.#apiFetch(`/api/Numbering?companyId=${this.#companyId}`),
@@ -186,15 +198,21 @@ export default class extends TabulatorController {
       this.#numTable?.setData((numRes.Data || []).map(x => this.#mapNum(x)));
     } catch (err) {
       showToast(err.message || 'Error al recargar numeración.', 'error');
+    } finally {
+      this.#hideLoader(loader);
     }
   }
 
   async #reloadRec() {
+    const loader = this.hasReceptionLoaderTarget ? this.receptionLoaderTarget : null;
+    this.#showLoader(loader);
     try {
       const res = await this.#apiFetch(`/api/Numbering/GetReceptNumberingByCompany?companyId=${this.#companyId}`);
       this.#recTable?.setData((res.Data || []).map(x => this.#mapRec(x)));
     } catch (err) {
       showToast(err.message || 'Error al recargar numeración de recepción.', 'error');
+    } finally {
+      this.#hideLoader(loader);
     }
   }
 

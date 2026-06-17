@@ -3,14 +3,40 @@
 
 <div data-controller="numbering"
      data-testid="numbering-page"
-     class="p-6 flex flex-col gap-4 h-full">
+     class="p-6 flex flex-col gap-4 h-full relative">
+
+  <%# Loader de toda la sección (carga inicial combinada) — sin texto %>
+  <div data-numbering-target="viewLoader"
+       class="hidden absolute inset-0 z-30 flex items-center justify-center bg-white/60">
+    <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
+      <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
+      <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
+              stroke-linecap="round" stroke-dasharray="80 200">
+        <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                          from="0 25 25" to="360 25 25" dur="0.8s" repeatCount="indefinite"></animateTransform>
+      </circle>
+    </svg>
+  </div>
 
   <%# ================================================================ %>
   <%# SECCIÓN 1: Numeración %>
   <%# ================================================================ %>
   <%# flex-1 min-h-0: ocupa el espacio disponible del flex padre %>
   <div data-numbering-target="numberingCard"
-       class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-1 min-h-0">
+       class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-1 min-h-0 relative">
+
+    <%# Loader de la sección Numeración — sin texto %>
+    <div data-numbering-target="numberingLoader"
+         class="hidden absolute inset-0 z-20 flex items-center justify-center bg-white/60 rounded-lg">
+      <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
+                stroke-linecap="round" stroke-dasharray="80 200">
+          <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                            from="0 25 25" to="360 25 25" dur="0.8s" repeatCount="indefinite"></animateTransform>
+        </circle>
+      </svg>
+    </div>
 
     <%# Header colapsable — flex-shrink-0 para que no se comprima %>
     <button type="button"
@@ -52,7 +78,20 @@
   <%# ================================================================ %>
   <%# flex-shrink-0: colapsada por defecto, solo ocupa el header %>
   <div data-numbering-target="receptionCard"
-       class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-shrink-0">
+       class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-shrink-0 relative">
+
+    <%# Loader de la sección Numeración de Recepción — sin texto %>
+    <div data-numbering-target="receptionLoader"
+         class="hidden absolute inset-0 z-20 flex items-center justify-center bg-white/60 rounded-lg">
+      <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
+                stroke-linecap="round" stroke-dasharray="80 200">
+          <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                            from="0 25 25" to="360 25 25" dur="0.8s" repeatCount="indefinite"></animateTransform>
+        </circle>
+      </svg>
+    </div>
 
     <%# Header colapsable %>
     <button type="button"

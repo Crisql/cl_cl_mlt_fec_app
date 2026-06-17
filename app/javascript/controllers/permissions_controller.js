@@ -1,7 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
 import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts'
-import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
 
 /**
  * PermissionsController — Gestión de permisos (By-Role y Global).
@@ -16,6 +15,12 @@ export default class extends Controller {
     // Tabs
     'tabByRole', 'tabGlobal',
     'panelByRole', 'panelGlobal',
+
+    // Loaders a nivel de sección (uno por panel)
+    'byRoleLoader', 'globalLoader',
+
+    // Loaders scoped al área drag&drop (al seleccionar rol/usuario)
+    'byRoleDragLoader', 'globalDragLoader',
 
     // By-Role
     'roleSelect', 'dragDropPanel', 'emptyRoleState',
@@ -261,9 +266,14 @@ export default class extends Controller {
   async #loadPermsByRol() {
     if (!this.#idRol) return
 
+    // Mostrar el área drag&drop vacía + loader scoped a esa sección durante la consulta
+    this.#clearPermLists()
+    this.#renderPermLists()
+    this.#showDragDropPanel()
+    this.#showDragLoader()
+
     try {
       const res = await this.#apiFetch(`/api/Permission/GetPermissionsByRol?idRol=${this.#idRol}`)
-      this.#clearPermLists()
 
       if (res.Data && res.Data.length) {
         const assignedSet = new Set(res.Data)
@@ -283,9 +293,10 @@ export default class extends Controller {
       }
 
       this.#renderPermLists()
-      this.#showDragDropPanel()
     } catch (err) {
       showToast(err.message || 'Error al cargar permisos del rol', 'error')
+    } finally {
+      this.#hideDragLoader()
     }
   }
 
@@ -633,7 +644,10 @@ export default class extends Controller {
       return
     }
 
-    this.#showOverlay('Cargando permisos del usuario...')
+    // Mostrar el área drag&drop vacía + loader scoped a esa sección durante la consulta
+    this.#renderGlobalPermLists()
+    this.#showGlobalDragDropPanel()
+    this.#showDragLoader()
 
     try {
       const res = await this.#apiFetch(`/api/User/global-permissions?userId=${encodeURIComponent(userId)}`)
@@ -653,11 +667,10 @@ export default class extends Controller {
       })
 
       this.#renderGlobalPermLists()
-      this.#showGlobalDragDropPanel()
     } catch (err) {
       showToast(err.message || 'Error al cargar permisos del usuario', 'error')
     } finally {
-      this.#hideOverlay()
+      this.#hideDragLoader()
     }
   }
 
@@ -1050,8 +1063,23 @@ export default class extends Controller {
   // ----------------------------------------------------------------
   // Helpers: Overlay y Toast
   // ----------------------------------------------------------------
-  #showOverlay(message) { showLoading(message) }
-  #hideOverlay()        { hideLoading() }
+  // Loader a nivel de sección (sin texto): muestra el spinner del panel del tab activo.
+  #sectionLoader() {
+    if (this.#activeTab === 'by-role' && this.hasByRoleLoaderTarget) return this.byRoleLoaderTarget
+    if (this.#activeTab === 'global'  && this.hasGlobalLoaderTarget) return this.globalLoaderTarget
+    return null
+  }
+  #showOverlay() { this.#sectionLoader()?.classList.remove('hidden') }
+  #hideOverlay() { this.#sectionLoader()?.classList.add('hidden') }
+
+  // Loader scoped al área drag&drop del tab activo (al consultar permisos de un rol/usuario).
+  #dragLoader() {
+    if (this.#activeTab === 'by-role' && this.hasByRoleDragLoaderTarget) return this.byRoleDragLoaderTarget
+    if (this.#activeTab === 'global'  && this.hasGlobalDragLoaderTarget) return this.globalDragLoaderTarget
+    return null
+  }
+  #showDragLoader() { this.#dragLoader()?.classList.remove('hidden') }
+  #hideDragLoader() { this.#dragLoader()?.classList.add('hidden') }
 
   #escapeHtml(str) {
     const div = document.createElement('div')

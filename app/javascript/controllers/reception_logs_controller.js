@@ -83,6 +83,7 @@ export default class extends TabulatorController {
   getTableConfig() {
     return {
       ...super.getTableConfig(),
+      data: undefined,   // evita que el [] heredado del base suprima el fetch remoto inicial (Tabulator requestDataCheck)
       height: '100%',
       maxHeight: undefined,
       layout: 'fitColumns',

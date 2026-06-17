@@ -15,7 +15,6 @@ import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator
 import { Storage, SStore } from 'vendor/clavisco/core';
 import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
-import { showLoading, hideLoading } from 'vendor/clavisco/overlay';
 
 // ── Compañías que requieren campo Tipo de OC ──────────────────────────────────
 const COMPANIES_WITH_OC = new Set([186, 1206]);
@@ -38,7 +37,7 @@ export default class extends TabulatorController {
     'changesBadge', 'changesBadgeValue',
     'changesSummary', 'assignSummaryRow', 'unassignSummaryRow',
     'assignCount', 'unassignCount',
-    'emptyState', 'assignmentPanel',
+    'emptyState', 'assignmentPanel', 'assignmentLoader',
     'applyBtn', 'cancelBtn',
     // Edit panel
     'editPanel', 'editBackdrop', 'editLoadingOverlay',
@@ -107,9 +106,7 @@ export default class extends TabulatorController {
     this.#activateTab(this.#visibleTabs[0]);
 
     // TabulatorController inicializa la tabla en el target "table"
-    super.connect();
-
-    this.#loadListData();
+    super.connect();   // construye la tabla y dispara la carga vía ajaxRequestFunc
   }
 
   disconnect() {
@@ -122,6 +119,7 @@ export default class extends TabulatorController {
   getTableConfig() {
     return {
       ...super.getTableConfig(),
+      data: undefined,   // evita que el [] heredado suprima la carga via ajaxRequestFunc
       height: '100%',
       maxHeight: undefined,  // anula el tope de 500px del config base
       layout: 'fitColumns',
@@ -135,6 +133,11 @@ export default class extends TabulatorController {
       dataLoaderLoading: TABULATOR_LOADING_HTML,
       columnDefaults: { headerSort: true },
       columns: this.getColumns(),
+      // Carga via el data-loader de Tabulator (igual que companies): dataLoaderLoading
+      // muestra el spinner a nivel de tabla durante el fetch. Paginacion local.
+      ajaxURL: '/api/User/accessible',
+      ajaxRequestFunc: () => this.#loadListData(),
+      ajaxResponse:    (_url, _params, response) => response,
     };
   }
 
@@ -225,24 +228,23 @@ export default class extends TabulatorController {
   }
 
   #loadTabData(name) {
-    if (name === 'list')                   this.#loadListData();
+    if (name === 'list')                   this.table?.setData();
     if (name === 'complete-registration')  this.#loadCompleteRegData();
     if (name === 'assignment')             this.#loadAssignmentInitialData();
   }
 
   // ── Tab Lista — carga de datos ────────────────────────────────────────────────
 
+  // Retorna el array de usuarios. Lo invoca ajaxRequestFunc, de modo que Tabulator
+  // muestra dataLoaderLoading (spinner a nivel de tabla) durante el fetch.
   async #loadListData() {
     const name  = this.searchNameTarget.value.trim();
     const email = this.searchEmailTarget.value.trim();
-    this.table?.alert(TABULATOR_LOADING_HTML);
     try {
       const data = await this.#apiFetch(
         `/api/User/accessible?fullName=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&activeOnly=false`
       );
       const rows = data.Data || [];
-      this.table?.clearAlert();
-      this.table?.setData(rows);
       if (!rows.length) showToast(data.Message || 'No se encontraron usuarios.', 'warning');
 
       // Mostrar botón Crear si tiene permiso
@@ -250,14 +252,15 @@ export default class extends TabulatorController {
         this.createBtnTarget.classList.remove('hidden');
         this.createBtnTarget.classList.add('inline-flex');
       }
+      return rows;
     } catch (err) {
-      this.table?.clearAlert();
       showToast(err.message || 'Error al cargar usuarios.', 'error');
+      return [];
     }
   }
 
   searchUsers() {
-    this.#loadListData();
+    this.table?.setData();
   }
 
   #onEditClick(row) {
@@ -428,7 +431,7 @@ export default class extends TabulatorController {
       await this.#apiFetch('/api/User', { method: 'PATCH', body: JSON.stringify(payload) });
       showToast('Usuario actualizado con éxito', 'success');
       this.closeEditPanel();
-      this.#loadListData();
+      this.table?.setData();
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al actualizar usuario', message: err.message });
       this.editSubmitBtnTarget.disabled = false;
@@ -454,9 +457,14 @@ export default class extends TabulatorController {
 
   async #loadCompleteRegData() {
     if (!this.#completeTabulator) {
-      await this.#initCompleteTable();
+      await this.#initCompleteTable();   // su ajaxRequestFunc dispara la carga inicial (loader de tabla)
+      return;
     }
-    this.#completeTabulator?.alert(TABULATOR_LOADING_HTML);
+    this.#completeTabulator.setData();   // recarga via ajaxRequestFunc (loader a nivel de tabla)
+  }
+
+  // Retorna usuarios inactivos. Lo invoca ajaxRequestFunc => dataLoaderLoading (loader de tabla).
+  async #fetchInactiveUsers() {
     try {
       const data = await this.#apiFetch(`/api/User/GetInactiveUsers?companyId=${this.#companyId}`);
       const rows = (data.Data || []).map(u => ({
@@ -464,12 +472,11 @@ export default class extends TabulatorController {
         _activeLabel:    u.Active         ? 'Sí' : 'No',
         _confirmedLabel: u.EmailConfirmed ? 'Sí' : 'No',
       }));
-      this.#completeTabulator?.clearAlert();
-      this.#completeTabulator?.setData(rows);
       if (!rows.length) showToast(data.Message || 'No hay usuarios pendientes de activación.', 'info');
+      return rows;
     } catch (err) {
-      this.#completeTabulator?.clearAlert();
       showToast(err.message || 'Error al cargar usuarios inactivos.', 'error');
+      return [];
     }
   }
 
@@ -483,6 +490,9 @@ export default class extends TabulatorController {
       locale: TABULATOR_LOCALE,
       langs: TABULATOR_LANGS,
       dataLoaderLoading: TABULATOR_LOADING_HTML,
+      ajaxURL: '/api/User/GetInactiveUsers',
+      ajaxRequestFunc: () => this.#fetchInactiveUsers(),
+      ajaxResponse:    (_url, _params, response) => response,
       pagination: true,
       paginationSize: 10,
       paginationSizeSelector: [5, 10, 25],
@@ -543,36 +553,39 @@ export default class extends TabulatorController {
   }
 
   async #activateUser(user) {
-    showLoading('Activando usuario...');
+    this.#completeTabulator?.alert(TABULATOR_LOADING_HTML);
     try {
       await this.#apiFetch(`/api/User/activate?userId=${encodeURIComponent(user.Id)}`, { method: 'PATCH' });
       showToast('El usuario se activó con éxito', 'success');
+      this.#completeTabulator?.clearAlert();
       await this.#loadCompleteRegData();
     } catch (err) {
+      this.#completeTabulator?.clearAlert();
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al activar usuario', message: err.message });
-    } finally {
-      hideLoading();
     }
   }
 
   async #resendConfirmation(user) {
-    showLoading('Reenviando correo...');
+    this.#completeTabulator?.alert(TABULATOR_LOADING_HTML);
     try {
       await this.#apiFetch(`/api/User/email-confirmations?userId=${encodeURIComponent(user.Id)}`, { method: 'POST' });
       showToast('El correo de confirmación ha sido enviado con éxito', 'success');
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al reenviar correo', message: err.message });
     } finally {
-      hideLoading();
+      this.#completeTabulator?.clearAlert();
     }
   }
 
   // ── Tab Asignación — carga inicial ──────────────────────────────────────────
 
+  #showAssignmentLoader() { if (this.hasAssignmentLoaderTarget) this.assignmentLoaderTarget.classList.remove('hidden'); }
+  #hideAssignmentLoader() { if (this.hasAssignmentLoaderTarget) this.assignmentLoaderTarget.classList.add('hidden'); }
+
   async #loadAssignmentInitialData() {
     if (this.#usersList.length) return; // ya cargado
 
-    showLoading('Cargando datos...');
+    this.#showAssignmentLoader();
     try {
       const [usersRes, groupsRes, companiesRes] = await Promise.all([
         this.#apiFetch('/api/User/for-assignments'),
@@ -591,7 +604,7 @@ export default class extends TabulatorController {
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al cargar datos', message: err.message });
     } finally {
-      hideLoading();
+      this.#hideAssignmentLoader();
     }
   }
 
@@ -634,7 +647,7 @@ export default class extends TabulatorController {
     this.#selectedUserId = user.Id;
     this.#clearCompanyLists();
 
-    showLoading('Cargando compañías del usuario...');
+    this.#showAssignmentLoader();
     try {
       const res = await this.#apiFetch(
         `/api/User/assigned-companies?userId=${encodeURIComponent(user.Id)}`
@@ -658,7 +671,7 @@ export default class extends TabulatorController {
     } catch (err) {
       showToast(err.message || 'Error al cargar las compañías del usuario.', 'error');
     } finally {
-      hideLoading();
+      this.#hideAssignmentLoader();
     }
   }
 
@@ -700,7 +713,7 @@ export default class extends TabulatorController {
   async #onGroupSelected(group) {
     this.#selectedGroupId = group.Id ?? -1;
 
-    showLoading('Cargando compañías del grupo...');
+    this.#showAssignmentLoader();
     try {
       const res = await this.#apiFetch(`/api/Companies/for-assignment?groupId=${this.#selectedGroupId}`);
       this.#allCompanies = res.Data || [];
@@ -713,7 +726,7 @@ export default class extends TabulatorController {
     } catch (err) {
       showToast(err.message || 'Error al cargar compañías del grupo.', 'error');
     } finally {
-      hideLoading();
+      this.#hideAssignmentLoader();
     }
   }
 
@@ -915,7 +928,7 @@ export default class extends TabulatorController {
     const selectedUser = this.#usersList.find(u => u.Id === this.#selectedUserId);
     if (!selectedUser) return;
 
-    showLoading('Aplicando cambios...');
+    this.#showAssignmentLoader();
     try {
       const requests = [];
       if (this.#toAssign.length) {
@@ -943,7 +956,7 @@ export default class extends TabulatorController {
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al aplicar cambios', message: err.message });
     } finally {
-      hideLoading();
+      this.#hideAssignmentLoader();
     }
   }
 

@@ -889,115 +889,68 @@ search() { this.table?.setData(); }
 
 
 
-## 18. Edición de archivos — regla CRÍTICA (SIEMPRE Python via Bash)
+## 18. Edición de archivos — usar las herramientas NATIVAS (Edit/Write), NO Python vía Bash
 
-**Usar SIEMPRE Python via Bash para editar cualquier archivo del proyecto.** El tool `Edit` tiene dos problemas conocidos:
+**Regla:** modificar archivos del proyecto SIEMPRE con las herramientas de archivo **nativas** (`Edit` para reemplazo quirúrgico, `Write` para archivo nuevo o reescritura completa). Estas escriben directo al filesystem de Windows (`C:\...`), de forma atómica.
 
-1. **Trunca archivos largos** (> ~1400 líneas) — pérdida silenciosa de contenido.
-2. **Falla con archivos CRLF** (`.erb`, `.html`, archivos de Windows) — los cambios aparecen aplicados en el editor pero git no los detecta como modificados, causando que los cambios nunca se commiteen.
+**Está PROHIBIDO escribir archivos del proyecto con Python, `sed`, redirección `>` u otros medios a través del shell de Bash.** El shell corre en un sandbox aislado que llega a los archivos por un *mount* de red (`/sessions/.../mnt/...`), y ese mount **corrompe las escrituras**.
 
-### Regla obligatoria — sin excepciones
+### Por qué (causa raíz confirmada)
 
-**Usar SIEMPRE Python via Bash para editar cualquier archivo, sin excepción.**
+Hay dos caminos distintos hacia los mismos archivos:
 
-El tool `Edit` está prohibido para cualquier modificación de archivos del proyecto.
+| Camino | Cómo escribe | Resultado |
+|---|---|---|
+| Herramientas nativas `Edit` / `Write` | Directo a `C:\...`, sin intermediario | **Seguro y atómico** |
+| Bash (`python open().write()`, `sed -i`, `>`) | A través del mount `/sessions/.../mnt/...` | **Corrompe el archivo** |
 
-> No existe ningún caso donde `Edit` sea preferible a Python. Python es más seguro, predecible y siempre produce cambios detectables por git.
+Síntomas reales observados al escribir vía el mount:
 
-### Patrón Python para editar cualquier archivo
+- **Truncado silencioso** — el archivo queda cortado a la mitad (ej. `users_controller.js` quedó en 962 de 1036 líneas, sin el cierre de clase) por un flush incompleto del mount.
+- **Relleno con bytes NUL** — el mount agrega bytes `\0` al final del archivo (ej. `numbering_controller.js`, `CLAUDE.md`). `grep` lo marca como `binary file matches` y el bundler de assets puede fallar.
 
-```python
-with open('ruta/al/archivo', 'r', encoding='utf-8') as f:
-    content = f.read()
+> ⚠️ La regla anterior de esta sección ("usar SIEMPRE Python vía Bash") era **la causa** de la corrupción, no la solución. Por eso se invierte: en este entorno (Cowork) la herramienta segura es `Edit`/`Write` nativa; lo riesgoso es escribir por el mount de Bash.
 
-# Reemplazo quirúrgico — usar el texto exacto como aparece en el archivo
-content = content.replace(
-    'código original exacto (multilínea con \n si aplica)',
-    'código nuevo exacto'
-)
+### Regla obligatoria
 
-with open('ruta/al/archivo', 'w', encoding='utf-8') as f:
-    f.write(content)
+1. Crear o modificar cualquier archivo del proyecto → `Edit` o `Write` nativas. **Nunca** Python / `sed -i` / `>` sobre el mount para escribir.
+2. Bash se reserva para **solo lectura** y comandos: `git`, `grep`, `node --check`, `wc`, correr tests, etc.
+3. Antes de usar `Edit`, el archivo debe haberse leído con `Read` en la conversación (la herramienta lo exige).
+4. `Edit` no se ve afectado por CRLF ni por el tamaño del archivo en este entorno; el problema histórico era el mount, no la herramienta.
 
-# Siempre verificar que el reemplazo ocurrió
-print("Occurrences replaced:", content.count('nuevo fragmento clave'))
-```
-
-### Para archivos ERB/HTML con CRLF — leer binario y normalizar
-
-```python
-# Si el archivo puede tener CRLF, leer en modo texto es suficiente
-# Python convierte CRLF → \n automáticamente en modo 'r'
-# Al escribir en modo 'w', guarda como LF (correcto para git con eol=lf)
-with open('app/views/modulo/index.html.erb', 'r', encoding='utf-8') as f:
-    content = f.read()
-
-content = content.replace('texto viejo', 'texto nuevo')
-
-with open('app/views/modulo/index.html.erb', 'w', encoding='utf-8') as f:
-    f.write(content)
-```
-
-### Archivos conocidos que superan el límite
-
-| Archivo | Líneas aprox. |
-|---------|--------------|
-| `inventory_output_controller.js` | ~1432 |
-| `sales_document_controller.js` | >1000 |
-| `business_partners_controller.js` | ~2578 |
-| `authenticated.html.erb` | ~278 (CRLF — siempre Python) |
-
-### Patrón seguro obligatorio — verificación antes y después
-
-Todo script Python de edición debe seguir este patrón completo. Sin las verificaciones, un truncado pasa silenciosamente:
-
-```python
-path = 'ruta/al/archivo'
-
-with open(path, 'r', encoding='utf-8') as f:
-    content = f.read()
-
-lines_before = content.count('\n') + 1
-
-# Verificar que el texto a reemplazar existe ANTES de escribir
-old = 'texto original exacto'
-new = 'texto nuevo exacto'
-assert old in content, f"ERROR: texto no encontrado en {path} — abortando"
-
-content = content.replace(old, new)
-lines_after = content.count('\n') + 1
-
-# Una edición de 1 línea no debería cambiar el conteo más de ±5
-assert abs(lines_after - lines_before) < 20, f"ERROR: conteo de líneas cambió de {lines_before} a {lines_after} — posible truncado"
-
-with open(path, 'w', encoding='utf-8') as f:
-    f.write(content)
-
-# Verificar en disco que el archivo quedó completo
-with open(path, 'r', encoding='utf-8') as f:
-    written = f.read()
-lines_disk = written.count('\n') + 1
-assert lines_disk == lines_after, f"ERROR: disco tiene {lines_disk} líneas, esperaba {lines_after}"
-
-print(f"OK — {lines_before} → {lines_after} líneas, cambio aplicado: {new in written}")
-```
-
-### ⚠️ Señales de truncado silencioso
-
-- El script reporta "Done" pero las líneas bajaron más de lo esperado
-- `tail` del archivo muestra que se corta en medio de una función o expresión
-- El browser lanza `SyntaxError: Private field '#x' must be declared in an enclosing class` — indica que la clase no cerró correctamente
-
-### Recuperación cuando ocurre truncado
+### Verificación después de editar (Bash, solo lectura)
 
 ```bash
-# 1. Verificar líneas actuales vs git HEAD
+# 1. ¿Quedó algún byte NUL? Debe imprimir "limpio".
+grep -qI . app/javascript/controllers/mi_controller.js && echo limpio || echo "NUL/CORRUPTO"
+
+# 2. Sintaxis JS válida
+node --check app/javascript/controllers/mi_controller.js
+
+# 3. Conteo de líneas razonable vs HEAD (detecta truncado)
+wc -l app/javascript/controllers/mi_controller.js
+git show HEAD:app/javascript/controllers/mi_controller.js | wc -l
+```
+
+### Señales de archivo corrupto
+
+- `grep` reporta `binary file matches` → el archivo tiene bytes NUL (relleno del mount).
+- `tail` muestra el archivo cortado a media función/expresión → truncado.
+- El browser lanza `SyntaxError: Private field '#x' must be declared in an enclosing class` → la clase no cerró (truncado).
+
+### Recuperación cuando un archivo ya quedó corrupto / truncado
+
+```bash
+# 1. Comparar disco vs HEAD
 wc -l app/javascript/controllers/mi_controller.js
 git show HEAD:app/javascript/controllers/mi_controller.js | wc -l
 
-# 2. Si difieren, restaurar desde git y re-aplicar el cambio
+# 2. Restaurar el contenido pristino. `git show` lee el blob desde el object store
+#    y la redirección '>' restituye el archivo sin el padding del mount (verificado).
 git show HEAD:app/javascript/controllers/mi_controller.js > app/javascript/controllers/mi_controller.js
 ```
 
+Después de restaurar, reaplicar los cambios con `Edit` nativo (no con Python).
 
----                                                                                                                                                                                                                                                                                                                           
+
+---

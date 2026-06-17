@@ -41,8 +41,7 @@ export default class extends TabulatorController {
     const company   = SStore.get('CurrentCompany');
     this.#companyId  = company?.companyId ? parseInt(company.companyId) : null;
 
-    super.connect();
-    this.#loadInitialData();
+    super.connect();   // construye la tabla y dispara la carga vía ajaxRequestFunc
   }
 
   // ── Configuración Tabulator ────────────────────────────────────────────────
@@ -50,6 +49,7 @@ export default class extends TabulatorController {
   getTableConfig() {
     return {
       ...super.getTableConfig(),
+      data: undefined,   // evita que el [] heredado suprima la carga vía ajaxRequestFunc
       height:    '100%',
       maxHeight: undefined,
       layout: 'fitColumns',
@@ -63,6 +63,12 @@ export default class extends TabulatorController {
       dataLoaderLoading: TABULATOR_LOADING_HTML,
       columnDefaults: { headerSort: false },
       columns: this.getColumns(),
+      // Carga vía el data-loader de Tabulator (igual que companies): dataLoaderLoading
+      // muestra el spinner a nivel de tabla durante el fetch. Sin paginationMode:'remote'
+      // => paginacion local sobre el dataset completo.
+      ajaxURL: '/api/Udf/GetUdfs',
+      ajaxRequestFunc: () => this.#loadData(),
+      ajaxResponse:    (_url, _params, response) => response,
     };
   }
 
@@ -162,9 +168,9 @@ export default class extends TabulatorController {
 
   // ── Carga de datos ─────────────────────────────────────────────────────────
 
-  async #loadInitialData() {
-    showLoading('Cargando...');
-    this.table?.alert(TABULATOR_LOADING_HTML);
+  // Retorna el array de filas merge-eado. Lo invoca ajaxRequestFunc, de modo que
+  // Tabulator muestra dataLoaderLoading (spinner a nivel de tabla) durante el fetch.
+  async #loadData() {
     try {
       const [udfsRes, configuredRes] = await Promise.all([
         this.#apiFetch(`/api/Udf/GetUdfs?searchUdfsForHeader=${this.#searchUdfsForHeader}`),
@@ -180,14 +186,11 @@ export default class extends TabulatorController {
         ValuesList:     (udf.MappedValues ?? []).filter((v) => v.IsActive).map((v) => v.Value),
       }));
 
-      this.table?.setData(rows);
-
       if (udfsRes?.Message && !udfsRes?.Data?.length) showToast(udfsRes.Message, 'warning');
+      return rows;
     } catch (err) {
       showToast(err.message || 'Error al cargar los campos definidos por usuario.', 'error');
-    } finally {
-      this.table?.clearAlert();
-      hideLoading();
+      return [];
     }
   }
 
@@ -284,7 +287,7 @@ export default class extends TabulatorController {
         body:   JSON.stringify(payload),
       });
       showToast('Campos actualizados exitosamente.', 'success');
-      await this.#loadInitialData();
+      this.table?.setData();   // recarga via ajaxRequestFunc (loader a nivel de tabla)
     } catch (err) {
       showAlert({
         type:    ALERT_TYPES.ERROR,

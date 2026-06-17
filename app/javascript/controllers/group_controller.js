@@ -46,6 +46,8 @@ export default class extends TabulatorController {
     'newGroupNameError',
     'newGroupDescription',
     'createSubmitBtn',
+    // Loader de sección
+    'sectionLoader',
   ]
 
   static values = { ...TabulatorController.values }
@@ -148,7 +150,11 @@ export default class extends TabulatorController {
 
   // ── Carga inicial ─────────────────────────────────────────────────────────
 
+  #showLoader() { if (this.hasSectionLoaderTarget) this.sectionLoaderTarget.classList.remove('hidden') }
+  #hideLoader() { if (this.hasSectionLoaderTarget) this.sectionLoaderTarget.classList.add('hidden') }
+
   async #loadInitialData() {
+    this.#showLoader()
     try {
       const data = await this.#apiFetch(`/api/Group/GetGroupsByUser?companyId=${this.#companyId}`)
       if (!data.Data?.length) {
@@ -171,6 +177,8 @@ export default class extends TabulatorController {
       ])
     } catch (err) {
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Se produjo un error al obtener la información del grupo', message: err.message })
+    } finally {
+      this.#hideLoader()
     }
   }
 
