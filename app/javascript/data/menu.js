@@ -48,7 +48,7 @@ export default [
       { key: 'user-profile',     label: 'Perfil de Usuario',              route: '/configurations/user-profile',   requiredPermission: 'S_UpdateUserInfo' },
       { key: 'company',          label: 'Compañías',                      route: '/configurations/companies',      requiredPermission: 'S_Company' },
       { key: 'connections',      label: 'Conexiones',                     route: '/configurations/connections',    requiredPermission: 'Configurations_Connections_Access' },
-      { key: 'udfs',             label: 'UDFs',                           route: '/udfs',                          requiredPermission: 'S_Udfs' },
+      { key: 'udfs',             label: 'Campos definidos por usuario',   route: '/configurations/udfs',           requiredPermission: 'S_Udfs' },
       { key: 'users',            label: 'Usuarios',                       route: '/configurations/users',          requiredPermission: 'Configurations_Users_Access' },
       { key: 'groups',           label: 'Grupos',                         route: '/configurations/group',          requiredPermission: 'S_Groups' },
       { key: 'numbering',        label: 'Numeración',                     route: '/configurations/numbering',      requiredPermission: 'S_Numbering' },

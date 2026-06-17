@@ -1,0 +1,29 @@
+<% content_for :title, "Campos definidos por usuario" %>
+<% content_for :page_title, "Campos definidos por usuario" %>
+
+<div data-controller="udfs"
+     data-testid="udfs-page"
+     class="p-6 flex flex-col h-full">
+
+  <%# ── Encabezado de sección + toolbar ─────────────────────────────── %>
+  <div class="mb-4 flex items-center justify-between flex-shrink-0">
+    <h2 class="text-sm font-semibold text-gray-700 border-b-2 border-blue-600 pb-1">
+      Definiciones de cabecera
+    </h2>
+    <button type="button"
+            data-action="click->udfs#save"
+            data-testid="btn-save-udfs"
+            class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+      <span class="material-icons text-base">save</span>
+      Guardar
+    </button>
+  </div>
+
+  <%# ── Tabla ───────────────────────────────────────────────────────── %>
+  <div class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div data-udfs-target="table"
+         data-testid="udfs-table"
+         class="h-full">
+    </div>
+  </div>
+</div>

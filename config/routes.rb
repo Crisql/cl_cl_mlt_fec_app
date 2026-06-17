@@ -17,6 +17,7 @@ Rails.application.routes.draw do
     get 'general',             to: 'general#index',      as: :general
     get 'numbering',           to: 'numbering#index',    as: :numbering
     get 'branches',            to: 'branches#index',     as: :branches
+    get 'udfs',                to: 'udfs#index',         as: :udfs
 
     # Companies
     get 'companies',          to: 'companies#index', as: :companies

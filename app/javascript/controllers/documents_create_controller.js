@@ -255,6 +255,8 @@ export default class extends Controller {
     this.#showTarget(this.condicionVentaOtrosWrapTarget, true)
     this.#showTarget(this.emailSimpleWrapTarget, true)
     this.#showTarget(this.emailMultiWrapTarget, false)
+    // Posición no-FEC: telefono dentro del grid de emailSimpleWrap, antes del CC
+    this.emailSimpleWrapTarget.insertBefore(this.telefonoWrapTarget, this.emailCCWrapTarget)
     this.titleAccItemsTarget.textContent = 'Datos de Ítems'
     this.btnAddItemLabelTarget.textContent = 'Agregar Ítems'
     this.#docTypeRefList = [...TipoDocRefList]
@@ -289,6 +291,8 @@ export default class extends Controller {
         this.#conditionSaleList = [...CondicionVentaFE]
         this.#showTarget(this.emailSimpleWrapTarget, false)
         this.#showTarget(this.emailMultiWrapTarget, true)
+        // Posición FEC: telefono standalone antes del bloque de emails múltiples
+        this.emailMultiWrapTarget.insertAdjacentElement('beforebegin', this.telefonoWrapTarget)
         break
       case DOC_TYPE.REP:
         this.titleTarget.textContent = 'Recibo Electronico de Pago'

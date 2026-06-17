@@ -34,6 +34,7 @@ import SessionSyncController             from 'controllers/session_sync_controll
 import UsersController                  from 'controllers/users_controller'
 import UsersRegisterController          from 'controllers/users_register_controller'
 import UsersEditController              from 'controllers/users_edit_controller'
+import UdfsController                  from 'controllers/udfs_controller'
 
 application.register('login',             LoginController)
 application.register('auth-guard',        AuthGuardController)
@@ -66,3 +67,4 @@ application.register('session-sync',    SessionSyncController)
 application.register('users',           UsersController)
 application.register('users-register',  UsersRegisterController)
 application.register('users-edit',      UsersEditController)
+application.register('udfs',            UdfsController)
