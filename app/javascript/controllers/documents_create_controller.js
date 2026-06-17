@@ -539,8 +539,12 @@ export default class extends Controller {
 
   // ── Ubicación ─────────────────────────────────────────────
   #updateUbicacionRequired() {
-    // Ubicación es opcional (condición 2): no se muestran asteriscos de requerido
-    // Los campos aplican solo si el receptor tiene domicilio en el país
+    // FEC: requerido para id 01-04 (emisor domiciliado). Exento para 05; opcional para 06.
+    // Otros tipos: opcional (condición 2 — aplica si el receptor tiene domicilio en el país)
+    const isFEC  = this.#docType === DOC_TYPE.FEC
+    const idTipo = this.rcprIdeTipoTarget.value
+    const req    = isFEC && idTipo !== '05' && idTipo !== '06'
+    this.ubicacionRequiredMarkTargets.forEach(el => el.classList.toggle('hidden', !req))
   }
 
   onTelefonoInput() {
@@ -1397,7 +1401,25 @@ export default class extends Controller {
       else if (telVal.length > 20)        errors.push('El teléfono no puede superar 20 dígitos')
     }
 
-    // Ubicación — opcional (condición 2: aplica solo si el receptor tiene domicilio en el país)
+    // Ubicación — requerida para FEC con id 01-04 (emisor domiciliado)
+    if (this.#docType === DOC_TYPE.FEC) {
+      const idTipoFEC = this.rcprIdeTipoTarget.value
+      if (idTipoFEC !== '05' && idTipoFEC !== '06') {
+        if (!this.provinciaTarget.value)                  errors.push('La provincia del emisor es requerida')
+        if (!this.cantonTarget.value)                     errors.push('El cantón del emisor es requerido')
+        if (!this.distritoTarget.value)                   errors.push('El distrito del emisor es requerido')
+        const senas = this.otrasSenasTarget.value.trim()
+        if (!senas)                                       errors.push('La dirección del emisor es requerida')
+        else if (senas.length < 5)                        errors.push('La dirección del emisor debe tener al menos 5 caracteres')
+        else if (senas.length > 250)                      errors.push('La dirección del emisor no puede superar 250 caracteres')
+      } else if (idTipoFEC === '06') {
+        // No contribuyente: si ingresó dirección, validar longitud
+        const senas = this.otrasSenasTarget.value.trim()
+        if (senas && senas.length < 5)   errors.push('La dirección del emisor debe tener al menos 5 caracteres')
+        if (senas && senas.length > 250) errors.push('La dirección del emisor no puede superar 250 caracteres')
+      }
+    }
+    // Otros tipos: ubicación opcional (condición 2 — aplica si el receptor tiene domicilio en el país)
     if (this.condicionVentaTarget.value === '99' && !this.condicionVentaOtrosTarget.value.trim()) errors.push('Indique el detalle de la condición de venta')
     // tipoDoc es obligatorio para ND, NC, FEC, REP
     const refRequired = [DOC_TYPE.ND, DOC_TYPE.NC, DOC_TYPE.FEC, DOC_TYPE.REP].includes(this.#docType)
