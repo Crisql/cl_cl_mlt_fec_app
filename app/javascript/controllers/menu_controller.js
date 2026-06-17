@@ -49,6 +49,14 @@ export default class extends Controller {
   // ---------------------------------------------------------------------------
 
   connect() {
+    // Al navegar, Turbo reemplaza el <body> y mueve el <aside> permanente al
+    // nuevo body; Stimulus trata ese movimiento como una reconexión y vuelve a
+    // ejecutar connect(). El nodo permanente CONSERVA el DOM del menú (con los
+    // grupos abiertos), así que capturamos qué grupos estaban expandidos ANTES
+    // de re-renderizar para no perder la expansión. Sin esto, el menú colapsa
+    // en cada navegación pese a ser data-turbo-permanent.
+    this.#captureExpandedFromDom()
+
     this.#setUsername()
     this.#restoreCollapseState()
     this.#loadPermissionsAndRender()
@@ -93,6 +101,20 @@ export default class extends Controller {
   #restoreCollapseState() {
     const state = Storage.get('menuState')
     if (state?.isCollapsed) this.#setCollapsed(true)
+  }
+
+  /**
+   * Reconstruye #expandedGroups a partir del DOM ya renderizado (preservado por
+   * el <aside> permanente). Se llama al inicio de connect() para que un reconnect
+   * de Turbo no pierda los grupos que el usuario tenía abiertos.
+   */
+  #captureExpandedFromDom() {
+    if (!this.hasNavTarget) return
+    this.navTarget.querySelectorAll('[data-group]').forEach(sub => {
+      if (sub.dataset.group && !sub.classList.contains('hidden')) {
+        this.#expandedGroups.add(sub.dataset.group)
+      }
+    })
   }
 
   #setCollapsed(collapsed) {
@@ -212,16 +234,21 @@ export default class extends Controller {
     btn.appendChild(label)
 
     if (hasChildren) {
+      // Estado inicial del grupo: respeta lo que ya estaba expandido (memoria/DOM)
+      const expanded = this.#expandedGroups.has(node.key)
+
       // Chevron — se agrega al btn antes de crear subList
       const chevron = document.createElement('span')
       chevron.className = 'material-icons text-base transition-transform sidebar-label'
       chevron.textContent = 'chevron_right'
       chevron.dataset.chevron = node.key
+      if (expanded) chevron.style.transform = 'rotate(90deg)'
       btn.appendChild(chevron)
 
       // subList declarado aquí para que el listener lo capture en su closure
       const subList = document.createElement('div')
-      subList.className = 'hidden bg-gray-800 pl-4'
+      subList.className = 'bg-gray-800 pl-4'
+      if (!expanded) subList.classList.add('hidden')
       subList.dataset.group = node.key
 
       btn.addEventListener('click', () => this.#toggleGroup(node.key, subList, chevron))

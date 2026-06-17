@@ -954,3 +954,70 @@ Después de restaurar, reaplicar los cambios con `Edit` nativo (no con Python).
 
 
 ---
+
+## 19. Navegación SPA — `Turbo.visit`, NO `window.location.href`
+
+Turbo Drive ya está cargado (`import '@hotwired/turbo-rails'` en `application.js`).
+Para navegar entre vistas se usa **`Turbo.visit(ruta)`** (o anclas `<a href>` que
+Turbo intercepta), **nunca** `window.location.href`. Turbo reemplaza el `<body>`
+sin recargar assets ni perder el `<aside>` permanente del menú → navegación tipo SPA.
+
+`window.location.href` / `location.reload()` hacen un *full reload* del navegador:
+descartan el DOM, re-descargan todo y colapsan el menú. Reservarlos SOLO para los
+casos que deben re-bootstrapear el estado completo de la app.
+
+### Regla
+
+| Situación | Mecanismo |
+|---|---|
+| Navegar a otra vista (crear / editar / listar / volver) | **`Turbo.visit(ruta)`** |
+| Redirección por guard (sin permiso → `/home`) | `Turbo.visit('/home')` |
+| Cambio de empresa | `window.location.reload()` — recarga permisos/empresa y reconstruye el menú |
+| Asignación de permisos a un rol | `window.location.reload()` — refresca el estado de permisos |
+| Login (post-autenticación) | `window.location.href` — arranque limpio de sesión |
+| Logout | `window.location.href = '/login'` — limpia la sesión |
+| Sincronización de sesión entre pestañas | `window.location.href` — requiere re-init completo |
+| Abrir archivo/PDF en pestaña nueva (`window.open`) | `tab.location.href` — NO es navegación de página |
+
+### Por qué algunos casos SÍ usan reload
+
+El `<aside>` del menú es `data-turbo-permanent`: con `Turbo.visit` no se reconstruye,
+por lo que NO reflejaría permisos/empresa nuevos. Tras un **cambio de empresa** o de
+**permisos** hay que recargar (`location.reload()`) para que el menú y los catálogos
+se reconstruyan con el estado actualizado. Usar `Turbo.visit` ahí dejaría el menú
+desincronizado.
+
+### Patrón
+
+```js
+// ✅ Navegación pura
+Turbo.visit('/configurations/companies')
+Turbo.visit(`/configurations/companies/${id}/edit`)
+
+// ✅ Re-bootstrap intencional (cambió el estado global)
+window.location.reload()              // cambio de empresa / permisos
+window.location.href = '/login'       // logout
+
+// ❌ Navegación con full reload innecesario (parpadeo + colapsa el menú)
+window.location.href = '/configurations/companies'
+```
+
+### ⚠️ Preferir panel lateral sobre navegar a otra vista
+
+Para crear/editar (ver §8), preferir abrir un **panel lateral** en el mismo listado
+en lugar de navegar a `/new` o `/:id/edit`. No hay navegación y el estado del listado
+(filtros, página actual) se conserva. Referencia: `connections_controller.js`.
+
+### ⚠️ El menú colapsa al navegar aunque el `<aside>` sea `data-turbo-permanent`
+
+**Síntoma:** los nodos padre expandidos se cierran al navegar con `Turbo.visit`.
+**Causa:** al reemplazar el `<body>`, Turbo mueve el `<aside>` permanente al nuevo
+body y Stimulus lo trata como **reconexión** → `connect()` corre de nuevo,
+`#expandedGroups` (campo de la nueva instancia) nace vacío y `#renderMenu()` borra
+el DOM expandido.
+**Validación:** `console.log` en `connect()` del `menu_controller` → se dispara en
+cada navegación.
+**Solución:** el nodo permanente CONSERVA el DOM entre el disconnect y el connect;
+en `connect()` se reconstruye `#expandedGroups` leyendo del DOM
+(`#captureExpandedFromDom()`) **antes** de re-renderizar, y `#createNodeElement`
+respeta ese estado al recrear cada grupo. Sin storage.
