@@ -181,8 +181,13 @@ export default class extends Controller {
     })() : null
 
     if (!response.ok) {
-      const text = await response.text().catch(() => response.statusText)
-      throw new Error(decodedMessage || text || `HTTP ${response.status}`)
+      const text = await response.text().catch(() => '')
+      // El body de error suele venir como JSON { Message, Code }; extraer Message.
+      let bodyMessage = null
+      if (text) {
+        try { bodyMessage = JSON.parse(text)?.Message || null } catch { /* no es JSON */ }
+      }
+      throw new Error(decodedMessage || bodyMessage || text || `HTTP ${response.status}`)
     }
 
     const hasBody = response.status !== 204 &&

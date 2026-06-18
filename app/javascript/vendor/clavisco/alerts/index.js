@@ -54,12 +54,14 @@ class AlertsService {
    * @param {number} duration - Auto-dismiss delay in ms (default 4000)
    */
   showToast(message, type = 'success', duration = 4000) {
+    // Mismo lenguaje visual que showAlert: tarjeta blanca + ícono en círculo tenue
+    // con el color del tipo. Sin fondos sólidos de color.
     const config = {
-      success: { bg: 'bg-green-600', icon: 'check_circle' },
-      error:   { bg: 'bg-red-600',   icon: 'error'         },
-      warning: { bg: 'bg-yellow-500', icon: 'warning'      },
-      info:    { bg: 'bg-blue-600',  icon: 'info'          },
-    }[type] ?? { bg: 'bg-gray-700', icon: 'notifications' };
+      success: { iconColor: '#16a34a', iconBg: '#f0fdf4', icon: 'check_circle' },
+      error:   { iconColor: '#dc2626', iconBg: '#fef2f2', icon: 'error'        },
+      warning: { iconColor: '#d97706', iconBg: '#fffbeb', icon: 'warning'      },
+      info:    { iconColor: '#2563eb', iconBg: '#eff6ff', icon: 'info'         },
+    }[type] ?? { iconColor: '#6b7280', iconBg: '#f9fafb', icon: 'notifications' };
 
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -71,15 +73,16 @@ class AlertsService {
 
     const toast = document.createElement('div');
     toast.className = [
-      'pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg',
-      'text-sm text-white max-w-lg transition-all duration-300',
-      config.bg,
+      'pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg',
+      'bg-white border border-gray-100 text-sm text-gray-700 max-w-lg transition-all duration-300',
     ].join(' ');
     toast.setAttribute('role', 'alert');
     toast.innerHTML = `
-      <span class="material-icons text-base mt-0.5 flex-shrink-0">${config.icon}</span>
-      <span class="flex-1 break-words min-w-0">${escapedMsg}</span>
-      <button type="button" class="flex-shrink-0 hover:opacity-75 ml-1" onclick="this.closest('[role=alert]').remove()">
+      <span class="inline-flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0" style="background-color:${config.iconBg}">
+        <span class="material-icons text-lg" style="color:${config.iconColor}">${config.icon}</span>
+      </span>
+      <span class="flex-1 break-words min-w-0 self-center">${escapedMsg}</span>
+      <button type="button" class="flex-shrink-0 text-gray-400 hover:text-gray-600 ml-1 self-center" onclick="this.closest('[role=alert]').remove()">
         <span class="material-icons text-sm">close</span>
       </button>
     `;
