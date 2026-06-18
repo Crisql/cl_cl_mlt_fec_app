@@ -363,10 +363,12 @@ export default class extends TabulatorController {
     const tenant = this.#allTenants.find(t => t.Id === id);
     if (!tenant) return;
 
-    const label = newStatus ? 'activar' : 'inactivar';
+    const action = newStatus
+      ? `reanudar el procesamiento de correos de la compañía "${tenant.CompanyName}"`
+      : `detener el procesamiento de correos de la compañía "${tenant.CompanyName}"`;
     const confirmed = await confirm(
-      `¿Está seguro que desea ${label} la compañía "${tenant.CompanyName}"?`,
-      'Confirmar cambio de estado'
+      `¿Está seguro que desea ${action}?`,
+      'Confirmar procesamiento de correos'
     );
     if (!confirmed) return;
 
@@ -377,7 +379,7 @@ export default class extends TabulatorController {
       });
       tenant.IsActive = newStatus;
       this.filterTenants();
-      showToast(`Compañía ${newStatus ? 'activada' : 'inactivada'} correctamente.`, 'success');
+      showToast(`Se ${newStatus ? 'reanudó' : 'detuvo'} el procesamiento de correos de la compañía correctamente.`, 'success');
     } catch (err) {
       showToast(err.message || 'Error al cambiar el estado.', 'error');
     }
