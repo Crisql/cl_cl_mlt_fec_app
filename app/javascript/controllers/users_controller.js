@@ -49,6 +49,14 @@ export default class extends TabulatorController {
     'editActiveCheck',
     'editTestCredBtn', 'editTestCredIcon', 'editTestCredLabel',
     'editSubmitBtn',
+    // Create panel
+    'createPanel', 'createBackdrop', 'createLoadingOverlay',
+    'createCompanySelect', 'createGroupSelect',
+    'createFullName', 'createFullNameError',
+    'createIdentification', 'createIdentificationError',
+    'createEmail', 'createEmailError',
+    'createOcTypeWrapper', 'createOcType', 'createOcTypeError',
+    'createSubmitBtn',
   ];
 
   // ── Estado ──────────────────────────────────────────────────────────────────
@@ -69,6 +77,9 @@ export default class extends TabulatorController {
   #editUserInfo         = null;
   #credentialsDirty     = false;
   #credentialsValidated = false;
+
+  // Create panel
+  #createDataLoaded = false;
 
   // Asignación tab
   #usersList         = [];
@@ -450,6 +461,163 @@ export default class extends TabulatorController {
     check(this.editFullNameTarget,       this.editFullNameErrorTarget,       () => !!this.editFullNameTarget.value.trim());
     check(this.editIdentificationTarget, this.editIdentificationErrorTarget, () => !!this.editIdentificationTarget.value.trim());
     check(this.editSapUserTarget,        this.editSapUserErrorTarget,        () => !!this.editSapUserTarget.value.trim());
+    return valid;
+  }
+
+  // ── Create panel ──────────────────────────────────────────────────────────────
+
+  openCreatePanel() {
+    this.createBackdropTarget.classList.remove('hidden');
+    this.createPanelTarget.classList.remove('translate-x-full');
+    document.body.style.overflow = 'hidden';
+    this.#resetCreateForm();
+    if (!this.#createDataLoaded) this.#loadCreateData();
+  }
+
+  closeCreatePanel() {
+    this.createPanelTarget.classList.add('translate-x-full');
+    this.createBackdropTarget.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  async #loadCreateData() {
+    this.createLoadingOverlayTarget.classList.remove('hidden');
+    try {
+      const [companiesRes, groupsRes] = await Promise.all([
+        this.#apiFetch(`/api/Companies/GetCompaniesByUserGroup?companyId=${this.#companyId}`),
+        this.#apiFetch(`/api/Group/GetGroupsByUser?companyId=${this.#companyId}`),
+      ]);
+
+      const companies = companiesRes.Data || [];
+      const groups    = groupsRes.Data || [];
+
+      this.createCompanySelectTarget.innerHTML = '';
+      companies.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.Id;
+        opt.textContent = c.EmsrNombre;
+        this.createCompanySelectTarget.appendChild(opt);
+      });
+
+      this.createGroupSelectTarget.innerHTML = '';
+      groups.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.Id;
+        opt.textContent = g.GroupName;
+        this.createGroupSelectTarget.appendChild(opt);
+      });
+
+      if (companies.length) this.#toggleCreateOCType(parseInt(companies[0].Id));
+      this.#createDataLoaded = true;
+      this.#validateCreateFormState();
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al cargar datos', message: err.message });
+    } finally {
+      this.createLoadingOverlayTarget.classList.add('hidden');
+    }
+  }
+
+  onCreateCompanyChange() {
+    this.#toggleCreateOCType(parseInt(this.createCompanySelectTarget.value));
+    this.#validateCreateFormState();
+  }
+
+  // Action pública: re-evalúa el estado del botón Registrar ante cambios de campos
+  validateCreateForm() {
+    this.#validateCreateFormState();
+  }
+
+  #toggleCreateOCType(companyId) {
+    const show = COMPANIES_WITH_OC.has(companyId);
+    this.createOcTypeWrapperTarget.classList.toggle('hidden', !show);
+    if (!show) {
+      this.createOcTypeTarget.value = '';
+      this.createOcTypeErrorTarget.classList.add('hidden');
+    }
+  }
+
+  #validateCreateFormState() {
+    const isOCVisible = !this.createOcTypeWrapperTarget.classList.contains('hidden');
+    const emailRegex  = /^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i;
+
+    const valid =
+      this.createFullNameTarget.value.trim() &&
+      this.createIdentificationTarget.value.trim() &&
+      emailRegex.test(this.createEmailTarget.value.trim()) &&
+      this.createCompanySelectTarget.value &&
+      this.createGroupSelectTarget.value &&
+      (!isOCVisible || this.createOcTypeTarget.value);
+
+    this.createSubmitBtnTarget.disabled = !valid;
+  }
+
+  #resetCreateForm() {
+    this.createFullNameTarget.value       = '';
+    this.createIdentificationTarget.value = '';
+    this.createEmailTarget.value          = '';
+    this.createOcTypeTarget.value         = '';
+    this.createFullNameErrorTarget.classList.add('hidden');
+    this.createIdentificationErrorTarget.classList.add('hidden');
+    this.createEmailErrorTarget.classList.add('hidden');
+    this.createOcTypeErrorTarget.classList.add('hidden');
+    this.createSubmitBtnTarget.disabled = true;
+  }
+
+  async createUser() {
+    if (!this.#runCreateValidation()) return;
+
+    this.createLoadingOverlayTarget.classList.remove('hidden');
+    this.createSubmitBtnTarget.disabled = true;
+
+    const isOCVisible = !this.createOcTypeWrapperTarget.classList.contains('hidden');
+    const payload = {
+      Id:                  '',
+      CompanyIdDB:         parseInt(this.createCompanySelectTarget.value),
+      GroupIdDB:           parseInt(this.createGroupSelectTarget.value),
+      FullName:            this.createFullNameTarget.value.trim(),
+      Identification:      this.createIdentificationTarget.value.trim(),
+      UserName:            this.createEmailTarget.value.trim(),
+      Email:               this.createEmailTarget.value.trim(),
+      EmailConfirmed:      false,
+      Owner:               false,
+      CreateDate:          new Date().toISOString(),
+      Active:              false,
+      passwordHash:        '',
+      sapUser:             '',
+      sapPass:             '',
+      password:            '',
+      DocNumberPreference: isOCVisible ? (this.createOcTypeTarget.value || '') : '',
+    };
+
+    try {
+      await this.#apiFetch('/api/User', { method: 'POST', body: JSON.stringify(payload) });
+      showToast('Usuario registrado exitosamente', 'success');
+      this.closeCreatePanel();
+      this.table?.setData();
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al registrar usuario', message: err.message });
+      this.createSubmitBtnTarget.disabled = false;
+    } finally {
+      this.createLoadingOverlayTarget.classList.add('hidden');
+    }
+  }
+
+  #runCreateValidation() {
+    let valid = true;
+    const emailRegex  = /^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i;
+    const isOCVisible = !this.createOcTypeWrapperTarget.classList.contains('hidden');
+
+    const check = (errorTarget, condition) => {
+      const ok = condition();
+      errorTarget.classList.toggle('hidden', ok);
+      if (!ok) valid = false;
+    };
+
+    check(this.createFullNameErrorTarget,       () => !!this.createFullNameTarget.value.trim());
+    check(this.createIdentificationErrorTarget, () => !!this.createIdentificationTarget.value.trim());
+    check(this.createEmailErrorTarget,          () => emailRegex.test(this.createEmailTarget.value.trim()));
+    if (isOCVisible) check(this.createOcTypeErrorTarget, () => !!this.createOcTypeTarget.value);
+
     return valid;
   }
 

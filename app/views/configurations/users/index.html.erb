@@ -73,12 +73,13 @@
             <span class="material-icons text-base">filter_alt</span>
             Consultar
           </button>
-          <a href="<%= configurations_users_register_path %>"
-             data-users-target="createBtn"
-             class="hidden flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <button type="button"
+                  data-users-target="createBtn"
+                  data-action="click->users#openCreatePanel"
+                  class="hidden flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
             <span class="material-icons text-base">add</span>
             Crear
-          </a>
+          </button>
         </div>
 
       </div>
@@ -297,6 +298,125 @@
     </div>
 
   </div>
+
+  <%# ── Create user — panel lateral ───────────────────────────────────────── %>
+  <div data-users-target="createBackdrop"
+       data-action="click->users#closeCreatePanel"
+       class="hidden fixed inset-0 z-40 bg-black/40"></div>
+
+  <div data-users-target="createPanel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <%# Header %>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800">Registrar Usuario</h3>
+      <button type="button" data-action="click->users#closeCreatePanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <%# Loader overlay %>
+    <div data-users-target="createLoadingOverlay"
+         class="hidden absolute inset-0 z-10 bg-white/80 flex items-center justify-center">
+      <div class="flex flex-col items-center gap-2">
+        <svg class="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        <span class="text-sm text-gray-600">Cargando...</span>
+      </div>
+    </div>
+
+    <%# Body %>
+    <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+
+      <%# Compañía %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Compañía <span class="text-red-500">*</span></label>
+        <select data-users-target="createCompanySelect"
+                data-action="change->users#onCreateCompanyChange"
+                class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Cargando...</option>
+        </select>
+      </div>
+
+      <%# Cuenta (Grupo) %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Cuenta <span class="text-red-500">*</span></label>
+        <select data-users-target="createGroupSelect"
+                disabled
+                class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed">
+          <option value="">Cargando...</option>
+        </select>
+      </div>
+
+      <%# Nombre Completo %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Nombre Completo <span class="text-red-500">*</span></label>
+        <input type="text" data-users-target="createFullName"
+               data-action="input->users#validateCreateForm"
+               placeholder="Nombre Completo"
+               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-users-target="createFullNameError" class="hidden mt-1 text-xs text-red-600">El nombre completo es requerido.</p>
+      </div>
+
+      <%# Cédula %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Cédula <span class="text-red-500">*</span></label>
+        <input type="text" data-users-target="createIdentification"
+               data-action="input->users#validateCreateForm"
+               inputmode="numeric"
+               placeholder="Identificación"
+               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-users-target="createIdentificationError" class="hidden mt-1 text-xs text-red-600">La identificación es requerida.</p>
+      </div>
+
+      <%# Usuario (correo) %>
+      <div>
+        <label class="text-xs font-medium text-gray-600">Usuario (correo) <span class="text-red-500">*</span></label>
+        <input type="text" data-users-target="createEmail"
+               data-action="input->users#validateCreateForm"
+               placeholder="usuario@empresa.com"
+               class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p data-users-target="createEmailError" class="hidden mt-1 text-xs text-red-600">Ingrese un correo válido.</p>
+      </div>
+
+      <%# Tipo de OC (solo para compañías con OC) %>
+      <div data-users-target="createOcTypeWrapper" class="hidden">
+        <label class="text-xs font-medium text-gray-600">Tipo de OC <span class="text-red-500">*</span></label>
+        <select data-users-target="createOcType"
+                data-action="change->users#validateCreateForm"
+                class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">-- Seleccione --</option>
+          <option value="1">Con número de OC</option>
+          <option value="2">Sin número de OC</option>
+        </select>
+        <p data-users-target="createOcTypeError" class="hidden mt-1 text-xs text-red-600">El tipo de OC es requerido.</p>
+      </div>
+
+    </div>
+
+    <%# Footer %>
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+      <button type="button"
+              data-action="click->users#closeCreatePanel"
+              class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+        <span class="material-icons text-base">cancel</span>
+        Cancelar
+      </button>
+      <button type="button"
+              data-users-target="createSubmitBtn"
+              data-action="click->users#createUser"
+              disabled
+              class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base">check</span>
+        Registrar
+      </button>
+    </div>
+
+  </div><%# /createPanel %>
 
   <%# ── Edit user — panel lateral ─────────────────────────────────────────── %>
   <div data-users-target="editBackdrop"
