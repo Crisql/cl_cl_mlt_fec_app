@@ -221,10 +221,10 @@
         </div>
 
         <%# Body %>
-        <div class="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+        <div class="flex-1 min-h-0 px-6 py-5 flex flex-col gap-4">
 
-          <%# Input de búsqueda %>
-          <div class="relative">
+          <%# Input de búsqueda — fijo (no scrollea con la tabla) %>
+          <div class="relative flex-shrink-0">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-gray-400 text-xl">search</span>
             <input type="text"
                    data-company-selector-target="searchInput"
@@ -234,17 +234,10 @@
                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           </div>
 
-          <%# Loading state %>
-          <p data-company-selector-target="loading"
-             class="text-center text-sm text-gray-500 py-4 hidden">
-            Cargando compañías...
-          </p>
-
-          <%# Lista de opciones %>
-          <ul data-company-selector-target="list"
-              class="border border-gray-200 rounded-lg divide-y divide-gray-100">
-            <%# Renderizado dinámico por company_selector_controller.js %>
-          </ul>
+          <%# Tabla de compañías (Tabulator, sin paginación) — scroll interno %>
+          <div class="flex-1 min-h-0 border border-gray-200 rounded-lg overflow-hidden">
+            <div data-company-selector-target="table" class="h-full"></div>
+          </div>
 
         </div>
 

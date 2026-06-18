@@ -1,5 +1,7 @@
 import { Controller } from '@hotwired/stimulus'
+import { TabulatorFull } from 'tabulator-tables'
 import { Storage, SStore, getApiHeaders } from 'vendor/clavisco/core'
+import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale'
 
 /**
  * CompanySelectorController — Panel lateral de selección de empresa.
@@ -17,8 +19,7 @@ export default class extends Controller {
     'pageLoader',
     'toolbarLabel',
     'searchInput',
-    'list',
-    'loading',
+    'table',
     'cancelBtn',
     'confirmBtn',
     'contextMenu'
@@ -29,6 +30,9 @@ export default class extends Controller {
 
   /** @type {object|null} Empresa seleccionada en el UI (pendiente de confirmar) */
   #pendingSelection = null
+
+  /** @type {import('tabulator-tables').Tabulator|null} Instancia de la tabla */
+  #table = null
 
   /** @type {Function|null} Handler de click global para cerrar el context menu */
   #contextMenuDismissHandler = null
@@ -62,6 +66,11 @@ export default class extends Controller {
     }
   }
 
+  disconnect() {
+    this.#table?.destroy()
+    this.#table = null
+  }
+
   // ---------------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------------
@@ -87,11 +96,14 @@ export default class extends Controller {
   }
 
   filter() {
-    const query = this.searchInputTarget.value.toLowerCase()
-    this.#renderList(
-      this.#companies.filter(c =>
-        `${c.EmsrIdeNumero} - ${c.EmsrNombreComercial}`.toLowerCase().includes(query)
-      )
+    if (!this.#table) return
+    const query = this.searchInputTarget.value.toLowerCase().trim()
+    if (!query) {
+      this.#table.clearFilter()
+      return
+    }
+    this.#table.setFilter(row =>
+      `${row.EmsrIdeNumero} - ${row.EmsrNombreComercial}`.toLowerCase().includes(query)
     )
   }
 
@@ -185,7 +197,8 @@ export default class extends Controller {
 
   #resetInput() {
     if (this.hasSearchInputTarget) this.searchInputTarget.value = ''
-    if (this.hasListTarget) this.listTarget.innerHTML = ''
+    this.#table?.clearFilter()
+    this.#clearSelection()
   }
 
   #setConfirmDisabled(disabled) {
@@ -193,9 +206,48 @@ export default class extends Controller {
     this.confirmBtnTarget.disabled = disabled
   }
 
+  #initTable() {
+    if (this.#table || !this.hasTableTarget) return
+
+    this.#table = new TabulatorFull(this.tableTarget, {
+      height:            '100%',
+      layout:            'fitColumns',
+      placeholder:       'Sin resultados',
+      locale:            TABULATOR_LOCALE,
+      langs:             TABULATOR_LANGS,
+      dataLoaderLoading: TABULATOR_LOADING_HTML,
+      columnDefaults: {
+        headerSort: true,
+        // cellClick es el mecanismo de clic probado en el proyecto (Tabulator no
+        // dispara rowClick de forma fiable en este build); cubre toda la fila.
+        cellClick:    (_e, cell) => this.#selectRow(cell.getRow()),
+        cellDblClick: (_e, cell) => { this.#selectRow(cell.getRow()); this.confirm() },
+      },
+      columns: [
+        { title: 'Identificación',   field: 'EmsrIdeNumero',       width: 130 },
+        { title: 'Nombre Comercial', field: 'EmsrNombreComercial', widthGrow: 1 },
+      ],
+    })
+  }
+
+  /** Marca una fila como seleccionada (resaltado + estado pendiente). */
+  #selectRow(row) {
+    this.#table?.getRows().forEach(r => { r.getElement().style.backgroundColor = '' })
+    row.getElement().style.backgroundColor = '#dbeafe' // blue-100
+    this.#pendingSelection = row.getData()
+    this.#setConfirmDisabled(false)
+  }
+
+  /** Limpia la selección y su resaltado. */
+  #clearSelection() {
+    this.#pendingSelection = null
+    this.#table?.getRows().forEach(r => { r.getElement().style.backgroundColor = '' })
+    this.#setConfirmDisabled(true)
+  }
+
   async #loadCompanies() {
-    if (this.hasLoadingTarget) this.loadingTarget.classList.remove('hidden')
-    if (this.hasListTarget)    this.listTarget.innerHTML = ''
+    this.#initTable()
+    this.#table.alert(TABULATOR_LOADING_HTML)
 
     try {
       const response = await fetch(
@@ -207,48 +259,15 @@ export default class extends Controller {
 
       const data = await response.json()
       this.#companies = data?.Data ?? []
-      this.#renderList(this.#companies)
+      this.#table.clearAlert()
+      await this.#table.setData(this.#companies)
+      // El panel entra con translate-x; forzamos redibujado para que calcule la altura
+      requestAnimationFrame(() => this.#table?.redraw(true))
     } catch (error) {
       console.error('[CompanySelector] Error cargando empresas:', error)
-      if (this.hasListTarget) {
-        this.listTarget.innerHTML = '<li class="px-4 py-3 text-sm text-red-500">Error al cargar compañías</li>'
-      }
-    } finally {
-      if (this.hasLoadingTarget) this.loadingTarget.classList.add('hidden')
+      this.#table.clearAlert()
+      this.#table.alert('Error al cargar compañías', 'error')
     }
-  }
-
-  #renderList(companies) {
-    if (!this.hasListTarget) return
-    this.listTarget.innerHTML = ''
-
-    if (companies.length === 0) {
-      this.listTarget.innerHTML = '<li class="px-4 py-3 text-sm text-gray-400 text-center">Sin resultados</li>'
-      return
-    }
-
-    companies.forEach(company => {
-      const li = document.createElement('li')
-      li.dataset.testid = 'company-option'
-      li.className = [
-        'px-4 py-2.5 text-sm text-gray-700 cursor-pointer',
-        'hover:bg-blue-50 hover:text-blue-700 transition-colors'
-      ].join(' ')
-      li.textContent = `${company.EmsrIdeNumero} - ${company.EmsrNombreComercial}`
-
-      li.addEventListener('click', () => {
-        // Resaltar selección
-        this.listTarget.querySelectorAll('li').forEach(el =>
-          el.classList.remove('bg-blue-100', 'text-blue-800', 'font-medium')
-        )
-        li.classList.add('bg-blue-100', 'text-blue-800', 'font-medium')
-
-        this.#pendingSelection = company
-        this.#setConfirmDisabled(false)
-      })
-
-      this.listTarget.appendChild(li)
-    })
   }
 
   async #applyCompanyChange(company) {
