@@ -20,6 +20,7 @@ export default class extends Controller {
     'toolbarLabel',
     'searchInput',
     'table',
+    'panelLoader',
     'cancelBtn',
     'confirmBtn',
     'contextMenu'
@@ -247,7 +248,7 @@ export default class extends Controller {
 
   async #loadCompanies() {
     this.#initTable()
-    this.#table.alert(TABULATOR_LOADING_HTML)
+    this.#showPanelLoader()
 
     try {
       const response = await fetch(
@@ -259,15 +260,23 @@ export default class extends Controller {
 
       const data = await response.json()
       this.#companies = data?.Data ?? []
-      this.#table.clearAlert()
       await this.#table.setData(this.#companies)
       // El panel entra con translate-x; forzamos redibujado para que calcule la altura
       requestAnimationFrame(() => this.#table?.redraw(true))
     } catch (error) {
       console.error('[CompanySelector] Error cargando empresas:', error)
-      this.#table.clearAlert()
-      this.#table.alert('Error al cargar compañías', 'error')
+      this.#table?.alert('Error al cargar compañías', 'error')
+    } finally {
+      this.#hidePanelLoader()
     }
+  }
+
+  #showPanelLoader() {
+    if (this.hasPanelLoaderTarget) this.panelLoaderTarget.classList.remove('hidden')
+  }
+
+  #hidePanelLoader() {
+    if (this.hasPanelLoaderTarget) this.panelLoaderTarget.classList.add('hidden')
   }
 
   async #applyCompanyChange(company) {
