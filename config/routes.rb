@@ -7,6 +7,11 @@ Rails.application.routes.draw do
   get  '/sign-in', to: redirect('/login')
   get  '/home',    to: 'home#index',    as: :home
 
+  # Verificación de cuenta por OTP (página pública, sin menú).
+  # Migrado de Angular: ruta /account-verification/:OTPCode → VerificationEmailComponent.
+  get 'account-verification/:otp_code', to: 'account_verifications#show',
+      as: :account_verification, constraints: { otp_code: %r{[^/]+} }
+
   namespace :configurations do
     get 'permissions',         to: 'permissions#index',  as: :permissions
     get 'permissions/by-role', to: 'permissions#index',  as: :permissions_by_role

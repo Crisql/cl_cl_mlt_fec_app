@@ -1,0 +1,78 @@
+<% content_for :title, "Verificación de cuenta" %>
+
+<div class="min-h-screen flex items-center justify-center bg-gray-100 p-5"
+     data-controller="account-verification"
+     data-account-verification-otp-code-value="<%= @otp_code %>"
+     data-account-verification-redirect-path-value="/login">
+
+  <%# La verificación del correo se hace al conectar; mientras tanto el overlay global
+      (vendor/clavisco/overlay) cubre la pantalla. La sección de contraseña permanece
+      oculta hasta que el OTP se valida con éxito. %>
+  <div data-account-verification-target="passwordSection"
+       class="hidden w-full max-w-md bg-white rounded-2xl shadow-md border border-gray-200 p-8">
+
+    <%# Logo %>
+    <div class="text-center mb-8">
+      <%= image_tag 'Logo-Clavisco-blue.png', alt: 'Clavisco', class: 'mx-auto w-56' %>
+    </div>
+
+    <h2 class="text-center text-lg font-semibold text-gray-800 mb-6">Establecer contraseña</h2>
+
+    <div class="space-y-4">
+
+      <%# Contraseña %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Contraseña</label>
+        <div class="relative">
+          <input type="password"
+                 data-account-verification-target="password"
+                 data-testid="password"
+                 placeholder="Contraseña"
+                 minlength="8"
+                 maxlength="40"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button"
+                  data-action="click->account-verification#togglePassword"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700">
+            <span class="material-icons text-base">visibility_off</span>
+          </button>
+        </div>
+      </div>
+
+      <%# Confirmar Contraseña %>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Confirme la contraseña</label>
+        <div class="relative">
+          <input type="password"
+                 data-account-verification-target="confirmPassword"
+                 data-testid="confirm-password"
+                 placeholder="Confirme la contraseña"
+                 minlength="8"
+                 maxlength="40"
+                 data-action="keydown.enter->account-verification#changePassword"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button"
+                  data-action="click->account-verification#togglePassword"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700">
+            <span class="material-icons text-base">visibility_off</span>
+          </button>
+        </div>
+      </div>
+
+      <%# Botón Registrar %>
+      <button type="button"
+              data-action="click->account-verification#changePassword"
+              data-account-verification-target="submitButton"
+              data-testid="submit"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
+        Registrar
+      </button>
+
+      <%# Copyright %>
+      <div class="text-center text-gray-500 text-sm mt-6">
+        <p>© <%= Date.current.year %> Clavis Consultores</p>
+      </div>
+
+    </div>
+  </div>
+</div>
