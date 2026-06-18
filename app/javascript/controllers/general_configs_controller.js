@@ -27,6 +27,8 @@ export default class extends Controller {
     'updateFormatWrapper',
     'btnUpdateFormat',
     'cedulaInput',
+    'formatLoader',
+    'cedulaLoader',
   ]
 
   // ----------------------------------------------------------------
@@ -66,18 +68,16 @@ export default class extends Controller {
   // Carga inicial
   // ----------------------------------------------------------------
   async #loadAll() {
-    this.#showOverlay('Cargando configuraciones...')
-    try {
-      await Promise.all([
-        this.#loadGeneralConfigs(),
-        this.#loadSettings(),
-      ])
-    } finally {
-      this.#hideOverlay()
-    }
+    // Cada sección tiene su propia consulta → loader independiente por sección
+    // (sin overlay global de página). Ver CLAUDE.md §15.
+    await Promise.all([
+      this.#loadGeneralConfigs(),
+      this.#loadSettings(),
+    ])
   }
 
   async #loadGeneralConfigs() {
+    this.#showSectionLoader(this.formatLoaderTarget)
     try {
       const data = await this.#apiFetch('/api/GeneralConfigs/GetGeneralConfigs')
 
@@ -95,10 +95,13 @@ export default class extends Controller {
       }
     } catch (err) {
       showToast(err.message || 'Error al cargar configuraciones generales', 'error')
+    } finally {
+      this.#hideSectionLoader(this.formatLoaderTarget)
     }
   }
 
   async #loadSettings() {
+    this.#showSectionLoader(this.cedulaLoaderTarget)
     try {
       const data = await this.#apiFetch('/api/settings')
 
@@ -112,6 +115,8 @@ export default class extends Controller {
       }
     } catch (err) {
       showToast(err.message || 'Error al cargar ajustes', 'error')
+    } finally {
+      this.#hideSectionLoader(this.cedulaLoaderTarget)
     }
   }
 
@@ -293,9 +298,15 @@ export default class extends Controller {
   }
 
   // ----------------------------------------------------------------
-  // Helpers: Overlay
+  // Helpers: Overlay global (operaciones de escritura — bloqueante)
   // ----------------------------------------------------------------
   #showOverlay(message) { showLoading(message) }
   #hideOverlay()        { hideLoading() }
+
+  // ----------------------------------------------------------------
+  // Helpers: Loader por sección (carga de lectura — sin texto)
+  // ----------------------------------------------------------------
+  #showSectionLoader(target) { target?.classList.remove('hidden') }
+  #hideSectionLoader(target) { target?.classList.add('hidden') }
 
 }

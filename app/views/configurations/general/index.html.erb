@@ -15,7 +15,21 @@
   <%# ---------------------------------------------------------------- %>
   <%# SECCIÓN: Formato de Impresión por Defecto %>
   <%# ---------------------------------------------------------------- %>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+  <div class="relative bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+
+    <%# Loader a nivel de sección (sin texto) %>
+    <div data-general-configs-target="formatLoader"
+         class="hidden absolute inset-0 z-30 flex items-center justify-center bg-white/60 rounded-xl">
+      <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
+                stroke-linecap="round" stroke-dasharray="80 200">
+          <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                            from="0 25 25" to="360 25 25" dur="0.8s" repeatCount="indefinite"></animateTransform>
+        </circle>
+      </svg>
+    </div>
+
     <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
       Formato de Impresión
     </h2>
@@ -94,7 +108,21 @@
   <%# ---------------------------------------------------------------- %>
   <%# SECCIÓN: Cédula Proveedor Sistemas %>
   <%# ---------------------------------------------------------------- %>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+  <div class="relative bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+
+    <%# Loader a nivel de sección (sin texto) %>
+    <div data-general-configs-target="cedulaLoader"
+         class="hidden absolute inset-0 z-30 flex items-center justify-center bg-white/60 rounded-xl">
+      <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
+        <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
+                stroke-linecap="round" stroke-dasharray="80 200">
+          <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                            from="0 25 25" to="360 25 25" dur="0.8s" repeatCount="indefinite"></animateTransform>
+        </circle>
+      </svg>
+    </div>
+
     <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
       Configuración de Proveedor
     </h2>
