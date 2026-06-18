@@ -402,7 +402,7 @@ export default class extends TabulatorController {
     this.editTestCredLabelTarget.textContent = 'Probando...';
 
     try {
-      const res = await this.#apiFetch('/api/SapConnections/validate-credentials', {
+      const res = await this.#apiFetch('/api/Connections/validate-user-credentials', {
         method: 'POST',
         body: JSON.stringify({ SapUser: sapUser, SapPass: sapPass, CompanyId: companyId }),
       });
