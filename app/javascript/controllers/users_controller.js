@@ -178,7 +178,9 @@ export default class extends TabulatorController {
   }
 
   getColumns() {
-    const hasPerm = this.#hasPerm('Configurations_Users_Update');
+    const canEdit         = this.#hasPerm('Configurations_Users_Update');
+    const canManageAccess = this.#hasPerm('Configurations_Users_ManageAccess');
+    const actionCount     = (canEdit ? 1 : 0) + (canManageAccess ? 1 : 0);
     return [
       { title: 'Nombre Completo',    field: 'FullName',         flexGrow: 2, minWidth: 150 },
       { title: 'Correo Electrónico', field: 'Email',            flexGrow: 2, minWidth: 180 },
@@ -202,20 +204,20 @@ export default class extends TabulatorController {
         width: 100, hozAlign: 'center',
         formatter: (cell) => this.#statusBadge(cell.getValue() ? 'active' : 'inactive'),
       },
-      {
+      ...(actionCount > 0 ? [{
         title: 'Acciones',
         field: '_actions',
-        width: hasPerm ? 110 : 80, hozAlign: 'center', headerSort: false,
+        width: actionCount > 1 ? 110 : 80, hozAlign: 'center', headerSort: false,
         formatter: () => `
           <div class="flex items-center justify-center gap-1">
-            ${hasPerm ? `<button type="button" data-action-type="edit" data-tooltip="Editar"
+            ${canEdit ? `<button type="button" data-action-type="edit" data-tooltip="Editar"
                     class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
               <span class="material-icons text-base">edit</span>
             </button>` : ''}
-            <button type="button" data-action-type="manage-access" data-tooltip="Gestionar accesos"
+            ${canManageAccess ? `<button type="button" data-action-type="manage-access" data-tooltip="Gestionar accesos"
                     class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
               <span class="material-icons text-base">admin_panel_settings</span>
-            </button>
+            </button>` : ''}
           </div>`,
         cellClick: (e, cell) => {
           const data = cell.getRow().getData();
@@ -225,7 +227,7 @@ export default class extends TabulatorController {
             this.#openAccessPanel(data);
           }
         },
-      },
+      }] : []),
     ];
   }
 
@@ -1193,6 +1195,7 @@ export default class extends TabulatorController {
 
   async #openAccessPanel(row) {
     if (!row) return;
+    if (!this.#hasPerm('Configurations_Users_ManageAccess')) return;
 
     this.#accessUser = row;
     this.#accessActiveTab = 'roles';

@@ -51,7 +51,7 @@ export default [
       { key: 'users',            label: 'Usuarios',                       route: '/configurations/users',          requiredPermission: 'Configurations_Users_Access' },
       { key: 'groups',           label: 'Grupos',                         route: '/configurations/group',          requiredPermission: 'S_Groups' },
       { key: 'numbering',        label: 'Numeración',                     route: '/configurations/numbering',      requiredPermission: 'S_Numbering' },
-      { key: 'Rol',              label: 'Seguridad',                      route: '/configurations/security',       requiredPermission: 'S_Rols' },
+      { key: 'Rol',              label: 'Seguridad',                      route: '/configurations/security',       requiredPermission: 'Configurations_Security_Access' },
       { key: 'sucursal',         label: 'Sucursal',                       route: '/configurations/branches',       requiredPermission: 'S_Sucursal' },
       { key: 'wizardSetup',      label: 'Asistente de configuración',     route: '/wizard-setup',                  requiredPermission: 'Configurations_WizardSetup_Access' },
       { key: 'mailParserConfig', label: 'Bandejas de recepción',          route: '/configurations/mail-parser',    requiredPermission: ['Configurations_MailParser_ViewConfigurations', 'Configurations_MailParser_ViewAllConfigurationsInApplication'] },
