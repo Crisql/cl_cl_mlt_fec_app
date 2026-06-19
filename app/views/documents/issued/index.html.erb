@@ -9,11 +9,11 @@
   <%# FORMULARIO DE FILTROS %>
   <%# ---------------------------------------------------------------- %>
   <div class="flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
 
       <%# Fecha de Inicio %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Inicio</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Fecha de Inicio</label>
         <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
           <input type="date"
                  data-documents-issued-target="inputStartDate"
@@ -29,8 +29,8 @@
       </div>
 
       <%# Fecha Final %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha Final</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Fecha Final</label>
         <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
           <input type="date"
                  data-documents-issued-target="inputEndDate"
@@ -46,21 +46,21 @@
       </div>
 
       <%# Consecutivo %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Consecutivo</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Consecutivo</label>
         <input type="text"
                data-documents-issued-target="inputConsecutivo"
                data-testid="input-consecutivo"
                placeholder="N° Referencia"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Estado %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Estado</label>
         <select data-documents-issued-target="selectStatus"
                 data-testid="select-status"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
           <option value="1">Aceptado</option>
           <option value="2">Procesando</option>
           <option value="3">En Hacienda</option>
@@ -71,61 +71,61 @@
       </div>
 
       <%# Cedula %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Cédula</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Cédula</label>
         <input type="text"
                data-documents-issued-target="inputCedula"
                data-testid="input-cedula"
                placeholder="Cédula del receptor"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Código de Moneda %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Código de Moneda</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Código de Moneda</label>
         <input type="text"
                data-documents-issued-target="inputCodigoMoneda"
                data-testid="input-codigo-moneda"
                placeholder="Ej: CRC, USD"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Clave %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Clave</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Clave</label>
         <input type="text"
                data-documents-issued-target="inputClave"
                data-testid="input-clave"
                placeholder="Clave del comprobante"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Receptor %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Receptor</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Receptor</label>
         <input type="text"
                data-documents-issued-target="inputReceptor"
                data-testid="input-receptor"
                placeholder="Nombre del receptor"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Consecutivo FE %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Consecutivo FE</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Consecutivo FE</label>
         <input type="text"
                data-documents-issued-target="inputConsecutivoFE"
                data-testid="input-consecutivo-fe"
                placeholder="N° Consecutivo FE"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Tipo de documento %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Documento</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo de Documento</label>
         <select data-documents-issued-target="selectDocType"
                 data-testid="select-doc-type"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
           <option value="01" selected>FE</option>
           <option value="02">ND</option>
           <option value="03">NC</option>
@@ -137,7 +137,7 @@
       </div>
 
       <%# Botón Consultar %>
-      <div class="flex items-end">
+      <div class="flex gap-2">
         <button type="button"
                 data-action="click->documents-issued#search"
                 data-testid="btn-search"

@@ -35,39 +35,39 @@
        class="flex flex-col flex-1 min-h-0">
 
     <%# Filtros %>
-    <div class="mb-4 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3">
+    <div class="mb-4 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3 items-end">
 
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">E-mail</label>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">E-mail</label>
           <input type="text"
                  data-email-senders-target="filterEmail"
                  data-testid="filter-email"
                  placeholder="E-mail"
-                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                 class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">SSL</label>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">SSL</label>
           <select data-email-senders-target="filterSsl"
                   data-testid="filter-ssl"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
             <option value="2">Todos</option>
             <option value="1">Activo</option>
             <option value="0">Inactivo</option>
           </select>
         </div>
 
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Host</label>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Host</label>
           <select data-email-senders-target="filterHost"
                   data-testid="filter-host"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
             <option value="">Todos</option>
           </select>
         </div>
 
-        <div class="flex items-end gap-2">
+        <div class="flex gap-2">
           <button type="button"
                   data-action="click->email-senders#searchConfig"
                   data-testid="btn-search-config"
@@ -118,18 +118,18 @@
        class="hidden flex flex-col flex-1 min-h-0">
 
     <%# Selector de compañía %>
-    <div class="mb-4 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-      <div class="max-w-sm relative">
-        <label class="block text-xs font-medium text-gray-600 mb-1">Seleccione la compañía</label>
+    <div class="mb-4 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div class="max-w-sm relative flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Seleccione la compañía</label>
         <input type="text"
                data-email-senders-target="assignCompanyInput"
                data-action="input->email-senders#filterAssignCompanies focus->email-senders#showAssignCompanyDropdown blur->email-senders#closeAssignCompanyDropdown"
                data-testid="assign-company-input"
                placeholder="Digite el nombre de una compañía"
                autocomplete="off"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <ul data-email-senders-target="assignCompanyDropdown"
-            class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto text-sm">
+            class="hidden absolute z-10 w-full top-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto text-sm">
         </ul>
       </div>
     </div>

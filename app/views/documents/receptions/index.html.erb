@@ -9,11 +9,11 @@
   <%# FORMULARIO DE FILTROS %>
   <%# ---------------------------------------------------------------- %>
   <div class="flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
 
       <%# Fecha de Inicio %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha de Inicio</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Fecha de Inicio</label>
         <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
           <input type="date"
                  data-documents-receptions-target="inputStartDate"
@@ -29,8 +29,8 @@
       </div>
 
       <%# Fecha Final %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Fecha Final</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Fecha Final</label>
         <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
           <input type="date"
                  data-documents-receptions-target="inputEndDate"
@@ -64,11 +64,11 @@
       </div>
 
       <%# Petición (MessageType) %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Petición</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Petición</label>
         <select data-documents-receptions-target="selectMessageType"
                 data-testid="select-message-type"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
           <option value="0" selected>Todos</option>
           <option value="1">Aceptado</option>
           <option value="2">Aceptado Parcialmente</option>
@@ -77,11 +77,11 @@
       </div>
 
       <%# Estado %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Estado</label>
         <select data-documents-receptions-target="selectStatus"
                 data-testid="select-status"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
           <option value="0" selected>Todos</option>
           <option value="1">Aceptado</option>
           <option value="2">Procesando</option>
@@ -94,52 +94,52 @@
       </div>
 
       <%# Nombre del Emisor %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del Emisor</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Nombre del Emisor</label>
         <input type="text"
                data-documents-receptions-target="inputNombreEmisor"
                data-testid="input-nombre-emisor"
                placeholder="Nombre del emisor"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Clave %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Clave</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Clave</label>
         <input type="text"
                data-documents-receptions-target="inputClave"
                data-testid="input-clave"
                placeholder="Clave del comprobante"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Cédula Emisor %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Cédula Emisor</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Cédula Emisor</label>
         <input type="text"
                data-documents-receptions-target="inputCedula"
                data-testid="input-cedula"
                placeholder="Cédula del emisor"
                maxlength="12"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Consecutivo Emisor %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Consecutivo Emisor</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Consecutivo Emisor</label>
         <input type="text"
                data-documents-receptions-target="inputConsecutivoEmisor"
                data-testid="input-consecutivo-emisor"
                placeholder="N° Consecutivo del emisor"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
       <%# Tipo de Documento %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Documento</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo de Documento</label>
         <select data-documents-receptions-target="selectDocType"
                 data-testid="select-doc-type"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
           <option value="01" selected>FE</option>
           <option value="02">ND</option>
           <option value="03">NC</option>
@@ -151,30 +151,30 @@
       </div>
 
       <%# Bandeja (se carga dinámicamente) %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Bandeja</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Bandeja</label>
         <select data-documents-receptions-target="selectBandeja"
                 data-testid="select-bandeja"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
           <option value="">Todas</option>
         </select>
       </div>
 
       <%# Código de Moneda (con autocomplete) %>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Código de Moneda</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Código de Moneda</label>
         <input type="text"
                data-documents-receptions-target="inputCodigoMoneda"
                data-action="input->documents-receptions#onCodigoMonedaInput"
                data-testid="input-codigo-moneda"
                placeholder="Ej: CRC, USD"
                list="currency-codes-list"
-               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <datalist id="currency-codes-list"></datalist>
       </div>
 
       <%# Botón Consultar %>
-      <div class="flex items-end">
+      <div class="flex gap-2">
         <button type="button"
                 data-action="click->documents-receptions#search"
                 data-testid="btn-search"
