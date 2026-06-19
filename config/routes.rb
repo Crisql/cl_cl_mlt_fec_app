@@ -5,7 +5,8 @@ Rails.application.routes.draw do
 
   get  '/login',   to: 'sessions#new',  as: :login
   get  '/sign-in', to: redirect('/login')
-  get  '/home',    to: 'home#index',    as: :home
+  get  '/home',      to: 'home#index',      as: :home
+  get  '/not-found', to: 'not_found#index', as: :not_found
 
   # Verificación de cuenta por OTP (página pública, sin menú).
   # Migrado de Angular: ruta /account-verification/:OTPCode → VerificationEmailComponent.
