@@ -18,6 +18,8 @@ const DETAIL_REQUIRED_MESSAGES = new Set(['2', '3'])
 
 export default class extends Controller {
   static targets = [
+    // Panel lateral contenedor
+    'panel', 'panelBackdrop',
     // Form
     'fileInput', 'inputAdjunto', 'errorAdjunto',
     'selectMensaje',
@@ -52,6 +54,42 @@ export default class extends Controller {
     if (this.#codigoActividad) {
       this.inputCodigoActividadTarget.value = this.#codigoActividad
     }
+  }
+
+  // ──────────────────────────────────────────────
+  // PANEL LATERAL — abrir / cerrar
+  // ──────────────────────────────────────────────
+
+  openPanel() {
+    this.#resetForm()
+    this.panelBackdropTarget.classList.remove('hidden')
+    this.panelTarget.classList.remove('translate-x-full')
+    document.body.style.overflow = 'hidden'
+  }
+
+  closePanel() {
+    this.panelTarget.classList.add('translate-x-full')
+    this.panelBackdropTarget.classList.add('hidden')
+    document.body.style.overflow = ''
+  }
+
+  #resetForm() {
+    this.#selectedFile = null
+    this.fileInputTarget.value     = ''
+    this.inputAdjuntoTarget.value  = ''
+    this.errorAdjuntoTarget.classList.add('hidden')
+
+    this.selectMensajeTarget.value           = '1'
+    this.selectCondicionImpuestoTarget.value = '01'
+    this.inputDetalleMensajeTarget.value     = ''
+    this.errorDetalleMensajeTarget.classList.add('hidden')
+    this.errorCodigoActividadTarget.classList.add('hidden')
+
+    this.inputCodigoActividadTarget.value = this.#codigoActividad ?? ''
+
+    // Reset TaxFactor según condición por defecto (01 → deshabilitado)
+    this.onCondicionImpuestoChange()
+    this.onMensajeChange()
   }
 
   // ──────────────────────────────────────────────
@@ -218,7 +256,8 @@ export default class extends Controller {
 
       if (data?.result) {
         showToast('Se procesó correctamente la petición', 'success')
-        window.location.reload()
+        this.closePanel()
+        this.dispatch('done')   // documents-reception:done → recarga la tabla de receptions
       } else {
         const msg = data?.errorInfo?.Message ?? 'Error al procesar la recepción'
         showToast(msg, 'warning')

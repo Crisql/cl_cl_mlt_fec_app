@@ -52,7 +52,7 @@ export default class extends TabulatorController {
     'selectDocType', 'selectBandeja', 'inputCodigoMoneda',
 
     // Toolbar
-    'statusCounters', 'btnChart', 'btnBulkDownload',
+    'statusCounters', 'btnChart', 'btnBulkDownload', 'btnRecepcionar',
 
     // Panel recepcionar
     'receptPanel', 'receptBackdrop',
@@ -111,6 +111,11 @@ export default class extends TabulatorController {
     // Mostrar botón descarga masiva si tiene permiso
     if (this.#hasPerm('F_CreateBulkDownloadOfDocuments')) {
       this.btnBulkDownloadTarget.classList.remove('hidden');
+    }
+
+    // Mostrar botón "Recepcionar" (carga de XML) si tiene permiso
+    if (this.hasBtnRecepcionarTarget && this.#hasPerm('S_ReceptDocs')) {
+      this.btnRecepcionarTarget.classList.remove('hidden');
     }
 
     // Escuchar cambios en el formulario para ocultar btnChart
@@ -797,6 +802,12 @@ export default class extends TabulatorController {
   }
 
   // ── Formulario handlers ────────────────────────────────────────────────────
+
+  // Recarga la tabla tras recepcionar un documento desde el panel de carga
+  // (evento documents-reception:done)
+  reloadTable() {
+    this.table?.replaceData();
+  }
 
   search() {
     const clave     = this.inputClaveTarget.value.trim();
