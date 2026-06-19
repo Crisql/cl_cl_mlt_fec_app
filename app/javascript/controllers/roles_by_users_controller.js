@@ -28,7 +28,7 @@ export default class extends TabulatorController {
     // panel
     'panelBackdrop', 'panel', 'panelTitle',
     'panelRole', 'panelRoleError',
-    'panelUser', 'panelUserError',
+    'userInput', 'userDropdown', 'panelUserError',
     'companyWrapper', 'companyInput', 'companyDropdown',
     'submitBtn', 'submitIcon', 'submitLabel',
   ];
@@ -47,6 +47,10 @@ export default class extends TabulatorController {
   /** Lista completa de compañías (solo clavisco) */
   #companies    = [];
   #companiesFilt = [];
+
+  /** Lista de usuarios de la compañía (para autocomplete del panel) */
+  #users        = [];
+  #usersFilt    = [];
 
   /** Fila en edición (null → crear) */
   #editingRow   = null;
@@ -190,7 +194,9 @@ export default class extends TabulatorController {
     // Si editando, preseleccionar valores
     if (isEdit) {
       this.panelRoleTarget.value = row.RolId;
-      this.panelUserTarget.value = row.UserId;
+      this.#setUserInput(row.UserId, row.UserName);
+    } else {
+      this.#setUserInput(null);
     }
 
     // Limpiar errores
@@ -292,19 +298,65 @@ export default class extends TabulatorController {
   async #loadPanelUsers(companyId) {
     try {
       const data = await this.#apiFetch(`/api/User/GetUsersByCompany?companyId=${companyId}`);
-      const users = data.Data || [];
-      const sel = this.panelUserTarget;
-      sel.innerHTML = '';
-      users.forEach(u => {
-        const opt = document.createElement('option');
-        opt.value = u.UserId;
-        opt.textContent = u.UserName;
-        sel.appendChild(opt);
-      });
-      if (!users.length) showToast(data.Message || 'Sin usuarios para esta compañía.', 'warning');
+      this.#users     = data.Data || [];
+      this.#usersFilt = [...this.#users];
+      // limpiar selección previa al recargar usuarios de otra compañía
+      this.#setUserInput(null);
+      if (!this.#users.length) showToast(data.Message || 'Sin usuarios para esta compañía.', 'warning');
     } catch (err) {
       showToast(err.message || 'Error al cargar usuarios.', 'error');
     }
+  }
+
+  // ── Panel — usuario (autocomplete) ────────────────────────────────────────
+
+  #setUserInput(userId, userName = null) {
+    const match = userId != null
+      ? this.#users.find(u => String(u.UserId) === String(userId))
+      : null;
+    this.userInputTarget.value = match ? match.UserName : (userName || '');
+    if (match) {
+      this.userInputTarget.dataset.selectedId = String(match.UserId);
+    } else if (userId != null) {
+      this.userInputTarget.dataset.selectedId = String(userId);
+    } else {
+      delete this.userInputTarget.dataset.selectedId;
+    }
+  }
+
+  onUserFocus() {
+    this.#usersFilt = [...this.#users];
+    this.#renderUserDropdown();
+  }
+
+  onUserInput() {
+    // editar el texto invalida la selección previa
+    delete this.userInputTarget.dataset.selectedId;
+    const q = this.userInputTarget.value.toLowerCase();
+    this.#usersFilt = this.#users.filter(u => u.UserName.toLowerCase().includes(q));
+    this.#renderUserDropdown();
+  }
+
+  #renderUserDropdown() {
+    const ul = this.userDropdownTarget;
+    ul.innerHTML = '';
+    this.#usersFilt.slice(0, 50).forEach(u => {
+      const li = document.createElement('li');
+      li.textContent = u.UserName;
+      li.className = 'px-3 py-2 hover:bg-blue-50 cursor-pointer';
+      li.addEventListener('mousedown', () => {
+        this.userInputTarget.value = u.UserName;
+        this.userInputTarget.dataset.selectedId = String(u.UserId);
+        ul.classList.add('hidden');
+        this.panelUserErrorTarget.classList.add('hidden');
+      });
+      ul.appendChild(li);
+    });
+    ul.classList.toggle('hidden', this.#usersFilt.length === 0);
+
+    // cerrar al perder foco
+    const hide = () => { ul.classList.add('hidden'); };
+    this.userInputTarget.addEventListener('blur', hide, { once: true });
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -318,7 +370,7 @@ export default class extends TabulatorController {
 
     const payload = {
       RolId:     parseInt(this.panelRoleTarget.value),
-      UserId:    this.panelUserTarget.value,
+      UserId:    this.userInputTarget.dataset.selectedId,
       CompanyId: selectedCompanyId,
       RolByUser: this.#editingRow ? this.#editingRow.RolByUser : 0,
     };
@@ -347,7 +399,7 @@ export default class extends TabulatorController {
     } else {
       this.panelRoleErrorTarget.classList.add('hidden');
     }
-    if (!this.panelUserTarget.value) {
+    if (!this.userInputTarget.dataset.selectedId) {
       this.panelUserErrorTarget.classList.remove('hidden');
       valid = false;
     } else {
