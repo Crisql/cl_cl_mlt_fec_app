@@ -1,6 +1,6 @@
 import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator_controller';
 import { Storage, SStore } from 'vendor/clavisco/core';
-import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 
 /**
@@ -28,6 +28,17 @@ export default class extends TabulatorController {
     'submitBtn',
     'submitIcon',
     'submitLabel',
+    // Panel de permisos del rol
+    'permsPanel',
+    'permsBackdrop',
+    'permsTitle',
+    'permsLoader',
+    'permsList',
+    'permsEmpty',
+    'permsSearch',
+    'permsSelectAll',
+    'permsCount',
+    'permsSaveBtn',
   ];
 
   static values = { ...TabulatorController.values };
@@ -42,6 +53,20 @@ export default class extends TabulatorController {
 
   /** companyId leído del storage */
   #companyId = null;
+
+  // ── Estado del panel de permisos ────────────────────────────────────────────
+
+  /** Rol cuyos permisos se gestionan en el panel */
+  #permsRole = null;
+
+  /** Catálogo completo de permisos (cargado una vez y reutilizado) */
+  #allPerms = [];
+
+  /** Ids asignados al rol al abrir el panel (estado inicial) */
+  #initialPermIds = new Set();
+
+  /** Ids asignados según la edición actual del usuario */
+  #currentPermIds = new Set();
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -91,12 +116,15 @@ export default class extends TabulatorController {
       {
         title: 'Acciones',
         field: 'Id',
-        width: 110,
+        width: 140,
         hozAlign: 'center',
-        formatter: () => this.#editButton(),
+        formatter: () => this.#rowActions(),
         cellClick: (e, cell) => {
+          const data = cell.getRow().getData();
           if (e.target.closest('[data-action-type="edit"]')) {
-            this.#editRole(cell.getRow().getData());
+            this.#editRole(data);
+          } else if (e.target.closest('[data-action-type="perms"]')) {
+            this.#openPermsPanel(data);
           }
         },
       },
@@ -142,12 +170,18 @@ export default class extends TabulatorController {
       : `<span style="background-color:#fdecea; color:#c0392b;" class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">Inactivo</span>`;
   }
 
-  #editButton() {
+  #rowActions() {
     return `
-      <button type="button" data-action-type="edit" data-tooltip="Editar"
-              class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-        <span class="material-icons text-base">edit</span>
-      </button>`;
+      <div class="flex items-center justify-center gap-1">
+        <button type="button" data-action-type="edit" data-tooltip="Editar"
+                class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+          <span class="material-icons text-base">edit</span>
+        </button>
+        <button type="button" data-action-type="perms" data-tooltip="Permisos"
+                class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+          <span class="material-icons text-base">verified_user</span>
+        </button>
+      </div>`;
   }
 
   // ── Handlers de eventos ───────────────────────────────────────────────────
@@ -224,6 +258,222 @@ export default class extends TabulatorController {
     this.nameErrorTarget.classList.add('hidden');
   }
 
+  // ── Panel de permisos del rol ───────────────────────────────────────────────
+
+  /** Texto del filtro de búsqueda de permisos */
+  #permsFilter = '';
+
+  async #openPermsPanel(role) {
+    if (!role) return;
+
+    if (role.Name === 'OWNER') {
+      showToast('Este rol administra todos los permisos y no es editable', 'info');
+      return;
+    }
+
+    this.#permsRole = role;
+    this.#permsFilter = '';
+    this.#initialPermIds = new Set();
+    this.#currentPermIds = new Set();
+
+    this.permsTitleTarget.textContent = role.Name;
+    this.permsSearchTarget.value = '';
+    this.permsListTarget.innerHTML = '';
+    this.permsEmptyTarget.classList.add('hidden');
+    this.permsSaveBtnTarget.disabled = true;
+
+    this.permsBackdropTarget.classList.remove('hidden');
+    this.permsPanelTarget.classList.remove('translate-x-full');
+    document.body.style.overflow = 'hidden';
+
+    await this.#loadRolePerms();
+  }
+
+  // Cierre solicitado por el usuario (X, backdrop, Cancelar): confirma si hay
+  // cambios sin guardar.
+  async requestClosePermsPanel() {
+    if (this.#hasPermsChanges()) {
+      const ok = await confirm(
+        'Hay cambios sin guardar que se perderán si cierra el panel. ¿Desea cerrar de todos modos?',
+        'Cambios sin guardar'
+      );
+      if (!ok) return;
+    }
+    this.closePermsPanel();
+  }
+
+  closePermsPanel() {
+    this.permsPanelTarget.classList.add('translate-x-full');
+    this.permsBackdropTarget.classList.add('hidden');
+    document.body.style.overflow = '';
+    this.#permsRole = null;
+  }
+
+  async #loadRolePerms() {
+    this.permsLoaderTarget.classList.remove('hidden');
+
+    try {
+      // El catálogo de permisos se carga una sola vez y se reutiliza entre roles.
+      const requests = [
+        this.#apiFetch(`/api/Permission/GetPermissionsByRol?idRol=${this.#permsRole.Id}`),
+      ];
+      if (this.#allPerms.length === 0) {
+        requests.push(this.#apiFetch('/api/Permission/GetPermissions'));
+      }
+
+      const [byRolRes, allPermsRes] = await Promise.all(requests);
+
+      if (allPermsRes) {
+        if (allPermsRes.Data && allPermsRes.Data.length) {
+          this.#allPerms = allPermsRes.Data;
+        } else {
+          showToast(allPermsRes.Message || 'No se pudieron cargar los permisos', 'warning');
+        }
+      }
+
+      const assignedIds = Array.isArray(byRolRes.Data) ? byRolRes.Data : [];
+      this.#initialPermIds = new Set(assignedIds);
+      this.#currentPermIds = new Set(assignedIds);
+
+      this.#renderPermsList();
+      this.#updatePermsUI();
+    } catch (err) {
+      showToast(err.message || 'Error al cargar los permisos del rol', 'error');
+    } finally {
+      this.permsLoaderTarget.classList.add('hidden');
+    }
+  }
+
+  #filteredPerms() {
+    const q = this.#permsFilter.trim().toLowerCase();
+    if (!q) return this.#allPerms;
+    return this.#allPerms.filter((p) => (p.Description || '').toLowerCase().includes(q));
+  }
+
+  #renderPermsList() {
+    const perms = this.#filteredPerms();
+    this.permsListTarget.innerHTML = '';
+
+    if (perms.length === 0) {
+      this.permsEmptyTarget.classList.remove('hidden');
+      this.permsEmptyTarget.classList.add('flex');
+      return;
+    }
+    this.permsEmptyTarget.classList.add('hidden');
+    this.permsEmptyTarget.classList.remove('flex');
+
+    perms.forEach((perm) => {
+      const checked = this.#currentPermIds.has(perm.Id);
+      const label = document.createElement('label');
+      label.dataset.testid = `role-perm-${perm.Id}`;
+      label.className =
+        'flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ' +
+        (checked ? 'border-blue-200 bg-blue-50/50' : 'border-gray-200 hover:bg-gray-50');
+
+      label.innerHTML = `
+        <input type="checkbox" data-action="change->roles#togglePerm" data-perm-id="${perm.Id}"
+               ${checked ? 'checked' : ''}
+               class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+        <div class="flex flex-col flex-1 gap-0.5 min-w-0">
+          <span class="font-medium text-gray-800 text-sm">${this.#escapeHtml(perm.Description)}</span>
+        </div>`;
+
+      this.permsListTarget.appendChild(label);
+    });
+  }
+
+  togglePerm(event) {
+    const id = parseInt(event.target.dataset.permId, 10);
+    if (Number.isNaN(id)) return;
+
+    if (event.target.checked) {
+      this.#currentPermIds.add(id);
+    } else {
+      this.#currentPermIds.delete(id);
+    }
+
+    // Refleja el estilo de la fila sin re-renderizar toda la lista
+    const label = event.target.closest('label');
+    if (label) {
+      const checked = event.target.checked;
+      label.className =
+        'flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ' +
+        (checked ? 'border-blue-200 bg-blue-50/50' : 'border-gray-200 hover:bg-gray-50');
+    }
+
+    this.#updatePermsUI();
+  }
+
+  onPermsSearch(event) {
+    this.#permsFilter = event.target.value || '';
+    this.#renderPermsList();
+    this.#updatePermsUI();
+  }
+
+  toggleSelectAllPerms(event) {
+    const select = event.target.checked;
+    // Aplica solo a los permisos visibles según el filtro actual
+    this.#filteredPerms().forEach((perm) => {
+      if (select) this.#currentPermIds.add(perm.Id);
+      else this.#currentPermIds.delete(perm.Id);
+    });
+    this.#renderPermsList();
+    this.#updatePermsUI();
+  }
+
+  #updatePermsUI() {
+    // Contador de asignados (sobre el total, no solo lo filtrado)
+    this.permsCountTarget.textContent = this.#currentPermIds.size;
+
+    // Estado del checkbox "Seleccionar todos" según lo visible
+    const visible = this.#filteredPerms();
+    const allVisibleChecked = visible.length > 0 && visible.every((p) => this.#currentPermIds.has(p.Id));
+    this.permsSelectAllTarget.checked = allVisibleChecked;
+
+    // Habilitar Guardar solo si hay cambios respecto al estado inicial
+    this.permsSaveBtnTarget.disabled = !this.#hasPermsChanges();
+  }
+
+  #hasPermsChanges() {
+    if (this.#initialPermIds.size !== this.#currentPermIds.size) return true;
+    for (const id of this.#currentPermIds) {
+      if (!this.#initialPermIds.has(id)) return true;
+    }
+    return false;
+  }
+
+  async savePermissions() {
+    if (!this.#permsRole || !this.#hasPermsChanges()) {
+      showToast('No hay cambios para guardar', 'info');
+      return;
+    }
+
+    const permByRolList = Array.from(this.#currentPermIds).map((permId) => ({
+      Id: 0,
+      PermId: permId,
+      RolId: this.#permsRole.Id,
+      Active: true,
+    }));
+
+    this.permsLoaderTarget.classList.remove('hidden');
+
+    try {
+      await this.#apiFetch('/api/Permission/AssignPermByRol', {
+        method: 'POST',
+        body: JSON.stringify({ permByRolList, idRol: this.#permsRole.Id }),
+      });
+
+      showToast('Permisos asignados con éxito!!!', 'success');
+      this.#initialPermIds = new Set(this.#currentPermIds);
+      this.#updatePermsUI();
+      this.closePermsPanel();
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar los permisos', message: err.message || 'Error desconocido' });
+    } finally {
+      this.permsLoaderTarget.classList.add('hidden');
+    }
+  }
+
   async #apiFetch(url, options = {}) {
     const session = Storage.get('Session') || {};
     const token   = session.access_token;
@@ -258,5 +508,11 @@ export default class extends TabulatorController {
     const json = JSON.parse(text);
     if (decodedMessage && !json.Message) json.Message = decodedMessage;
     return json;
+  }
+
+  #escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str || ''));
+    return div.innerHTML;
   }
 }

@@ -13,12 +13,8 @@ Rails.application.routes.draw do
       as: :account_verification, constraints: { otp_code: %r{[^/]+} }
 
   namespace :configurations do
-    get 'permissions',         to: 'permissions#index',  as: :permissions
-    get 'permissions/by-role', to: 'permissions#index',  as: :permissions_by_role
-    get 'permissions/global',  to: 'permissions#index',  as: :permissions_global
     get 'user-profile',        to: 'user_profile#index', as: :user_profile
-    get 'roles',               to: 'roles#index',        as: :roles
-    get 'roles-by-users',      to: 'roles_by_users#index', as: :roles_by_users
+    get 'security',            to: 'roles#index',        as: :security
     get 'general',             to: 'general#index',      as: :general
     get 'numbering',           to: 'numbering#index',    as: :numbering
     get 'branches',            to: 'branches#index',     as: :branches

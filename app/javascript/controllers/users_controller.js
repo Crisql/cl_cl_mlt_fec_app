@@ -57,6 +57,13 @@ export default class extends TabulatorController {
     'createEmail', 'createEmailError',
     'createOcTypeWrapper', 'createOcType', 'createOcTypeError',
     'createSubmitBtn',
+    // Gestionar accesos panel
+    'accessPanel', 'accessBackdrop', 'accessLoader', 'accessUserLabel',
+    'accessTabBtn', 'accessTabContent',
+    'accessRoleSearch', 'accessRoleList', 'accessRoleEmpty', 'accessRoleError',
+    'accessGlobalSearch', 'accessGlobalSelectAll',
+    'accessGlobalList', 'accessGlobalEmpty', 'accessGlobalCount',
+    'accessSaveBtn',
   ];
 
   // ── Estado ──────────────────────────────────────────────────────────────────
@@ -98,12 +105,30 @@ export default class extends TabulatorController {
   #draggedCompanyId   = null;
   #draggedFromZone    = null;
 
+  // Gestionar accesos (panel por usuario)
+  #globalAccessAllowed   = false;   // permiso para el tab de permisos globales
+  #accessUser            = null;    // usuario seleccionado (fila de la tabla)
+  #accessActiveTab       = 'roles';
+  // Roles tab
+  #accessRoles           = [];
+  #accessInitialRolId    = null;
+  #accessCurrentRolId    = null;
+  #accessRolByUser       = 0;       // id de la asignación existente (0 = nueva)
+  #accessRoleFilter      = '';
+  // Permisos globales tab
+  #accessGlobalPerms     = [];      // catálogo global (cacheado entre usuarios)
+  #accessGlobalInitial   = new Set();
+  #accessGlobalCurrent   = new Set();
+  #accessGlobalFilter    = '';
+  #accessGlobalLoaded    = false;   // asignados del usuario actual ya cargados
+
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   connect() {
     const company = SStore.get('CurrentCompany');
     this.#companyId  = company?.companyId ? parseInt(company.companyId) : null;
     this.#permissions = SStore.get('Permissions') || [];
+    this.#globalAccessAllowed = this.#hasPerm('Configurations_Permissions_GlobalAccess');
 
     this.#buildVisibleTabs();
 
@@ -177,17 +202,30 @@ export default class extends TabulatorController {
         width: 100, hozAlign: 'center',
         formatter: (cell) => this.#statusBadge(cell.getValue() ? 'active' : 'inactive'),
       },
-      ...(hasPerm ? [{
+      {
         title: 'Acciones',
         field: '_actions',
-        width: 80, hozAlign: 'center', headerSort: false,
+        width: hasPerm ? 110 : 80, hozAlign: 'center', headerSort: false,
         formatter: () => `
-          <button type="button" data-action-type="edit" data-tooltip="Editar"
-                  class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-            <span class="material-icons text-base">edit</span>
-          </button>`,
-        cellClick: (_e, cell) => this.#onEditClick(cell.getRow().getData()),
-      }] : []),
+          <div class="flex items-center justify-center gap-1">
+            ${hasPerm ? `<button type="button" data-action-type="edit" data-tooltip="Editar"
+                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+              <span class="material-icons text-base">edit</span>
+            </button>` : ''}
+            <button type="button" data-action-type="manage-access" data-tooltip="Gestionar accesos"
+                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+              <span class="material-icons text-base">admin_panel_settings</span>
+            </button>
+          </div>`,
+        cellClick: (e, cell) => {
+          const data = cell.getRow().getData();
+          if (e.target.closest('[data-action-type="edit"]')) {
+            this.#onEditClick(data);
+          } else if (e.target.closest('[data-action-type="manage-access"]')) {
+            this.#openAccessPanel(data);
+          }
+        },
+      },
     ];
   }
 
@@ -1138,6 +1176,442 @@ export default class extends TabulatorController {
     } else {
       this.#clearCompanyLists();
     }
+  }
+
+  // ── Gestionar accesos (panel por usuario) ──────────────────────────────────────
+  //
+  // Tab "Roles": asignación de un rol por usuario y compañía.
+  //   - GET  /api/Rol/GetRoles?companyId            → roles de la compañía
+  //   - GET  /api/Rol/GetRolUserCompAssign?rolId=0  → asignación actual del usuario
+  //   - POST /api/Rol/AssignRolByUserComp           → crear/editar asignación
+  //
+  // Tab "Permisos globales" (solo si Configurations_Permissions_GlobalAccess):
+  //   - GET    /api/Permission/global-permissions       → catálogo global
+  //   - GET    /api/User/global-permissions?userId=X     → asignados al usuario
+  //   - POST   /api/Permission/bulk-global-permissions   → asignar
+  //   - DELETE /api/Permission/bulk-global-permissions   → desasignar
+
+  async #openAccessPanel(row) {
+    if (!row) return;
+
+    this.#accessUser = row;
+    this.#accessActiveTab = 'roles';
+    this.#accessGlobalFilter = '';
+    this.#accessRoleFilter = '';
+
+    // Estado por-usuario: reiniciar al abrir para otro usuario (evita asteriscos
+    // de cambios "fantasma" heredados del usuario anterior).
+    this.#accessInitialRolId  = '';
+    this.#accessCurrentRolId  = '';
+    this.#accessGlobalInitial = new Set();
+    this.#accessGlobalCurrent = new Set();
+    this.#accessGlobalLoaded  = false;
+    this.accessGlobalListTarget.innerHTML = '';
+
+    this.accessUserLabelTarget.textContent = row.FullName || row.Email || '';
+    this.accessGlobalSearchTarget.value = '';
+    this.accessRoleSearchTarget.value = '';
+
+    // Mostrar el tab de permisos globales solo si el usuario actual tiene el permiso
+    this.accessTabBtnTargets.forEach(btn => {
+      if (btn.dataset.accessTab === 'global') {
+        btn.classList.toggle('hidden', !this.#globalAccessAllowed);
+      }
+    });
+
+    this.#activateAccessTab('roles');
+
+    // Abrir panel
+    this.accessBackdropTarget.classList.remove('hidden');
+    this.accessPanelTarget.classList.remove('translate-x-full');
+    document.body.style.overflow = 'hidden';
+
+    await this.#loadAccessRoles();
+  }
+
+  // Cierre por X o backdrop (puede ser accidental): confirma si hay cambios sin
+  // guardar en cualquiera de los dos tabs.
+  async requestCloseAccessPanel() {
+    if (this.#anyAccessChanges()) {
+      const ok = await confirm(
+        'Hay cambios sin guardar que se perderán si cierra el panel. ¿Desea cerrar de todos modos?',
+        'Cambios sin guardar'
+      );
+      if (!ok) return;
+    }
+    this.closeAccessPanel();
+  }
+
+  // Cancelar es un descarte explícito del tab activo: no confirma por esos
+  // cambios. Solo confirma si el OTRO tab tiene cambios que también se perderían.
+  async cancelAccessPanel() {
+    const otherTab = this.#accessActiveTab === 'roles' ? 'global' : 'roles';
+    if (this.#tabHasChanges(otherTab)) {
+      const label = otherTab === 'global' ? 'Permisos globales' : 'Roles';
+      const ok = await confirm(
+        `Hay cambios sin guardar en ${label} que se perderán si cierra el panel. ¿Desea cerrar de todos modos?`,
+        'Cambios sin guardar'
+      );
+      if (!ok) return;
+    }
+    this.closeAccessPanel();
+  }
+
+  closeAccessPanel() {
+    this.accessPanelTarget.classList.add('translate-x-full');
+    this.accessBackdropTarget.classList.add('hidden');
+    document.body.style.overflow = '';
+    this.#accessUser = null;
+  }
+
+  switchAccessTab(event) {
+    const name = event.currentTarget.dataset.accessTab;
+    if (name === this.#accessActiveTab) return;
+    this.#activateAccessTab(name);
+
+    // Cargar asignados del usuario al entrar al tab global (una vez por usuario)
+    if (name === 'global' && !this.#accessGlobalLoaded) {
+      this.#loadAccessGlobalPerms();
+    }
+  }
+
+  #activateAccessTab(name) {
+    this.#accessActiveTab = name;
+
+    this.accessTabBtnTargets.forEach(btn => {
+      const isActive = btn.dataset.accessTab === name;
+      btn.classList.toggle('border-blue-600', isActive);
+      btn.classList.toggle('text-blue-600',   isActive);
+      btn.classList.toggle('border-transparent', !isActive);
+      btn.classList.toggle('text-gray-500',   !isActive);
+    });
+
+    this.accessTabContentTargets.forEach(panel => {
+      panel.classList.toggle('hidden', panel.dataset.accessTab !== name);
+    });
+
+    // El contador de globales solo es relevante en el tab de permisos globales
+    if (this.hasAccessGlobalCountTarget) {
+      this.accessGlobalCountTarget.parentElement.classList.toggle('invisible', name !== 'global');
+    }
+
+    this.#updateAccessSaveBtn();
+  }
+
+  // ── Tab Roles ───────────────────────────────────────────────────────────────
+
+  async #loadAccessRoles() {
+    this.accessLoaderTarget.classList.remove('hidden');
+    this.accessRoleErrorTarget.classList.add('hidden');
+
+    try {
+      const [rolesRes, assignsRes] = await Promise.all([
+        this.#apiFetch(`/api/Rol/GetRoles?companyId=${this.#companyId}`),
+        this.#apiFetch(`/api/Rol/GetRolUserCompAssign?rolId=0&companyId=${this.#companyId}`),
+      ]);
+
+      this.#accessRoles = (rolesRes.Data || []).filter(r => r.Active && r.Name !== 'OWNER');
+
+      // Asignación actual del usuario (un rol por compañía)
+      const assigns = assignsRes.Data || [];
+      const mine = assigns.find(a => String(a.UserId) === String(this.#accessUser.Id));
+      this.#accessRolByUser    = mine ? mine.RolByUser : 0;
+      this.#accessInitialRolId = mine ? String(mine.RolId) : '';
+      this.#accessCurrentRolId = this.#accessInitialRolId;
+
+      this.#renderAccessRoleList();
+      this.#updateAccessSaveBtn();
+    } catch (err) {
+      showToast(err.message || 'Error al cargar los roles del usuario', 'error');
+    } finally {
+      this.accessLoaderTarget.classList.add('hidden');
+    }
+  }
+
+  #filteredAccessRoles() {
+    const q = this.#accessRoleFilter.trim().toLowerCase();
+    if (!q) return this.#accessRoles;
+    return this.#accessRoles.filter(r => (r.Name || '').toLowerCase().includes(q));
+  }
+
+  #renderAccessRoleList() {
+    const roles = this.#filteredAccessRoles();
+    this.accessRoleListTarget.innerHTML = '';
+
+    if (roles.length === 0) {
+      this.accessRoleEmptyTarget.classList.remove('hidden');
+      this.accessRoleEmptyTarget.classList.add('flex');
+      return;
+    }
+    this.accessRoleEmptyTarget.classList.add('hidden');
+    this.accessRoleEmptyTarget.classList.remove('flex');
+
+    roles.forEach(role => {
+      const checked = String(role.Id) === String(this.#accessCurrentRolId);
+      const label = document.createElement('label');
+      label.className =
+        'flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ' +
+        (checked ? 'border-blue-200 bg-blue-50/50' : 'border-gray-200 hover:bg-gray-50');
+      label.innerHTML = `
+        <input type="radio" name="access-role" data-action="change->users#selectAccessRole" data-rol-id="${role.Id}"
+               ${checked ? 'checked' : ''}
+               class="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+        <div class="flex flex-col flex-1 gap-0.5 min-w-0">
+          <span class="font-medium text-gray-800 text-sm">${this.#escapeHtml(role.Name)}</span>
+        </div>`;
+      this.accessRoleListTarget.appendChild(label);
+    });
+  }
+
+  selectAccessRole(event) {
+    this.#accessCurrentRolId = event.target.dataset.rolId;
+    this.accessRoleErrorTarget.classList.add('hidden');
+    this.#renderAccessRoleList();   // refleja la selección (un solo rol activo)
+    this.#updateAccessSaveBtn();
+  }
+
+  onAccessRoleSearch(event) {
+    this.#accessRoleFilter = event.target.value || '';
+    this.#renderAccessRoleList();
+  }
+
+  async #saveAccessRole() {
+    if (!this.#accessCurrentRolId) {
+      this.accessRoleErrorTarget.classList.remove('hidden');
+      return;
+    }
+
+    const payload = {
+      RolId:     parseInt(this.#accessCurrentRolId),
+      UserId:    this.#accessUser.Id,
+      CompanyId: this.#companyId,
+      RolByUser: this.#accessRolByUser || 0,
+    };
+
+    this.accessLoaderTarget.classList.remove('hidden');
+    try {
+      await this.#apiFetch('/api/Rol/AssignRolByUserComp/', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      showToast('Asignación realizada correctamente.', 'success');
+      this.#accessInitialRolId = this.#accessCurrentRolId;
+      this.#updateAccessSaveBtn();
+      this.#afterAccessSave('global');
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al guardar la asignación', message: err.message });
+    } finally {
+      this.accessLoaderTarget.classList.add('hidden');
+    }
+  }
+
+  // ── Tab Permisos globales ─────────────────────────────────────────────────────
+
+  async #loadAccessGlobalPerms() {
+    this.accessLoaderTarget.classList.remove('hidden');
+
+    try {
+      const requests = [
+        this.#apiFetch(`/api/User/global-permissions?userId=${encodeURIComponent(this.#accessUser.Id)}`),
+      ];
+      if (this.#accessGlobalPerms.length === 0) {
+        requests.push(this.#apiFetch('/api/Permission/global-permissions'));
+      }
+
+      const [assignedRes, catalogRes] = await Promise.all(requests);
+
+      if (catalogRes) {
+        if (catalogRes.Data && catalogRes.Data.length) {
+          this.#accessGlobalPerms = catalogRes.Data;
+        } else {
+          showToast(catalogRes.Message || 'No hay permisos globales disponibles', 'warning');
+        }
+      }
+
+      const assignedIds = (assignedRes.Data && Array.isArray(assignedRes.Data))
+        ? assignedRes.Data.map(p => p.Id)
+        : [];
+      this.#accessGlobalInitial = new Set(assignedIds);
+      this.#accessGlobalCurrent = new Set(assignedIds);
+      this.#accessGlobalLoaded  = true;
+
+      this.#renderAccessGlobalList();
+      this.#updateAccessSaveBtn();
+    } catch (err) {
+      showToast(err.message || 'Error al cargar los permisos globales', 'error');
+    } finally {
+      this.accessLoaderTarget.classList.add('hidden');
+    }
+  }
+
+  #filteredAccessGlobal() {
+    const q = this.#accessGlobalFilter.trim().toLowerCase();
+    if (!q) return this.#accessGlobalPerms;
+    return this.#accessGlobalPerms.filter(p => (p.Description || '').toLowerCase().includes(q));
+  }
+
+  #renderAccessGlobalList() {
+    const perms = this.#filteredAccessGlobal();
+    this.accessGlobalListTarget.innerHTML = '';
+
+    if (perms.length === 0) {
+      this.accessGlobalEmptyTarget.classList.remove('hidden');
+      this.accessGlobalEmptyTarget.classList.add('flex');
+      return;
+    }
+    this.accessGlobalEmptyTarget.classList.add('hidden');
+    this.accessGlobalEmptyTarget.classList.remove('flex');
+
+    perms.forEach(perm => {
+      const checked = this.#accessGlobalCurrent.has(perm.Id);
+      const label = document.createElement('label');
+      label.className =
+        'flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ' +
+        (checked ? 'border-blue-200 bg-blue-50/50' : 'border-gray-200 hover:bg-gray-50');
+      label.innerHTML = `
+        <input type="checkbox" data-action="change->users#toggleAccessGlobalPerm" data-perm-id="${perm.Id}"
+               ${checked ? 'checked' : ''}
+               class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+        <div class="flex flex-col flex-1 gap-0.5 min-w-0">
+          <span class="font-medium text-gray-800 text-sm">${this.#escapeHtml(perm.Description)}</span>
+        </div>`;
+      this.accessGlobalListTarget.appendChild(label);
+    });
+  }
+
+  toggleAccessGlobalPerm(event) {
+    const id = parseInt(event.target.dataset.permId, 10);
+    if (Number.isNaN(id)) return;
+
+    if (event.target.checked) this.#accessGlobalCurrent.add(id);
+    else this.#accessGlobalCurrent.delete(id);
+
+    const label = event.target.closest('label');
+    if (label) {
+      const checked = event.target.checked;
+      label.className =
+        'flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ' +
+        (checked ? 'border-blue-200 bg-blue-50/50' : 'border-gray-200 hover:bg-gray-50');
+    }
+
+    this.#updateAccessSaveBtn();
+  }
+
+  onAccessGlobalSearch(event) {
+    this.#accessGlobalFilter = event.target.value || '';
+    this.#renderAccessGlobalList();
+    this.#updateAccessSaveBtn();
+  }
+
+  toggleAccessGlobalAll(event) {
+    const select = event.target.checked;
+    this.#filteredAccessGlobal().forEach(perm => {
+      if (select) this.#accessGlobalCurrent.add(perm.Id);
+      else this.#accessGlobalCurrent.delete(perm.Id);
+    });
+    this.#renderAccessGlobalList();
+    this.#updateAccessSaveBtn();
+  }
+
+  async #saveAccessGlobal() {
+    const toAssign = [];
+    const toUnassign = [];
+    this.#accessGlobalCurrent.forEach(id => { if (!this.#accessGlobalInitial.has(id)) toAssign.push(id); });
+    this.#accessGlobalInitial.forEach(id => { if (!this.#accessGlobalCurrent.has(id)) toUnassign.push(id); });
+
+    if (toAssign.length === 0 && toUnassign.length === 0) {
+      showToast('No hay cambios para guardar', 'info');
+      return;
+    }
+
+    this.accessLoaderTarget.classList.remove('hidden');
+    try {
+      const requests = [];
+      if (toAssign.length > 0) {
+        requests.push(this.#apiFetch('/api/Permission/bulk-global-permissions', {
+          method: 'POST',
+          body: JSON.stringify({ UserId: this.#accessUser.Id, PermissionIds: toAssign }),
+        }));
+      }
+      if (toUnassign.length > 0) {
+        requests.push(this.#apiFetch('/api/Permission/bulk-global-permissions', {
+          method: 'DELETE',
+          body: JSON.stringify({ UserId: this.#accessUser.Id, PermissionIds: toUnassign }),
+        }));
+      }
+      await Promise.all(requests);
+
+      showToast('Permisos globales actualizados exitosamente', 'success');
+      this.#accessGlobalInitial = new Set(this.#accessGlobalCurrent);
+      this.#updateAccessSaveBtn();
+      this.#afterAccessSave('roles');
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al aplicar cambios', message: err.message });
+    } finally {
+      this.accessLoaderTarget.classList.add('hidden');
+    }
+  }
+
+  // ── Guardar (despacha según el tab activo) ────────────────────────────────────
+
+  saveAccess() {
+    if (this.#accessActiveTab === 'roles') this.#saveAccessRole();
+    else this.#saveAccessGlobal();
+  }
+
+  // Cambios pendientes de un tab específico ('roles' | 'global').
+  #tabHasChanges(name) {
+    if (name === 'roles') {
+      return !!this.#accessCurrentRolId && this.#accessCurrentRolId !== this.#accessInitialRolId;
+    }
+    if (name === 'global') {
+      if (this.#accessGlobalInitial.size !== this.#accessGlobalCurrent.size) return true;
+      for (const id of this.#accessGlobalCurrent) {
+        if (!this.#accessGlobalInitial.has(id)) return true;
+      }
+      return false;
+    }
+    return false;
+  }
+
+  #anyAccessChanges() {
+    return this.#tabHasChanges('roles') || this.#tabHasChanges('global');
+  }
+
+  // Tras guardar un tab: cierra el panel solo si el OTRO tab no tiene cambios
+  // pendientes. Si los tiene, lo deja abierto (el asterisco rojo ya lo indica).
+  #afterAccessSave(otherTab) {
+    if (!this.#tabHasChanges(otherTab)) {
+      this.closeAccessPanel();
+    }
+  }
+
+  // Marca con asterisco rojo los tabs con cambios sin guardar.
+  #updateAccessTabIndicators() {
+    this.accessTabBtnTargets.forEach(btn => {
+      const dot = btn.querySelector('[data-access-dot]');
+      if (dot) dot.classList.toggle('hidden', !this.#tabHasChanges(btn.dataset.accessTab));
+    });
+  }
+
+  #updateAccessSaveBtn() {
+    // Contador de globales asignados + estado del "Seleccionar todos"
+    if (this.hasAccessGlobalCountTarget) {
+      this.accessGlobalCountTarget.textContent = this.#accessGlobalCurrent.size;
+    }
+    if (this.hasAccessGlobalSelectAllTarget) {
+      const visible = this.#filteredAccessGlobal();
+      this.accessGlobalSelectAllTarget.checked =
+        visible.length > 0 && visible.every(p => this.#accessGlobalCurrent.has(p.Id));
+    }
+    this.accessSaveBtnTarget.disabled = !this.#tabHasChanges(this.#accessActiveTab);
+    this.#updateAccessTabIndicators();
+  }
+
+  #escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str || ''));
+    return div.innerHTML;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────────

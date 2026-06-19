@@ -1,5 +1,5 @@
-<% content_for :title, "Roles" %>
-<% content_for :page_title, "Roles Existentes" %>
+<% content_for :title, "Seguridad" %>
+<% content_for :page_title, "Seguridad" %>
 
 <div data-controller="roles"
      data-testid="roles-page"
@@ -88,6 +88,112 @@
         <span data-roles-target="submitIcon" class="material-icons text-base">check</span>
         <span data-roles-target="submitLabel">Crear</span>
       </button>
+    </div>
+
+  </div>
+
+  <%# ---------------------------------------------------------------- %>
+  <%# PANEL LATERAL: Permisos del Rol %>
+  <%# ---------------------------------------------------------------- %>
+  <%# Backdrop %>
+  <div data-roles-target="permsBackdrop"
+       data-testid="role-perms-backdrop"
+       data-action="click->roles#requestClosePermsPanel"
+       class="hidden fixed inset-0 z-40 bg-black/40">
+  </div>
+
+  <%# Panel lateral %>
+  <div data-roles-target="permsPanel"
+       data-testid="role-perms-panel"
+       class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
+              translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+    <%# Header %>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <div class="min-w-0">
+        <h3 class="text-base font-semibold text-gray-800">Permisos del rol</h3>
+        <p data-roles-target="permsTitle"
+           data-testid="role-perms-title"
+           class="text-sm text-gray-500 truncate"></p>
+      </div>
+      <button type="button"
+              data-action="click->roles#requestClosePermsPanel"
+              class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors flex-shrink-0">
+        <span class="material-icons text-xl">close</span>
+      </button>
+    </div>
+
+    <%# Toolbar: buscar + seleccionar todos %>
+    <div class="px-6 pt-4 pb-2 flex-shrink-0 flex items-center gap-3">
+      <div class="relative flex-1">
+        <input type="text"
+               data-roles-target="permsSearch"
+               data-action="input->roles#onPermsSearch"
+               data-testid="role-perms-search"
+               placeholder="Buscar permiso..."
+               autocomplete="off"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <span class="material-icons absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none">search</span>
+      </div>
+      <label class="flex items-center gap-2 text-xs font-medium text-gray-600 cursor-pointer whitespace-nowrap">
+        <input type="checkbox"
+               data-roles-target="permsSelectAll"
+               data-action="change->roles#toggleSelectAllPerms"
+               data-testid="role-perms-select-all"
+               class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+        Seleccionar todos
+      </label>
+    </div>
+
+    <%# Cuerpo scrolleable: lista de permisos con checkbox %>
+    <div class="flex-1 overflow-y-auto px-6 py-3 relative">
+
+      <%# Loader scoped a la sección %>
+      <div data-roles-target="permsLoader"
+           class="hidden absolute inset-0 z-30 flex items-center justify-center bg-white/70">
+        <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
+          <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
+          <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
+                  stroke-linecap="round" stroke-dasharray="80 200">
+            <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                              from="0 25 25" to="360 25 25" dur="0.8s" repeatCount="indefinite"></animateTransform>
+          </circle>
+        </svg>
+      </div>
+
+      <div data-roles-target="permsList" data-testid="role-perms-list" class="flex flex-col gap-2"></div>
+
+      <%# Empty state (sin resultados de búsqueda) %>
+      <div data-roles-target="permsEmpty"
+           class="hidden flex-col items-center justify-center text-gray-400 py-16 text-center">
+        <span class="material-icons text-5xl opacity-30 mb-3">search_off</span>
+        <p class="text-sm">No se encontraron permisos</p>
+      </div>
+    </div>
+
+    <%# Footer %>
+    <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
+      <span class="text-xs text-gray-500">
+        <strong data-roles-target="permsCount" data-testid="role-perms-count">0</strong> permiso(s) asignado(s)
+      </span>
+      <div class="flex gap-3">
+        <button type="button"
+                data-testid="btn-cancel-perms"
+                data-action="click->roles#closePermsPanel"
+                class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          <span class="material-icons text-base">cancel</span>
+          Cancelar
+        </button>
+        <button type="button"
+                data-roles-target="permsSaveBtn"
+                data-testid="btn-save-perms"
+                data-action="click->roles#savePermissions"
+                disabled
+                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <span class="material-icons text-base">save</span>
+          Guardar
+        </button>
+      </div>
     </div>
 
   </div>
