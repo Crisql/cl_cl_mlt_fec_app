@@ -142,7 +142,7 @@ export default class extends TabulatorController {
         field: 'EmailStatus',
         widthGrow: 1,
         formatter: (cell) => {
-          const statusMap = { 1: 'listo', 2: 'procesando', 3: 'error', 4: 'enviado' };
+          const statusMap = { 1: 'pendiente', 2: 'enviando', 3: 'error', 4: 'enviado' };
           return this.#emailStatusBadge(statusMap[cell.getValue()] ?? String(cell.getValue()));
         },
       },
@@ -244,10 +244,10 @@ export default class extends TabulatorController {
 
   #emailStatusBadge(status) {
     const map = {
-      listo:      { bg: '#ecfdf5', color: '#065f46', label: 'Listo'      },
-      procesando: { bg: '#fffbeb', color: '#b45309', label: 'Procesando' },
+      pendiente:  { bg: '#f3f4f6', color: '#6b7280', label: 'Pendiente'  },
+      enviando:   { bg: '#e8f0fe', color: '#1a56db', label: 'Enviando'   },
       error:      { bg: '#fdecea', color: '#c0392b', label: 'Error'      },
-      enviado:    { bg: '#e8f0fe', color: '#1a56db', label: 'Enviado'    },
+      enviado:    { bg: '#e8f5ee', color: '#3a7d52', label: 'Enviado'    },
     };
     const { bg, color, label } = map[status] ?? { bg: '#f3f4f6', color: '#4b5563', label: status };
     return `<span style="background-color:${bg}; color:${color};"
