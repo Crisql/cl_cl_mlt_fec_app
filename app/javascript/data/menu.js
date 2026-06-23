@@ -20,11 +20,11 @@ export default [
       { key: 'accept_documents_gt', label: 'Aceptación documentos GT',    route: '/documents/gt/receptions',    requiredPermission: 'S_AcceptDocsGT' },
       { key: 'mailParser',          label: 'Logs de recepciones',         route: '/documents/receptions/logs', requiredPermission: 'S_MailParserLogs' },
       { key: 'email_report',        label: 'Historial de correos',        route: '/documents/emails',           requiredPermission: 'S_EmailReport' },
-      { key: 'createFE',            label: 'Creación FE',                 route: '/documents/01/create',        requiredPermission: 'S_CreateDocsFE' },
-      { key: 'createND',            label: 'Creación ND',                 route: '/documents/02/create',        requiredPermission: 'S_CreateDocsND' },
-      { key: 'createNC',            label: 'Creación NC',                 route: '/documents/03/create',        requiredPermission: 'S_CreateDocsNC' },
-      { key: 'createFEC',           label: 'Creación FEC',                route: '/documents/08/create',        requiredPermission: 'S_CreateDocsFEC' },
-      { key: 'createREP',           label: 'Creación REP',                route: '/documents/10/create',        requiredPermission: 'S_CreateDocsREP' }
+      { key: 'createFE',            label: 'Emitir Factura Electrónica',  route: '/documents/01/create',        requiredPermission: 'S_CreateDocsFE' },
+      { key: 'createND',            label: 'Emitir Nota de Débito',       route: '/documents/02/create',        requiredPermission: 'S_CreateDocsND' },
+      { key: 'createNC',            label: 'Emitir Nota de Crédito',      route: '/documents/03/create',        requiredPermission: 'S_CreateDocsNC' },
+      { key: 'createFEC',           label: 'Emitir Factura de Compra',    route: '/documents/08/create',        requiredPermission: 'S_CreateDocsFEC' },
+      { key: 'createREP',           label: 'Emitir Recibo de Pago',       route: '/documents/10/create',        requiredPermission: 'S_CreateDocsREP' }
     ]
   },
   {
