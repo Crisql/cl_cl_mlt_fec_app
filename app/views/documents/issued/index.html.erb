@@ -202,7 +202,7 @@
               translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
 
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
-      <h3 class="text-base font-semibold text-gray-800">Correos enviados</h3>
+      <h3 class="text-base font-semibold text-gray-800">Historial de correos</h3>
       <button type="button"
               data-action="click->documents-issued#closeEmailPanel"
               class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">
@@ -222,8 +222,8 @@
         Cargando correos...
       </div>
 
-      <%# Tabla ocupa todo el espacio disponible; se reduce cuando aparece el form %>
-      <div data-documents-issued-target="emailTable" data-testid="email-table" class="flex-1 min-h-0"></div>
+      <%# Lista de tarjetas; ocupa el espacio disponible y hace scroll vertical propio %>
+      <div data-documents-issued-target="emailTable" data-testid="email-table" class="flex-1 min-h-0 overflow-y-auto -mr-2 pr-2"></div>
 
       <%# Mensaje sin registros %>
       <div data-documents-issued-target="emailEmpty"

@@ -2,6 +2,7 @@ import TabulatorController from 'vendor/clavisco/tabulator/controllers/tabulator
 import { Storage, SStore } from 'vendor/clavisco/core';
 import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
+import { relativeDate } from 'vendor/clavisco/format/dates';
 
 /**
  * DocumentsIssuedController — Búsqueda de documentos emitidos (FE/ND/NC/TE/FEC/FEE/REP).
@@ -72,9 +73,6 @@ export default class extends TabulatorController {
   /** Total real de registros (para el counter de paginación) */
   #totalRecords = 0;
 
-  /** Tabla de correos (Tabulator secundaria) */
-  #emailTabulator = null;
-
   /** Id del documento activo en el modal de correos */
   #activeEmailDocId = null;
 
@@ -110,7 +108,6 @@ export default class extends TabulatorController {
   }
 
   disconnect() {
-    this.#emailTabulator?.destroy();
     this.#chart?.destroy();
   }
 
@@ -638,50 +635,92 @@ export default class extends TabulatorController {
     document.body.style.overflow = '';
   }
 
+  // El panel es angosto (max-w-2xl): una tabla de 8 columnas trunca todo.
+  // Se renderiza como lista vertical de tarjetas — usa el alto disponible y
+  // muestra cada campo completo sin scroll horizontal. Ver §8 (paneles laterales).
   #buildEmailTable(data) {
-    if (this.#emailTabulator) {
-      this.#emailTabulator.setData(data);
-      return;
-    }
+    this.emailTableTarget.innerHTML = `
+      <div class="space-y-3">
+        ${data.map((m) => this.#emailCard(m)).join('')}
+      </div>`;
+  }
 
-    import('tabulator-tables').then(({ TabulatorFull }) => {
-      this.#emailTabulator = new TabulatorFull(this.emailTableTarget, {
-        data,
-        layout: 'fitColumns',
-        height: '100%',
-        maxHeight: undefined,
-        locale: TABULATOR_LOCALE,
-        langs: TABULATOR_LANGS,
-        pagination: true,
-        paginationSize: 5,
-        columnDefaults: { headerSort: false },
-        columns: [
-          { title: 'Fecha',          field: 'CreateDate',  widthGrow: 2 },
-          {
-            title: 'Estado',
-            field: 'Status',
-            width: 120,
-            formatter: (cell) => this.#emailStatusBadge(cell.getValue()),
-          },
-          {
-            title: 'Estado Doc',
-            field: 'DocStatus',
-            width: 130,
-            formatter: (cell) => this.#statusBadge(this.#statusLabel(Number(cell.getValue()))),
-          },
-          { title: 'Último intento', field: 'LastAttempt', widthGrow: 1 },
-          { title: 'Para',           field: 'OutputTo',    widthGrow: 2 },
-          { title: 'CC',             field: 'OutputCC',    widthGrow: 2 },
-          {
-            title: 'Tipo',
-            field: 'Type',
-            width: 100,
-            formatter: (cell) => this.#emailTypeBadge(cell.getValue()),
-          },
-          { title: 'Detalles',       field: 'Details',     widthGrow: 3 },
-        ],
-      });
-    });
+  // Normaliza un valor de texto de la API: null/undefined/""/"null" → "—".
+  // (escapeHtml(null) produce el literal "null", que es truthy y rompe el `|| '—'`.)
+  #mailText(value) {
+    if (value == null) return '—';
+    const str = String(value).trim();
+    if (str === '' || str.toLowerCase() === 'null') return '—';
+    return this.#escapeHtml(str);
+  }
+
+  // Renderiza una lista de correos (separados por coma) como chips individuales.
+  // Si no hay ninguno, devuelve "—".
+  #emailChips(value) {
+    if (value == null) return '<span class="text-sm text-gray-700">—</span>';
+    const emails = String(value)
+      .split(',')
+      .map((e) => e.trim())
+      .filter((e) => e !== '' && e.toLowerCase() !== 'null');
+
+    if (!emails.length) return '<span class="text-sm text-gray-700">—</span>';
+
+    return `
+      <div class="flex flex-wrap gap-1.5">
+        ${emails.map((e) => `
+          <span class="inline-flex items-center max-w-full bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-md break-all">
+            ${this.#escapeHtml(e)}
+          </span>`).join('')}
+      </div>`;
+  }
+
+  // Span de fecha relativa (relativeDate compartido) con la fecha original
+  // completa en el tooltip. Si no hay valor, devuelve "—" sin tooltip ni cursor-help.
+  #relativeDateSpan(value, className) {
+    const raw = (value == null) ? '' : String(value).trim();
+    const hasValue = raw !== '' && raw.toLowerCase() !== 'null';
+    if (!hasValue) return `<span class="${className}">—</span>`;
+    return `<span class="${className} cursor-help" title="${this.#escapeHtml(raw)}">${relativeDate(value)}</span>`;
+  }
+
+  // Una tarjeta por correo: cabecera con fecha + badges (estado correo, tipo),
+  // y debajo pares etiqueta/valor que envuelven texto largo (correos, detalles).
+  #emailCard(m) {
+    const row = (label, value, valueClass = 'text-gray-700') => `
+      <div class="flex flex-col gap-0.5">
+        <span class="text-xs font-medium text-gray-400">${label}</span>
+        <span class="text-sm ${valueClass} break-words">${value}</span>
+      </div>`;
+
+    // Fila de fecha relativa (con tooltip de la fecha original)
+    const dateRow = (label, value) => `
+      <div class="flex flex-col gap-0.5">
+        <span class="text-xs font-medium text-gray-400">${label}</span>
+        ${this.#relativeDateSpan(value, 'text-sm text-gray-700')}
+      </div>`;
+
+    // Para/CC pueden traer varios correos concatenados por coma → chips individuales
+    const chipRow = (label, value) => `
+      <div class="flex flex-col gap-1">
+        <span class="text-xs font-medium text-gray-400">${label}</span>
+        ${this.#emailChips(value)}
+      </div>`;
+
+    return `
+      <div class="border border-gray-200 rounded-lg p-4 space-y-3">
+        <div class="flex items-start justify-between flex-wrap gap-2">
+          ${this.#relativeDateSpan(m.CreateDate, 'text-sm font-semibold text-gray-800')}
+          <div class="flex flex-wrap items-center gap-1.5">
+            ${this.#emailStatusBadge(m.Status)}
+            ${this.#emailTypeBadge(m.Type)}
+          </div>
+        </div>
+        ${row('Estado del documento', this.#statusBadge(this.#statusLabel(Number(m.DocStatus))) || '—')}
+        ${chipRow('Para', m.OutputTo)}
+        ${chipRow('CC', m.OutputCC)}
+        ${dateRow('Último intento', m.LastAttempt)}
+        ${row('Detalles', this.#mailText(m.Details))}
+      </div>`;
   }
 
   onEmailRecipientInput() {
@@ -723,8 +762,6 @@ export default class extends TabulatorController {
   toggleOtherEmails() {
     this.otherEmailsFormTarget.classList.toggle('hidden');
     this.#updateResendButton();
-    // Tabulator necesita recalcular su altura cuando el form aparece/desaparece
-    requestAnimationFrame(() => this.#emailTabulator?.redraw(true));
   }
 
   async resendEmail() {
@@ -769,7 +806,7 @@ export default class extends TabulatorController {
         CreateDate: m.CreateDate ? m.CreateDate.replace('T', ' ').substring(0, 19) : '',
       }));
 
-      this.#emailTabulator?.setData(mails);
+      this.#buildEmailTable(mails);
       this.#setEmailState('table');
     } catch {
       this.#setEmailState('empty');
