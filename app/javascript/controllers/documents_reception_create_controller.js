@@ -2312,6 +2312,7 @@ export default class extends Controller {
   // ── Crear factura ──────────────────────────────────────
   async createDraft()  { await this.#doCreate(true)  }
   async createInSap()  { await this.#doCreate(false) }
+  cancel()             { Turbo.visit('/documents/receptions') }
 
   async #doCreate(isDraft) {
     if (!this.#selectedSupplierId) {

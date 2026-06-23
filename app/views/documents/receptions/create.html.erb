@@ -385,6 +385,12 @@
       <%# Footer fijo dentro del tab Cabecera %>
       <div class="flex-shrink-0 px-5 py-3 border-t border-gray-100 bg-white flex justify-end gap-3">
         <button type="button"
+                data-action="click->documents-reception-create#cancel"
+                class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+          <span class="material-icons text-base">cancel</span>
+          Cancelar
+        </button>
+        <button type="button"
                 disabled
                 data-documents-reception-create-target="btnCreateDraft"
                 data-action="click->documents-reception-create#createDraft"
