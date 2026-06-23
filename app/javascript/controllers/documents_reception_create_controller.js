@@ -94,6 +94,7 @@ export default class extends Controller {
   #shouldRecept     = false
 
   // Datos de catálogos
+  #activityCodes    = []
   #accountList      = []
   #taxCodeList      = []
   #itemSAPList      = []
@@ -212,7 +213,7 @@ export default class extends Controller {
       const [
         accountsRes, docXmlRes, docChargesRes, taxRes, itemsRes,
         companyRes, dimensionsRes, warehouseRes, projectsRes, currenciesRes,
-        freightRes
+        freightRes, activityRes
       ] = await Promise.all([
         this.#apiFetch('/api/Account/GetAccounts'),
         this.#apiFetch(`/api/Documents/GetDocAPInvoiceInfoXML?docId=${this.#docId}`),
@@ -225,6 +226,7 @@ export default class extends Controller {
         this.#apiFetch('/api/Project'),
         this.#apiFetch(`/api/Companies/${this.#companyId}/currencies`),
         this.#apiFetch('/api/Companies/GetAdditionalFreights'),
+        this.#apiFetch(`/api/Companies/${this.#companyId}/activity-codes`).catch(() => null),
       ])
 
       if (accountsRes?.Data?.length)     this.#accountList      = accountsRes.Data
@@ -242,6 +244,8 @@ export default class extends Controller {
       if (projectsRes?.Data?.length)     this.#projectList      = projectsRes.Data
       if (currenciesRes?.Data)           this.#companyCurrencies = currenciesRes.Data ?? []
       if (freightRes?.Data?.length)      this.#freightList        = freightRes.Data
+      this.#activityCodes = activityRes?.Data ?? activityRes ?? []
+      this.#populateActivitySelect()
     } catch (err) {
       this.#hideLoading()
       showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al cargar datos', message: err.message })
@@ -2470,6 +2474,25 @@ export default class extends Controller {
       TaxFactor:        this.receptTaxFactorTarget.value,
       CodigoActividad:  this.receptCodigoActividadTarget.value,
       UserId:           userId,
+    }
+  }
+
+  #populateActivitySelect() {
+    if (!this.hasReceptCodigoActividadTarget) return
+    const sel = this.receptCodigoActividadTarget
+    const current = sel.value
+    sel.innerHTML = '<option value="">-- Seleccione --</option>'
+    this.#activityCodes.forEach(a => {
+      const code = a.Code ?? a.code ?? ''
+      const name = a.Name ?? a.Description ?? a.name ?? ''
+      const opt  = document.createElement('option')
+      opt.value       = code
+      opt.textContent = `${code} - ${name}`
+      sel.appendChild(opt)
+    })
+    if (current) sel.value = current
+    if (!sel.value && this.#activityCodes.length === 1) {
+      sel.value = this.#activityCodes[0].Code ?? this.#activityCodes[0].code ?? ''
     }
   }
 

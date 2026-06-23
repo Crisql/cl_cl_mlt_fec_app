@@ -71,15 +71,14 @@
         <%# Código Actividad %>
         <div>
           <label class="block text-xs font-medium text-gray-600 mb-1">Código Actividad <span class="text-red-500">*</span></label>
-          <input type="text"
-                 data-documents-reception-create-target="receptCodigoActividad"
-                 data-testid="recept-codigo-actividad"
-                 placeholder="Código de actividad (6 dígitos)"
-                 maxlength="6"
-                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select data-documents-reception-create-target="receptCodigoActividad"
+                  data-testid="recept-codigo-actividad"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">-- Seleccione --</option>
+          </select>
           <p data-documents-reception-create-target="errorReceptCodigoActividad"
              data-testid="error-codigo-actividad"
-             class="hidden mt-1 text-xs text-red-600">El código de actividad debe tener exactamente 6 caracteres.</p>
+             class="hidden mt-1 text-xs text-red-600">El código de actividad es requerido.</p>
         </div>
 
       </div>

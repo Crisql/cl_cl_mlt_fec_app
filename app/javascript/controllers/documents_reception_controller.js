@@ -19,7 +19,7 @@ const DETAIL_REQUIRED_MESSAGES = new Set(['2', '3'])
 export default class extends Controller {
   static targets = [
     // Panel lateral contenedor
-    'panel', 'panelBackdrop',
+    'panel', 'panelBackdrop', 'panelLoader',
     // Form
     'fileInput', 'inputAdjunto', 'errorAdjunto',
     'selectMensaje',
@@ -40,19 +40,22 @@ export default class extends Controller {
     'previewDetalleBody', 'previewCargosBody', 'previewTotalesBody',
   ]
 
-  #selectedFile = null
-  #companyId    = null
+  #selectedFile    = null
+  #companyId       = null
   #codigoActividad = ''
+  #activityCodes   = []
 
   connect() {
     const company = SStore.get('CurrentCompany')
     if (company) {
-      this.#companyId      = company.companyId
+      this.#companyId       = company.companyId
       this.#codigoActividad = company.codigoActividad ?? ''
     }
 
-    if (this.#codigoActividad) {
-      this.inputCodigoActividadTarget.value = this.#codigoActividad
+    if (this.#companyId) {
+      this.#loadActivityCodes()
+    } else {
+      this.panelLoaderTarget.classList.add('hidden')
     }
   }
 
@@ -85,7 +88,7 @@ export default class extends Controller {
     this.errorDetalleMensajeTarget.classList.add('hidden')
     this.errorCodigoActividadTarget.classList.add('hidden')
 
-    this.inputCodigoActividadTarget.value = this.#codigoActividad ?? ''
+    this.#populateActivitySelect()
 
     // Reset TaxFactor según condición por defecto (01 → deshabilitado)
     this.onCondicionImpuestoChange()
@@ -171,9 +174,9 @@ export default class extends Controller {
       this.errorAdjuntoTarget.classList.add('hidden')
     }
 
-    // CodigoActividad (6 chars)
-    const codigo = this.inputCodigoActividadTarget.value.trim()
-    if (codigo.length !== 6) {
+    // CodigoActividad (requerido)
+    const codigo = this.inputCodigoActividadTarget.value
+    if (!codigo) {
       this.errorCodigoActividadTarget.classList.remove('hidden')
       valid = false
     } else {
@@ -424,6 +427,36 @@ export default class extends Controller {
     document.body.style.overflow = ''
   }
 
+
+  // ──────────────────────────────────────────────
+  // CÓDIGOS DE ACTIVIDAD — carga y población del select
+  // ──────────────────────────────────────────────
+
+  async #loadActivityCodes() {
+    try {
+      const data = await this.#apiFetch(
+        `/api/Companies/${this.#companyId}/activity-codes`
+      )
+      this.#activityCodes = data?.Data ?? []
+      this.#populateActivitySelect()
+    } catch {
+      this.#activityCodes = []
+    } finally {
+      this.panelLoaderTarget.classList.add('hidden')
+    }
+  }
+
+  #populateActivitySelect() {
+    const select = this.inputCodigoActividadTarget
+    select.innerHTML = '<option value="">-- Seleccione --</option>'
+    for (const item of this.#activityCodes) {
+      const opt = document.createElement('option')
+      opt.value       = item.Code
+      opt.textContent = `${item.Code} — ${item.Name}`
+      if (item.Code === this.#codigoActividad) opt.selected = true
+      select.appendChild(opt)
+    }
+  }
 
   // ──────────────────────────────────────────────
   // API FETCH — patrón estándar del proyecto

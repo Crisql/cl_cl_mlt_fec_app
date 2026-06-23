@@ -86,6 +86,7 @@ export default class extends TabulatorController {
   #bandejas = [];
   #currencyCodes = [];
   #companyInfo = null;   // { DefaultTaxForXML, SendReceptAndApInv, UseFactProv }
+  #activityCodes = [];
   #activeReceptDoc = null;
   #formChanged = false;
 
@@ -574,14 +575,33 @@ export default class extends TabulatorController {
     }
   }
 
+  #populateActivitySelect(selectedValue = null) {
+    if (!this.hasReceptCodigoActividadTarget) return;
+    const sel = this.receptCodigoActividadTarget;
+    const preserve = selectedValue ?? sel.value;
+    sel.innerHTML = '<option value="">-- Seleccione --</option>';
+    this.#activityCodes.forEach(a => {
+      const code = a.Code ?? a.code ?? '';
+      const name = a.Name ?? a.Description ?? a.name ?? '';
+      const opt  = document.createElement('option');
+      opt.value       = code;
+      opt.textContent = `${code} - ${name}`;
+      sel.appendChild(opt);
+    });
+    if (preserve) sel.value = preserve;
+    if (!sel.value && this.#activityCodes.length === 1) {
+      sel.value = this.#activityCodes[0].Code ?? this.#activityCodes[0].code ?? '';
+    }
+  }
+
   #openReceptPanel(row) {
     this.#activeReceptDoc = row;
     this.receptDocNameTarget.value             = row.DocName || '';
     this.receptMensajeTarget.value             = String(row.Mensaje ?? '1');
     this.receptCondicionImpuestoTarget.value   = row.CondicionImpuesto || '01';
     this.receptTaxFactorTarget.value           = row.TaxFactor ?? '';
-    this.receptCodigoActividadTarget.value     = row.CodigoActividadReceptor || '';
     this.receptDetalleMensajeTarget.value      = row.DetalleMensaje || '';
+    this.#populateActivitySelect(row.CodigoActividadReceptor || '');
 
     this.receptBackdropTarget.classList.remove('hidden');
     this.receptPanelTarget.classList.remove('translate-x-full');
@@ -895,10 +915,11 @@ export default class extends TabulatorController {
   async #loadInitialData() {
     if (!this.#companyId) return;
     try {
-      const [bandejas, currencies, companyInfo] = await Promise.allSettled([
+      const [bandejas, currencies, companyInfo, activityRes] = await Promise.allSettled([
         this.#apiFetch(`/api/Documents/GetBandejasReceptores?CompanyId=${this.#companyId}`),
         this.#apiFetch(`/api/Documents/GetCurrencyCodeAD/?companyId=${this.#companyId}`),
         this.#apiFetch(`/api/companies/${this.#companyId}`),
+        this.#apiFetch(`/api/Companies/${this.#companyId}/activity-codes`),
       ]);
 
       // Bandejas
@@ -927,6 +948,17 @@ export default class extends TabulatorController {
           SendReceptAndApInv:  d.SendReceptAndApInv,
           UseFactProv:         d.UseFactProv,
         };
+      }
+
+      // Códigos de actividad económica
+      if (activityRes.status === 'fulfilled') {
+        const val = activityRes.value;
+        console.log('[receptions] activity-codes raw:', val);
+        this.#activityCodes = val?.Data ?? val ?? [];
+        console.log('[receptions] #activityCodes parsed:', this.#activityCodes);
+        this.#populateActivitySelect();
+      } else {
+        console.warn('[receptions] activity-codes failed:', activityRes.reason);
       }
     } catch {
       // Cargar sin datos dinámicos — no es fatal
