@@ -79,8 +79,8 @@ export default class extends TabulatorController {
 
       pagination: true,
       paginationMode: 'remote',
-      paginationSize: 5,
-      paginationSizeSelector: [5, 10, 15],
+      paginationSize: 10,
+      paginationSizeSelector: [10, 15, 25],
       // paginationCounter custom — Tabulator calcula el total como last_page*pageSize, lo que
       // sobreestima cuando la última página no está llena. Usamos el total real del servidor.
       paginationCounter: (_pageSize, currentRow, _currentPage, _totalRows, _totalPages) => {

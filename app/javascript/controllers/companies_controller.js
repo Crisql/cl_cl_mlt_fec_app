@@ -9,7 +9,7 @@ import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'contr
  * Replica: Angular CompanyComponent
  *   - GET api/Companies/GetCompanies (paginado server-side)
  *   - Tabla Tabulator con paginación REMOTA (StartPos/StepPos + MaxQtyRowsFetch)
- *   - Columnas: Nombre Legal, Nombre Comercial, Identificación, Favorita (star), Estado (badge), Acciones
+ *   - Columnas: Nombre Legal, Nombre Comercial, Identificación, Estado (badge), Acciones (estrella favorita + editar)
  *   - "Consultar" → resetea a página 1 y recarga
  *   - "Crear" → navega a /new (permiso F_CreateCompany)
  *   - Favorita (star) con confirmación previa · Actualizar (edit, permiso F_ModifyCompany)
@@ -65,8 +65,8 @@ export default class extends TabulatorController {
       // Paginación server-side
       pagination: true,
       paginationMode: 'remote',
-      paginationSize: 5,
-      paginationSizeSelector: [5, 10, 15],
+      paginationSize: 10,
+      paginationSizeSelector: [10, 15, 25],
       // paginationCounter custom — Tabulator calcula el total como last_page*pageSize, lo que
       // sobreestima cuando la última página no está llena. Usamos el total real del servidor.
       paginationCounter: (_pageSize, currentRow, _currentPage, _totalRows, _totalPages) => {
@@ -91,18 +91,12 @@ export default class extends TabulatorController {
       { title: 'Nombre Comercial', field: 'EmsrNombreComercial', widthGrow: 2 },
       { title: 'Identificación', field: 'EmsrIdeNumero', widthGrow: 1 },
       {
-        title: 'Compañía Favorita', field: 'Favorite', width: 160, hozAlign: 'center',
-        formatter: (cell) => cell.getValue()
-          ? '<span class="material-icons" style="color:#FFC107;">star</span>'
-          : '',
-      },
-      {
         title: 'Estado', field: 'Active', width: 110,
         formatter: (cell) => this.#statusBadge(cell.getValue() ? 'active' : 'inactive'),
       },
       {
         title: 'Acciones', field: 'Id', width: 110, hozAlign: 'center',
-        formatter: () => this.#actionButtons(),
+        formatter: (cell) => this.#actionButtons(cell.getRow().getData()),
         cellClick: (e, cell) => {
           const row = cell.getRow().getData();
           if (e.target.closest('[data-action-type="favorite"]')) this.#onFavoriteClick(row);
@@ -164,6 +158,7 @@ export default class extends TabulatorController {
   // ── Event handlers de fila ─────────────────────────────────────────────────
 
   async #onFavoriteClick(company) {
+    if (company.Favorite) return;
     if ((company.QtyRolAssign ?? 1) === 0) {
       showToast('Opción no disponible, ya que no posee asignaciones.', 'info');
       return;
@@ -203,13 +198,23 @@ export default class extends TabulatorController {
     return `<span style="background-color:${bg}; color:${color};" class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">${label}</span>`;
   }
 
-  #actionButtons() {
-    const btn = (icon, tooltip, type) => `
-      <button type="button" data-action-type="${type}" data-tooltip="${tooltip}"
-              class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-        <span class="material-icons text-base">${icon}</span>
+  #actionButtons(row = {}) {
+    const isFavorite = !!row.Favorite;
+    const starStyle  = isFavorite
+      ? 'color:#FFC107;'
+      : 'color:transparent; -webkit-text-stroke:1.5px #9ca3af;';
+    const starTip    = isFavorite ? 'Compañía favorita' : 'Establecer como favorita';
+    const starBtn    = `
+      <button type="button" data-action-type="favorite" data-tooltip="${starTip}"
+              class="p-1.5 rounded transition-colors ${isFavorite ? 'cursor-default' : 'hover:bg-yellow-50 cursor-pointer'}">
+        <span class="material-icons text-base" style="${starStyle}">star</span>
       </button>`;
-    return `<div class="flex items-center justify-center gap-1">${btn('star', 'Establecer como Favorita', 'favorite')}${btn('edit', 'Actualizar', 'edit')}</div>`;
+    const editBtn = `
+      <button type="button" data-action-type="edit" data-tooltip="Actualizar"
+              class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+        <span class="material-icons text-base">edit</span>
+      </button>`;
+    return `<div class="flex items-center justify-center gap-1">${starBtn}${editBtn}</div>`;
   }
 
   // ── Helpers de UI ──────────────────────────────────────────────────────────

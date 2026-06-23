@@ -184,7 +184,6 @@ export default class extends TabulatorController {
     return [
       { title: 'Nombre Completo',    field: 'FullName',         flexGrow: 2, minWidth: 150 },
       { title: 'Correo Electrónico', field: 'Email',            flexGrow: 2, minWidth: 180 },
-      { title: 'Identificación',     field: 'Identification',   flexGrow: 1, minWidth: 70 },
       { title: 'Usuario SAP',        field: 'SapUser',          flexGrow: 1, minWidth: 110 },
       {
         title: 'Fecha de Creación',
@@ -707,7 +706,6 @@ export default class extends TabulatorController {
       paginationCounter: 'rows',
       columnDefaults: { headerSort: false },
       columns: [
-        { title: 'Identificación', field: 'Identification', flexGrow: 1, minWidth: 70 },
         { title: 'Nombre',         field: 'FullName',       flexGrow: 2, minWidth: 150 },
         { title: 'Correo',         field: 'Email',          flexGrow: 2, minWidth: 180 },
         {
