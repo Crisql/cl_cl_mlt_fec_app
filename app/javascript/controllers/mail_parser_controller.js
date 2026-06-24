@@ -135,9 +135,9 @@ export default class extends TabulatorController {
       { title: 'Puerto',       field: 'Port',        width: 80  },
       { title: 'Compañía',     field: 'EmsrNombre',  minWidth: 160 },
       {
-        title: 'Usa Token',
+        title: 'Autenticación por token',
         field: 'UseToken',
-        width: 110,
+        width: 180,
         hozAlign: 'center',
         formatter: (cell) => this.#boolBadge(cell.getValue()),
       },
