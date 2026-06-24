@@ -1067,3 +1067,53 @@ cada navegación.
 en `connect()` se reconstruye `#expandedGroups` leyendo del DOM
 (`#captureExpandedFromDom()`) **antes** de re-renderizar, y `#createNodeElement`
 respeta ese estado al recrear cada grupo. Sin storage.
+
+---
+
+## 20. Botón de creación primaria — label `Nuevo/Nueva [Entidad]`
+
+El botón de acción primaria del toolbar (el que **abre** el panel/modal de creación) usa
+siempre el patrón **`Nuevo/Nueva [Entidad en singular]`**, concordando el género con la
+entidad. Nunca un genérico `Crear` ni solo `Nuevo`/`Nueva` sin la entidad.
+
+### Regla
+
+> Label del botón = `Nuevo ` (masculino) o `Nueva ` (femenino) + **nombre de la entidad en
+> singular**. El género concuerda con la entidad; el ícono siempre es `add`.
+
+| Módulo | Entidad | Label correcto |
+|---|---|---|
+| Usuarios | Usuario (m) | `Nuevo Usuario` |
+| Seguridad / Roles | Rol (m) | `Nuevo Rol` |
+| Grupos | Grupo (m) | `Nuevo Grupo` |
+| Conexiones | Conexión (f) | `Nueva Conexión` |
+| Compañías | Compañía (f) | `Nueva Compañía` |
+| Sucursales | Sucursal (f) | `Nueva Sucursal` |
+| Numeración | Numeración (f) | `Nueva Numeración` |
+| Bandejas de emisión | Bandeja (f) | `Nueva Bandeja` |
+| Bandejas de recepción | Configuración (f) | `Nueva Configuración` |
+
+### Patrón
+
+```erb
+<%# ✅ CORRECTO — concuerda género + entidad en singular %>
+<button type="button"
+        data-action="click->mi-modulo#openCreatePanel"
+        class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+  <span class="material-icons text-base">add</span>
+  Nueva Conexión
+</button>
+
+<%# ❌ INCORRECTO — genéricos o sin entidad %>
+  Crear            <%# genérico, no dice qué se crea %>
+  Nuevo            <%# falta la entidad %>
+  Nuevo Conexión   <%# género mal concordado %>
+```
+
+### Alcance
+
+- Aplica **solo** al botón del toolbar que **abre** el formulario de creación.
+- El botón **submit** dentro del panel/modal es acción de formulario, no de apertura:
+  conserva `Crear` / `Guardar` según corresponda (ver §12). **No** se renombra.
+- El género se concuerda con la entidad aunque el patrón nominal sea "Nuevo [X]":
+  preferir español gramaticalmente correcto antes que un literal uniforme.
