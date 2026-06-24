@@ -210,7 +210,7 @@ export default class extends TabulatorController {
         <span class="material-icons text-base" style="${starStyle}">star</span>
       </button>`;
     const editBtn = `
-      <button type="button" data-action-type="edit" data-tooltip="Actualizar"
+      <button type="button" data-action-type="edit" data-tooltip="Editar"
               class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
         <span class="material-icons text-base">edit</span>
       </button>`;
