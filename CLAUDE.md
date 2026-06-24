@@ -762,9 +762,9 @@ await showAlert({ type: ALERT_TYPES.ERROR, title: 'Error', message: 'Descripció
 
 ---
 
-## 15. Loaders — tres tipos estándar
+## 15. Loaders — cuatro tipos estándar
 
-Existen exactamente tres tipos de loader en la app. No inventar variantes nuevas.
+Existen exactamente cuatro tipos de loader en la app. No inventar variantes fuera de estos.
 
 ### Tipo A — Overlay bloqueante (partial ERB)
 
@@ -825,6 +825,49 @@ this.table?.alert(TABULATOR_LOADING_HTML)  // mostrar
 this.table?.clearAlert()                   // ocultar
 ```
 
+### Tipo D — Loader a nivel de fila (celda de estado Tabulator)
+
+Para acciones que afectan **una sola fila** y NO deben bloquear el resto de la tabla
+(ej. *Reprocesar* en documentos emitidos/recepciones). En vez de un overlay global,
+la celda de **Estado** de esa fila muestra un badge transitorio con spinner mientras
+la solicitud está en vuelo; al terminar, `replaceData()` recarga desde el servidor y
+restaura el estado real (o revierte el loader si falló).
+
+```js
+// Helper — badge transitorio (mismo estilo que los badges de §1)
+#sendingBadge(label = 'Enviando') {
+  return `<span style="background-color:#e8f0fe; color:#1a56db;"
+                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">
+    <span class="inline-block h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin"></span>
+    ${label}
+  </span>`;
+}
+
+// En el formatter de la columna Estado — detectar el marcador transitorio
+formatter: (cell) => {
+  const val = cell.getValue();
+  if (val?.loading) return this.#sendingBadge(val.label);  // o sentinel 'loading' según el tipo del campo
+  return this.#statusBadge(val);
+}
+
+// En la acción de fila — marcar la celda, lanzar la petición, refrescar en finally
+const rowComp = this.table?.getRows().find(r => r.getData().Id === id);
+rowComp?.update({ StatusForTable: { loading: true } });
+try {
+  await this.#apiFetch(/* ... */);
+  showToast('Solicitud enviada', 'success');
+} catch (err) {
+  showToast(err.message, 'error');
+} finally {
+  this.table?.replaceData();   // restaura estado real (éxito) o revierte loader (error)
+}
+```
+
+**Regla del texto:** el label debe describir la **fase real** de la operación, no una
+acción que no ocurre todavía. Ej.: una acción que solo **encola** el documento para que
+un servicio en segundo plano lo procese usa **"Enviando"** (la solicitud se está enviando),
+**nunca "Procesando"/"Reprocesando"** — eso implicaría trabajo activo que no está pasando.
+
 ### Regla de selección
 
 | Situación | Tipo |
@@ -832,9 +875,12 @@ this.table?.clearAlert()                   // ocultar
 | Operación bloqueante en una vista ERB | **A — partial** |
 | Operación bloqueante en controller JS sin vista propia | **B — overlay service** |
 | Carga de datos en una tabla Tabulator | **C — TABULATOR_LOADING_HTML** |
+| Acción sobre una sola fila que no debe bloquear la tabla | **D — loader a nivel de fila** |
 
-**No usar** `animate-spin material-icons autorenew`, `border-b-2 border-blue-600`,
-ni `border-4 border-t-transparent` — son patrones legacy ya eliminados.
+**No usar** `animate-spin material-icons autorenew`, `border-b-2 border-blue-600`
+ni `border-4 border-t-transparent` como loaders de página/sección — son patrones legacy
+ya eliminados. La **única** excepción permitida para `border-t-transparent animate-spin`
+es el spinner pequeño (`h-3 w-3`) dentro del badge del **Tipo D**.
 
 ---
 

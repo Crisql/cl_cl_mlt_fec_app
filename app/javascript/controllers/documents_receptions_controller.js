@@ -310,9 +310,13 @@ export default class extends TabulatorController {
 
       const docs = (json.Data.DocumentList || []).map(d => this.#mapDoc(d));
 
-      const total    = docs[0]?.MaxQtyRowsFetch || 0;
+      // Si la página pedida queda fuera de rango (DocumentList vacío) no hay MaxQtyRowsFetch;
+      // derivamos el total de DocumentQtyList (suma por estado) para no reportar last_page=1
+      // ni colapsar la tabla a "1 página vacía" cuando aún quedan registros en otras páginas.
+      const qtyTotal = Object.values(this.#quantities).reduce((sum, q) => sum + (q || 0), 0);
+      const total    = docs[0]?.MaxQtyRowsFetch || qtyTotal || 0;
       this.#totalRecords = total;
-      const lastPage = Math.ceil(total / pageSize) || 1;
+      const lastPage = Math.max(1, Math.ceil(total / pageSize));
 
       if (docs.length > 0 && !this.#formChanged) {
         this.btnChartTarget.classList.remove('hidden');
@@ -341,12 +345,22 @@ export default class extends TabulatorController {
   // ── Formatters ────────────────────────────────────────────────────────────
 
   #statusBadge(status) {
+    if (status === 'loading') return this.#sendingBadge();
     const s = DOC_STATUS[status];
     if (!s) return `<span style="background-color:#f3f4f6; color:#4b5563;"
                          class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">${status ?? ''}</span>`;
     return `<span style="background-color:${s.bg}; color:${s.color};"
                   class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">
       ${s.label}
+    </span>`;
+  }
+
+  /** Badge transitorio que se muestra en la celda Estado mientras se envía la solicitud de reprocesamiento */
+  #sendingBadge() {
+    return `<span style="background-color:#e8f0fe; color:#1a56db;"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">
+      <span class="inline-block h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin"></span>
+      Enviando
     </span>`;
   }
 
@@ -769,15 +783,26 @@ export default class extends TabulatorController {
       showToast('No tiene permiso para reprocesar este documento', 'info');
       return;
     }
+    // Loader a nivel de fila: marca la celda Estado como "Enviando" durante la solicitud
+    const currentPage = this.table?.getPage() || 1;
+    const rowComp = this.table?.getRows().find(r => r.getData().Id === id);
+    rowComp?.update({ Statuscambio: 'loading' });
     try {
       await this.#apiFetch(
         `/api/Documents/${id}/Reprocess?isReceptionDocument=true&companyId=${this.#companyId}`,
         { method: 'PATCH', body: JSON.stringify({}), headers: { 'API': 'ApiFEUrl' } }
       );
       showToast('Solicitud de reprocesamiento enviada', 'success');
-      this.table?.replaceData();
     } catch (err) {
       showToast(err.message, 'error');
+    } finally {
+      // Refrescar manteniéndose en la página actual: setPage(n) recarga esa página desde el
+      // servidor con los filtros vigentes (replaceData/setData resetean a la página 1).
+      // Si tras refrescar la página quedó fuera de rango porque bajó el total (p.ej. se
+      // reprocesó el último registro de la página), navegar a la última página válida.
+      await this.table?.setPage(currentPage).catch(() => {});
+      const maxPage = this.table?.getPageMax?.() ?? 1;
+      if (currentPage > maxPage) await this.table?.setPage(maxPage).catch(() => {});
     }
   }
 
