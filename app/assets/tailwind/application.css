@@ -64,3 +64,15 @@
   display: block;
   margin: 0 auto;
 }
+
+/* ---------------------------------------------------------------------------
+ * Placeholder vacío vs loader — nunca mostrar ambos a la vez
+ * El overlay del loader/alert es semitransparente (rgba .7) para dejar ver los
+ * datos al refrescar; pero en la carga inicial la tabla está vacía y el texto
+ * del placeholder ("No hay registros", etc.) se transparentaba por detrás del
+ * spinner. Mientras haya un loader o alert activo, se oculta el placeholder.
+ * ------------------------------------------------------------------------- */
+.tabulator:has(.tabulator-loader) .tabulator-placeholder,
+.tabulator:has(.tabulator-alert)  .tabulator-placeholder {
+  display: none !important;
+}
