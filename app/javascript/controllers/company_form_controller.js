@@ -97,11 +97,11 @@ export default class extends Controller {
     'connLicenseServer',
     'connApiUrl', 'connApiUrlError',
     'connCrystalApiUrl',
-    'connOdbcType',
+    'connOdbcType', 'connOdbcTypeError',
     'connDbEngine', 'connDbEngineError',
-    'connServerType',
-    'connDbUser', 'connDbUserError',
-    'connDbPass', 'connDbPassError', 'connDbPassEyeIcon',
+    'connServerType', 'connServerTypeError', 'connServerTypeHint',
+    'connDbUser', 'connDbUserError', 'connDbUserRequired',
+    'connDbPass', 'connDbPassError', 'connDbPassEyeIcon', 'connDbPassRequired',
     'connBoSuppLangs',
     'connDst',
     'connUseTrusted',
@@ -1186,6 +1186,49 @@ export default class extends Controller {
     icon.textContent = input.type === 'password' ? 'visibility_off' : 'visibility';
   }
 
+  // Descripción por valor de "Tipo de Servidor". El sufijo "T" indica conexión de
+  // confianza (Trusted / autenticación de Windows). Los valores HANA arman el
+  // connectionString para SAP HANA Studio; los SQL arman el de SQL Server.
+  #connServerTypeHints = {
+    SQLSERVERT:  'SQL Server con conexión de confianza (autenticación de Windows / Trusted).',
+    HANASERVER:  'SAP HANA con autenticación estándar (usuario y contraseña).',
+  };
+
+  /** Muestra la descripción del tipo de servidor y ajusta si usuario/contraseña son requeridos. */
+  connServerTypeChanged() {
+    if (this.hasConnServerTypeHintTarget) {
+      this.connServerTypeHintTarget.textContent = this.#connServerTypeHints[this.connServerTypeTarget.value] ?? '';
+    }
+    this.#updateConnCredentialRequirement();
+  }
+
+  /**
+   * Usuario y contraseña de base de datos solo son obligatorios cuando el tipo
+   * de servidor es HANASERVER. Refleja la condición en los asteriscos del label.
+   */
+  #updateConnCredentialRequirement() {
+    const required = this.connServerTypeTarget.value === 'HANASERVER';
+    if (this.hasConnDbUserRequiredTarget) this.connDbUserRequiredTarget.classList.toggle('hidden', !required);
+    if (this.hasConnDbPassRequiredTarget) this.connDbPassRequiredTarget.classList.toggle('hidden', !required);
+  }
+
+  /** Habilita el botón de crear conexión solo cuando todos los requeridos están completos. */
+  refreshConnSubmitState() {
+    if (this.hasConnSaveBtnTarget) this.connSaveBtnTarget.disabled = !this.#isConnFormValid();
+  }
+
+  /** ¿Están completos todos los campos obligatorios del panel de conexión? */
+  #isConnFormValid() {
+    const filled = (t) => t.value.trim() !== '';
+    let ok = filled(this.connServerTarget) && filled(this.connApiUrlTarget) &&
+             filled(this.connOdbcTypeTarget) && filled(this.connDbEngineTarget) &&
+             filled(this.connServerTypeTarget);
+    if (this.connServerTypeTarget.value === 'HANASERVER') {
+      ok = ok && filled(this.connDbUserTarget) && filled(this.connDbPassTarget);
+    }
+    return ok;
+  }
+
   /**
    * Crea la conexión vía API y auto-selecciona el nuevo registro en el select.
    * Equivalente a dialogRef.afterClosed() + GetSAPConnectionsForAssignment() del legacy Angular.
@@ -1255,6 +1298,9 @@ export default class extends Controller {
     this.connUseTrustedTarget.checked  = false;
     this.connDbPassTarget.type         = 'password';
     this.connDbPassEyeIconTarget.textContent = 'visibility_off';
+    if (this.hasConnServerTypeHintTarget) this.connServerTypeHintTarget.textContent = '';
+    this.#updateConnCredentialRequirement();
+    this.refreshConnSubmitState();
 
     [
       this.connServerErrorTarget, this.connApiUrlErrorTarget, this.connDbEngineErrorTarget,
@@ -1265,12 +1311,18 @@ export default class extends Controller {
   #validateConnectionPanel() {
     let valid = true;
     const required = [
-      { input: this.connServerTarget,   error: this.connServerErrorTarget   },
-      { input: this.connApiUrlTarget,   error: this.connApiUrlErrorTarget   },
-      { input: this.connDbEngineTarget, error: this.connDbEngineErrorTarget },
-      { input: this.connDbUserTarget,   error: this.connDbUserErrorTarget   },
-      { input: this.connDbPassTarget,   error: this.connDbPassErrorTarget   },
+      { input: this.connServerTarget,     error: this.connServerErrorTarget     },
+      { input: this.connApiUrlTarget,     error: this.connApiUrlErrorTarget     },
+      { input: this.connOdbcTypeTarget,   error: this.connOdbcTypeErrorTarget   },
+      { input: this.connDbEngineTarget,   error: this.connDbEngineErrorTarget   },
+      { input: this.connServerTypeTarget, error: this.connServerTypeErrorTarget },
     ];
+
+    // Usuario y contraseña solo son obligatorios para servidores HANASERVER.
+    if (this.connServerTypeTarget.value === 'HANASERVER') {
+      required.push({ input: this.connDbUserTarget, error: this.connDbUserErrorTarget });
+      required.push({ input: this.connDbPassTarget, error: this.connDbPassErrorTarget });
+    }
     for (const { input, error } of required) {
       const empty = !input.value.trim();
       error.classList.toggle('hidden', !empty);

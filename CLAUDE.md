@@ -1154,3 +1154,53 @@ El botón del toolbar que abre el formulario de creación **conserva la entidad 
 (`Nuevo Usuario`, `Nueva Bandeja`) por la regla de §20. Es la **única** excepción: aunque el
 panel que abre se titule `Nueva bandeja` (Sentence case), el botón mantiene `Nueva Bandeja`.
 Los botones de formulario (`Crear`, `Guardar`, `Modificar`) siguen §12 — no son encabezados.
+
+---
+
+## 22. Formulario de Conexión SAP — está DUPLICADO en tres lugares
+
+El formulario "Nueva Conexión SAP" (campos Servidor, URL API, URL Crystal API, Tipo ODBC,
+Motor de Base de Datos, Tipo de Servidor, Usuario/Contraseña de BD, etc.) **NO es un partial
+compartido**: el mismo formulario está copiado en tres ubicaciones independientes. Todo cambio
+de campos, validación, etiquetas, requeridos o comportamiento **DEBE replicarse en las tres**,
+con su vista y su controller correspondientes.
+
+### Las tres ubicaciones
+
+| # | Vista | Controller | Contexto |
+|---|---|---|---|
+| 1 | `app/views/configurations/connections/index.html.erb` (panel lateral) | `connections_controller.js` | Crear/editar conexión desde el listado de conexiones (panel lateral, paginación remota). **Es el principal y el que ve el usuario normalmente.** |
+| 2 | `app/views/configurations/companies/_form.html.erb` (panel lateral, ~línea 750+) | `company_form_controller.js` (targets `conn*`, acciones `*ConnectionPanel`) | Crear conexión **inline** mientras se crea/edita una compañía (botón `add` del campo "Conexión de SAP"). Solo crea, no edita. Reutilizado por `companies/new` y `companies/edit`. |
+| 3 | `app/views/configurations/connections/_form.html.erb` (partial nav) | `connection_form_controller.js` | Formulario legacy de navegación (`connections/new` y `connections/edit`). Orfanado por el panel de #1 pero aún ruteado; mantener en sync por seguridad. |
+
+### Prefijos de target por controller
+
+- `connections_controller.js` → targets `f*` (`fServer`, `fDbUser`, `fServerType`, …).
+- `company_form_controller.js` → targets `conn*` (`connServer`, `connDbUser`, `connServerType`, …) + acciones `connServerTypeChanged`, `refreshConnSubmitState`.
+- `connection_form_controller.js` → targets sin prefijo (`server`, `dbUser`, `serverType`, …).
+
+### Reglas de negocio vigentes del formulario (mantener idénticas en las tres)
+
+- **Motor de Base de Datos** y **Tipo de Servidor** son `<select>` (no inputs libres).
+  - Motor: `SQL` (SQL Server) / `HANA` (SAP HANA).
+  - Tipo de Servidor: `SQLSERVERT` (SQL Server trusted) / `HANASERVER` (HANA estándar).
+    El sufijo `T` = Trusted (autenticación de Windows). Hay un texto-ayuda dinámico (`*ServerTypeHint`)
+    bajo el select y un `#*serverTypeHints` map en cada controller.
+  - `#applySelectValue` preserva valores legacy fuera del catálogo al editar (inyecta opción temporal).
+- **Campos ocultos** (en el DOM, se conservan en el payload): Servidor de Licencias, Idiomas
+  Soportados (BoSuppLangs), DST y el check UseTrusted (Trusted) van con clase `hidden`.
+- **Tipo ODBC** y **Tipo de Servidor** son **requeridos**.
+- **Tipo ODBC** es un combobox: `<input list>` + `<datalist>` con valores sugeridos
+  (`HDBODBC`, `SQL Server`) pero **permite escribir un valor personalizado**. El `id` del
+  datalist debe ser único por página (`odbc-types-connections` / `odbc-types-company` /
+  `odbc-types-connection-form`). Sigue siendo un `input` (no `select`), así que el target y la
+  lectura de `.value` no cambian.
+- **Usuario y Contraseña de BD** son requeridos **solo cuando Tipo de Servidor = `HANASERVER`**.
+  El asterisco rojo del label se muestra/oculta dinámicamente (`#updateCredentialRequirement` /
+  `#updateConnCredentialRequirement`).
+- **Botón de guardar deshabilitado** hasta que todo lo requerido esté completo: cada panel/form
+  tiene `data-action="input->… change->…"` en el contenedor que llama a `refreshSubmitState` /
+  `refreshConnSubmitState`, y se invoca también al abrir/resetear/cargar el formulario.
+
+> ⚠️ Antes de tocar el formulario de conexión, buscá las tres ubicaciones
+> (`grep -rl "Tipo de Servidor" app/views/configurations`) y aplicá el cambio en todas.

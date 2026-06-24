@@ -758,6 +758,7 @@
 
 <%# Panel deslizable desde la derecha %>
 <div data-company-form-target="connPanel"
+     data-action="input->company-form#refreshConnSubmitState change->company-form#refreshConnSubmitState"
      class="fixed top-0 right-0 h-full w-full max-w-lg bg-white shadow-2xl z-50
             translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
 
@@ -786,8 +787,8 @@
         <span data-company-form-target="connServerError" class="hidden text-xs text-red-500">El servidor es requerido.</span>
       </div>
 
-      <%# Servidor de Licencias %>
-      <div class="flex flex-col gap-1">
+      <%# Servidor de Licencias (oculto por requerimiento — se conserva en el payload) %>
+      <div class="hidden flex flex-col gap-1">
         <label class="text-xs font-medium text-gray-600">Servidor de Licencias</label>
         <input type="text"
                data-company-form-target="connLicenseServer"
@@ -819,38 +820,51 @@
 
       <%# Tipo ODBC %>
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-gray-600">Tipo ODBC</label>
+        <label class="text-xs font-medium text-gray-600">Tipo ODBC <span class="text-red-500">*</span></label>
         <input type="text"
                data-company-form-target="connOdbcType"
                data-testid="conn-panel-odbc-type"
-               placeholder="HDBODBC"
+               list="odbc-types-company"
+               placeholder="HDBODBC, SQL Server u otro"
                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <datalist id="odbc-types-company">
+          <option value="HDBODBC"></option>
+          <option value="SQL Server"></option>
+        </datalist>
+        <span data-company-form-target="connOdbcTypeError" class="hidden text-xs text-red-500">El tipo ODBC es requerido.</span>
       </div>
 
       <%# Motor de Base de Datos %>
       <div class="flex flex-col gap-1">
         <label class="text-xs font-medium text-gray-600">Motor de Base de Datos <span class="text-red-500">*</span></label>
-        <input type="text"
-               data-company-form-target="connDbEngine"
-               data-testid="conn-panel-db-engine"
-               placeholder="hdb"
-               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <select data-company-form-target="connDbEngine"
+                data-testid="conn-panel-db-engine"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Seleccione...</option>
+          <option value="SQL"  title="Conexiones a SQL Server">SQL (SQL Server)</option>
+          <option value="HANA" title="Conexiones a SAP HANA">HANA (SAP HANA)</option>
+        </select>
         <span data-company-form-target="connDbEngineError" class="hidden text-xs text-red-500">El motor de base de datos es requerido.</span>
       </div>
 
       <%# Tipo de Servidor %>
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-gray-600">Tipo de Servidor</label>
-        <input type="text"
-               data-company-form-target="connServerType"
-               data-testid="conn-panel-server-type"
-               placeholder="HanaDb"
-               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <label class="text-xs font-medium text-gray-600">Tipo de Servidor <span class="text-red-500">*</span></label>
+        <select data-company-form-target="connServerType"
+                data-testid="conn-panel-server-type"
+                data-action="change->company-form#connServerTypeChanged"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Seleccione...</option>
+          <option value="SQLSERVERT"  title="SQL Server con conexion de confianza (autenticacion de Windows / Trusted). Arma el connectionString para SQL Server.">SQLSERVERT</option>
+          <option value="HANASERVER"  title="SAP HANA con autenticacion estandar (usuario y contrasena). Arma el connectionString para SAP HANA Studio.">HANASERVER</option>
+        </select>
+        <span data-company-form-target="connServerTypeError" class="hidden text-xs text-red-500">El tipo de servidor es requerido.</span>
+        <span data-company-form-target="connServerTypeHint" class="text-xs text-gray-500"></span>
       </div>
 
-      <%# Usuario de Base de Datos %>
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-gray-600">Usuario de Base de Datos <span class="text-red-500">*</span></label>
+      <%# Usuario de Base de Datos (requerido solo si Tipo de Servidor = HANASERVER) %>
+      <div class="sm:col-span-2 flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-600">Usuario de Base de Datos<span data-company-form-target="connDbUserRequired" class="hidden text-red-500"> *</span></label>
         <input type="text"
                data-company-form-target="connDbUser"
                data-testid="conn-panel-db-user"
@@ -859,9 +873,9 @@
         <span data-company-form-target="connDbUserError" class="hidden text-xs text-red-500">El usuario de base de datos es requerido.</span>
       </div>
 
-      <%# Contraseña de Base de Datos %>
+      <%# Contraseña de Base de Datos (requerido solo si Tipo de Servidor = HANASERVER) %>
       <div class="sm:col-span-2 flex flex-col gap-1">
-        <label class="text-xs font-medium text-gray-600">Contraseña de Base de Datos <span class="text-red-500">*</span></label>
+        <label class="text-xs font-medium text-gray-600">Contraseña de Base de Datos<span data-company-form-target="connDbPassRequired" class="hidden text-red-500"> *</span></label>
         <div class="relative">
           <input type="password"
                  data-company-form-target="connDbPass"
@@ -877,8 +891,8 @@
         <span data-company-form-target="connDbPassError" class="hidden text-xs text-red-500">La contraseña es requerida.</span>
       </div>
 
-      <%# Idiomas Soportados %>
-      <div class="flex flex-col gap-1">
+      <%# Idiomas Soportados (oculto por requerimiento — se conserva en el payload) %>
+      <div class="hidden flex flex-col gap-1">
         <label class="text-xs font-medium text-gray-600">Idiomas Soportados (BoSuppLangs)</label>
         <input type="text"
                data-company-form-target="connBoSuppLangs"
@@ -887,8 +901,8 @@
                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
-      <%# DST %>
-      <div class="flex flex-col gap-1">
+      <%# DST (oculto por requerimiento — se conserva en el payload) %>
+      <div class="hidden flex flex-col gap-1">
         <label class="text-xs font-medium text-gray-600">DST</label>
         <input type="text"
                data-company-form-target="connDst"
@@ -897,8 +911,8 @@
                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
 
-      <%# UseTrusted %>
-      <div class="sm:col-span-2 flex items-center gap-2">
+      <%# UseTrusted (oculto por requerimiento — se conserva en el payload) %>
+      <div class="hidden sm:col-span-2 flex items-center gap-2">
         <input type="checkbox"
                id="connUseTrusted"
                data-company-form-target="connUseTrusted"

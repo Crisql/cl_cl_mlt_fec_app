@@ -34,10 +34,10 @@ export default class extends TabulatorController {
     'fLicenseServer',
     'fApiUrl', 'fApiUrlError',
     'fCrystalApiUrl',
-    'fOdbcType',
+    'fOdbcType', 'fOdbcTypeError',
     'fDbEngine', 'fDbEngineError',
-    'fServerType',
-    'fDbUser', 'fDbUserError',
+    'fServerType', 'fServerTypeError', 'fServerTypeHint',
+    'fDbUser', 'fDbUserError', 'fDbUserRequired',
     'fDbPass', 'fDbPassError', 'fDbPassRequired',
     'fBoSuppLangs',
     'fDst',
@@ -53,6 +53,14 @@ export default class extends TabulatorController {
   #connectionId = 0;        // 0 = crear; >0 = editar
   #editMode = false;
   #passVisible = false;
+
+  // Descripción por valor de "Tipo de Servidor". El sufijo "T" indica conexión de
+  // confianza (Trusted / autenticación de Windows). Los valores HANA arman el
+  // connectionString para SAP HANA Studio; los SQL arman el de SQL Server.
+  #serverTypeHints = {
+    SQLSERVERT:  'SQL Server con conexión de confianza (autenticación de Windows / Trusted).',
+    HANASERVER:  'SAP HANA con autenticación estándar (usuario y contraseña).',
+  };
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -188,7 +196,6 @@ export default class extends TabulatorController {
     this.panelTitleTarget.textContent  = 'Nueva Conexión SAP';
     this.submitIconTarget.textContent  = 'check';
     this.submitLabelTarget.textContent = 'Crear conexión';
-    this.fDbPassRequiredTarget.classList.remove('hidden');
 
     this.#openPanel();
   }
@@ -207,7 +214,6 @@ export default class extends TabulatorController {
     this.panelTitleTarget.textContent  = 'Editar Conexión SAP';
     this.submitIconTarget.textContent  = 'autorenew';
     this.submitLabelTarget.textContent = 'Actualizar';
-    this.fDbPassRequiredTarget.classList.add('hidden');
 
     this.#openPanel();
 
@@ -236,6 +242,39 @@ export default class extends TabulatorController {
     this.#passVisible = !this.#passVisible;
     this.fDbPassTarget.type               = this.#passVisible ? 'text' : 'password';
     this.togglePassIconTarget.textContent = this.#passVisible ? 'visibility' : 'visibility_off';
+  }
+
+  /** Muestra la descripción del tipo de servidor y ajusta si usuario/contraseña son requeridos. */
+  serverTypeChanged() {
+    this.#updateServerTypeHint();
+    this.#updateCredentialRequirement();
+  }
+
+  /**
+   * Usuario y contraseña de base de datos solo son obligatorios cuando el tipo
+   * de servidor es HANASERVER. Refleja la condición en los asteriscos del label.
+   */
+  #updateCredentialRequirement() {
+    const required = this.fServerTypeTarget.value === 'HANASERVER';
+    this.fDbUserRequiredTarget.classList.toggle('hidden', !required);
+    this.fDbPassRequiredTarget.classList.toggle('hidden', !required);
+  }
+
+  /** Habilita el botón de guardar solo cuando todos los campos requeridos están completos. */
+  refreshSubmitState() {
+    this.submitBtnTarget.disabled = !this.#isFormValid();
+  }
+
+  /** ¿Están completos todos los campos obligatorios del panel? */
+  #isFormValid() {
+    const filled = (t) => t.value.trim() !== '';
+    let ok = filled(this.fServerTarget) && filled(this.fApiUrlTarget) &&
+             filled(this.fOdbcTypeTarget) && filled(this.fDbEngineTarget) &&
+             filled(this.fServerTypeTarget);
+    if (this.fServerTypeTarget.value === 'HANASERVER') {
+      ok = ok && filled(this.fDbUserTarget) && filled(this.fDbPassTarget);
+    }
+    return ok;
   }
 
   async savePanel() {
@@ -291,6 +330,9 @@ export default class extends TabulatorController {
     this.fBoSuppLangsTarget.value   = '';
     this.fDstTarget.value           = '';
     this.fUseTrustedTarget.checked  = false;
+    this.#updateServerTypeHint();
+    this.#updateCredentialRequirement();
+    this.refreshSubmitState();
 
     [this.fServerErrorTarget, this.fApiUrlErrorTarget, this.fDbEngineErrorTarget,
      this.fDbUserErrorTarget, this.fDbPassErrorTarget].forEach(e => e.classList.add('hidden'));
@@ -302,26 +344,53 @@ export default class extends TabulatorController {
     this.fApiUrlTarget.value        = conn.APIUrl        ?? '';
     this.fCrystalApiUrlTarget.value = conn.CrystalAPIUrl ?? '';
     this.fOdbcTypeTarget.value      = conn.ODBCType      ?? '';
-    this.fDbEngineTarget.value      = conn.DBEngine      ?? '';
-    this.fServerTypeTarget.value    = conn.ServerType    ?? '';
+    this.#applySelectValue(this.fDbEngineTarget,   conn.DBEngine   ?? '');
+    this.#applySelectValue(this.fServerTypeTarget, conn.ServerType ?? '');
     this.fDbUserTarget.value        = conn.DBUser        ?? '';
     this.fDbPassTarget.value        = conn.DBPass        ?? '';
     this.fBoSuppLangsTarget.value   = conn.BoSuppLangs   ?? '';
     this.fDstTarget.value           = conn.DST           ?? '';
     this.fUseTrustedTarget.checked  = conn.UseTrusted    ?? false;
+    this.#updateServerTypeHint();
+    this.#updateCredentialRequirement();
+    this.refreshSubmitState();
+  }
+
+  /**
+   * Asigna un valor a un <select>; si el valor no corresponde a ninguna opción
+   * (p. ej. una conexión legacy con un motor/tipo fuera del catálogo actual),
+   * agrega una opción temporal para no perder el dato al editar.
+   */
+  #applySelectValue(select, value) {
+    if (value && ![...select.options].some(o => o.value === value)) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value;
+      select.appendChild(opt);
+    }
+    select.value = value;
+  }
+
+  /** Refresca el texto de ayuda bajo el select "Tipo de Servidor". */
+  #updateServerTypeHint() {
+    if (!this.hasFServerTypeHintTarget) return;
+    this.fServerTypeHintTarget.textContent = this.#serverTypeHints[this.fServerTypeTarget.value] ?? '';
   }
 
   #validatePanel() {
     let valid = true;
 
     const required = [
-      { target: this.fServerTarget,   error: this.fServerErrorTarget   },
-      { target: this.fApiUrlTarget,   error: this.fApiUrlErrorTarget   },
-      { target: this.fDbEngineTarget, error: this.fDbEngineErrorTarget },
-      { target: this.fDbUserTarget,   error: this.fDbUserErrorTarget   },
+      { target: this.fServerTarget,     error: this.fServerErrorTarget     },
+      { target: this.fApiUrlTarget,     error: this.fApiUrlErrorTarget     },
+      { target: this.fOdbcTypeTarget,   error: this.fOdbcTypeErrorTarget   },
+      { target: this.fDbEngineTarget,   error: this.fDbEngineErrorTarget   },
+      { target: this.fServerTypeTarget, error: this.fServerTypeErrorTarget },
     ];
 
-    if (!this.#editMode) {
+    // Usuario y contraseña solo son obligatorios para servidores HANASERVER.
+    if (this.fServerTypeTarget.value === 'HANASERVER') {
+      required.push({ target: this.fDbUserTarget, error: this.fDbUserErrorTarget });
       required.push({ target: this.fDbPassTarget, error: this.fDbPassErrorTarget });
     }
 

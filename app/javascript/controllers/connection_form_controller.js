@@ -28,10 +28,10 @@ export default class extends Controller {
     'licenseServer',
     'apiUrl',       'apiUrlError',
     'crystalApiUrl',
-    'odbcType',
+    'odbcType',     'odbcTypeError',
     'dbEngine',     'dbEngineError',
-    'serverType',
-    'dbUser',       'dbUserError',
+    'serverType',   'serverTypeError', 'serverTypeHint',
+    'dbUser',       'dbUserError', 'dbUserRequired',
     'dbPass',       'dbPassError', 'dbPassRequired',
     'boSuppLangs',
     'dst',
@@ -45,6 +45,14 @@ export default class extends Controller {
   #isEditMode   = false;
   #permissions  = [];
   #passVisible  = false;
+
+  // Descripción por valor de "Tipo de Servidor". El sufijo "T" indica conexión de
+  // confianza (Trusted / autenticación de Windows). Los valores HANA arman el
+  // connectionString para SAP HANA Studio; los SQL arman el de SQL Server.
+  #serverTypeHints = {
+    SQLSERVERT:  'SQL Server con conexión de confianza (autenticación de Windows / Trusted).',
+    HANASERVER:  'SAP HANA con autenticación estándar (usuario y contraseña).',
+  };
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -76,7 +84,8 @@ export default class extends Controller {
 
     this.submitIconTarget.textContent  = 'check';
     this.submitLabelTarget.textContent = 'Crear';
-    this.dbPassRequiredTarget.classList.remove('hidden');
+    this.#updateCredentialRequirement();
+    this.refreshSubmitState();
   }
 
   async #initEditMode() {
@@ -88,7 +97,7 @@ export default class extends Controller {
 
     this.submitIconTarget.textContent  = 'autorenew';
     this.submitLabelTarget.textContent = 'Actualizar';
-    this.dbPassRequiredTarget.classList.add('hidden');
+    this.#updateCredentialRequirement();
 
     this.#loadConnection();
   }
@@ -118,13 +127,37 @@ export default class extends Controller {
     this.apiUrlTarget.value        = conn.APIUrl        ?? '';
     this.crystalApiUrlTarget.value = conn.CrystalAPIUrl ?? '';
     this.odbcTypeTarget.value      = conn.ODBCType      ?? '';
-    this.dbEngineTarget.value      = conn.DBEngine      ?? '';
-    this.serverTypeTarget.value    = conn.ServerType    ?? '';
+    this.#applySelectValue(this.dbEngineTarget,   conn.DBEngine   ?? '');
+    this.#applySelectValue(this.serverTypeTarget, conn.ServerType ?? '');
     this.dbUserTarget.value        = conn.DBUser        ?? '';
     this.dbPassTarget.value        = conn.DBPass        ?? '';
     this.boSuppLangsTarget.value   = conn.BoSuppLangs   ?? '';
     this.dstTarget.value           = conn.DST           ?? '';
     this.useTrustedTarget.checked  = conn.UseTrusted    ?? false;
+    this.#updateServerTypeHint();
+    this.#updateCredentialRequirement();
+    this.refreshSubmitState();
+  }
+
+  /**
+   * Asigna un valor a un <select>; si el valor no corresponde a ninguna opción
+   * (p. ej. una conexión legacy con un motor/tipo fuera del catálogo actual),
+   * agrega una opción temporal para no perder el dato al editar.
+   */
+  #applySelectValue(select, value) {
+    if (value && ![...select.options].some(o => o.value === value)) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value;
+      select.appendChild(opt);
+    }
+    select.value = value;
+  }
+
+  /** Refresca el texto de ayuda bajo el select "Tipo de Servidor". */
+  #updateServerTypeHint() {
+    if (!this.hasServerTypeHintTarget) return;
+    this.serverTypeHintTarget.textContent = this.#serverTypeHints[this.serverTypeTarget.value] ?? '';
   }
 
   // ── Handlers de eventos ───────────────────────────────────────────────────
@@ -133,6 +166,39 @@ export default class extends Controller {
     this.#passVisible = !this.#passVisible;
     this.dbPassTarget.type             = this.#passVisible ? 'text' : 'password';
     this.togglePassIconTarget.textContent = this.#passVisible ? 'visibility' : 'visibility_off';
+  }
+
+  /** Muestra la descripción del tipo de servidor y ajusta si usuario/contraseña son requeridos. */
+  serverTypeChanged() {
+    this.#updateServerTypeHint();
+    this.#updateCredentialRequirement();
+  }
+
+  /**
+   * Usuario y contraseña de base de datos solo son obligatorios cuando el tipo
+   * de servidor es HANASERVER. Refleja la condición en los asteriscos del label.
+   */
+  #updateCredentialRequirement() {
+    const required = this.serverTypeTarget.value === 'HANASERVER';
+    this.dbUserRequiredTarget.classList.toggle('hidden', !required);
+    this.dbPassRequiredTarget.classList.toggle('hidden', !required);
+  }
+
+  /** Habilita el botón de guardar solo cuando todos los campos requeridos están completos. */
+  refreshSubmitState() {
+    this.submitBtnTarget.disabled = !this.#isFormValid();
+  }
+
+  /** ¿Están completos todos los campos obligatorios del formulario? */
+  #isFormValid() {
+    const filled = (t) => t.value.trim() !== '';
+    let ok = filled(this.serverTarget) && filled(this.apiUrlTarget) &&
+             filled(this.odbcTypeTarget) && filled(this.dbEngineTarget) &&
+             filled(this.serverTypeTarget);
+    if (this.serverTypeTarget.value === 'HANASERVER') {
+      ok = ok && filled(this.dbUserTarget) && filled(this.dbPassTarget);
+    }
+    return ok;
   }
 
   async save() {
@@ -172,13 +238,16 @@ export default class extends Controller {
     let valid = true;
 
     const required = [
-      { target: this.serverTarget,   error: this.serverErrorTarget   },
-      { target: this.apiUrlTarget,   error: this.apiUrlErrorTarget   },
-      { target: this.dbEngineTarget, error: this.dbEngineErrorTarget },
-      { target: this.dbUserTarget,   error: this.dbUserErrorTarget   },
+      { target: this.serverTarget,     error: this.serverErrorTarget     },
+      { target: this.apiUrlTarget,     error: this.apiUrlErrorTarget     },
+      { target: this.odbcTypeTarget,   error: this.odbcTypeErrorTarget   },
+      { target: this.dbEngineTarget,   error: this.dbEngineErrorTarget   },
+      { target: this.serverTypeTarget, error: this.serverTypeErrorTarget },
     ];
 
-    if (!this.#isEditMode) {
+    // Usuario y contraseña solo son obligatorios para servidores HANASERVER.
+    if (this.serverTypeTarget.value === 'HANASERVER') {
+      required.push({ target: this.dbUserTarget, error: this.dbUserErrorTarget });
       required.push({ target: this.dbPassTarget, error: this.dbPassErrorTarget });
     }
 
