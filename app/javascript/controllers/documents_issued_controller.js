@@ -483,7 +483,7 @@ export default class extends TabulatorController {
   }
 
   async #skipValidations(docId) {
-    const confirmed = await confirm('¿Está seguro que desea continuar?', 'Esta acción omitirá las validaciones y enviará el documento a Hacienda con errores bajo su propia responsabilidad');
+    const confirmed = await confirm('Esta acción omitirá las validaciones y enviará el documento a Hacienda con errores bajo su propia responsabilidad. ¿Está seguro que desea continuar?', 'Omitir validaciones');
     if (!confirmed) return;
     try {
       const session = Storage.get('Session') || {};
