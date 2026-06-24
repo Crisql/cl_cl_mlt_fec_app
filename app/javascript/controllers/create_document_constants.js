@@ -23,6 +23,21 @@ export const DocTypes = [
   { Id: '10', Name: 'REP' },
 ]
 
+// Descripciones extendidas de los tipos de documento electrónico (Hacienda CR).
+// Fuente única de verdad: usar en tablas/paneles que muestran el nombre completo.
+export const DOC_TYPE_DESCRIPTIONS = {
+  '01': 'Factura electrónica',
+  '02': 'Nota de débito electrónica',
+  '03': 'Nota de crédito electrónica',
+  '04': 'Tiquete electrónico',
+  '08': 'Factura electrónica de compra',
+  '09': 'Factura electrónica de exportación',
+  '10': 'Recibo electrónico de pago',
+}
+
+export const docTypeDescription = (code) =>
+  DOC_TYPE_DESCRIPTIONS[String(code).padStart(2, '0')] ?? code
+
 // ── Tipos de identificación ─────────────────────────────────
 export const IdentificationType = [
   { Id: '01', Name: 'Cédula Fisica'   },

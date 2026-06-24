@@ -3,6 +3,7 @@ import { TabulatorFull } from 'tabulator-tables';
 import { Storage, SStore } from 'vendor/clavisco/core';
 import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
+import { docTypeDescription } from 'controllers/create_document_constants';
 
 /**
  * NumberingController — Configuración de Numeración y Numeración de Recepción.
@@ -109,7 +110,10 @@ export default class extends TabulatorController {
   #numColumns() {
     return [
       { title: 'Tipo de Integración', field: 'IntegrationClm', widthGrow: 1 },
-      { title: 'Tipo de Documento',   field: 'DocType',        widthGrow: 1 },
+      {
+        title: 'Tipo de Documento', field: 'DocType', widthGrow: 1,
+        formatter: (cell) => docTypeDescription(cell.getValue()),
+      },
       { title: 'Número Siguiente',    field: 'NextNumber',     widthGrow: 1 },
       { title: 'Observación',         field: 'Obvs',           widthGrow: 2 },
       { title: 'Sucursal',            field: 'SucursalNum',    widthGrow: 1 },
