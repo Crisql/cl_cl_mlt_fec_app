@@ -1117,3 +1117,40 @@ entidad. Nunca un genérico `Crear` ni solo `Nuevo`/`Nueva` sin la entidad.
   conserva `Crear` / `Guardar` según corresponda (ver §12). **No** se renombra.
 - El género se concuerda con la entidad aunque el patrón nominal sea "Nuevo [X]":
   preferir español gramaticalmente correcto antes que un literal uniforme.
+
+---
+
+## 21. Capitalización de tabs y encabezados — Sentence case
+
+Todo texto de **navegación (tabs)** y todo **encabezado** (títulos de sección, títulos de
+panel/diálogo, encabezados de columnas duales) usa **Sentence case**: solo se capitaliza la
+**primera palabra** y los **nombres propios**. Nunca Title Case (capitalizar cada palabra).
+
+### Regla
+
+> Tab / encabezado = primera palabra en mayúscula + resto en minúscula (salvo nombres propios).
+> Los nombres comunes (usuario, bandeja, compañía, registro, correos…) van en **minúscula**
+> cuando no abren la frase.
+
+| ❌ Title Case | ✅ Sentence case |
+|---|---|
+| `Lista de Usuarios` | `Lista de usuarios` |
+| `Completar Registro` | `Completar registro` |
+| `Bandeja de Correos` | `Bandeja de correos` |
+| `Asignación de Bandejas a Compañías` | `Asignación de bandejas a compañías` |
+| `Bandejas Disponibles` | `Bandejas disponibles` |
+| `Información de la Bandeja` | `Información de la bandeja` |
+
+### Alcance
+
+Aplica a: etiquetas de tabs, `<h3>`/títulos de panel lateral y modal, encabezados de las
+columnas de listas duales (asignación), y cualquier título de sección visible.
+Incluye los títulos de panel asignados dinámicamente en JS
+(`this.panelTitleTarget.textContent = 'Nueva bandeja'`).
+
+### Excepción única — botón de creación primaria (§20)
+
+El botón del toolbar que abre el formulario de creación **conserva la entidad capitalizada**
+(`Nuevo Usuario`, `Nueva Bandeja`) por la regla de §20. Es la **única** excepción: aunque el
+panel que abre se titule `Nueva bandeja` (Sentence case), el botón mantiene `Nueva Bandeja`.
+Los botones de formulario (`Crear`, `Guardar`, `Modificar`) siguen §12 — no son encabezados.

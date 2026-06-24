@@ -214,7 +214,7 @@ export default class extends TabulatorController {
     this.#isCredentialsValidated = false;
     this.#credentialSnapshot = null;
     this.#resetForm();
-    this.panelTitleTarget.textContent = 'Nueva Bandeja';
+    this.panelTitleTarget.textContent = 'Nueva bandeja';
     this.#setPanelMode('create');
     this.#openPanel();
   }
@@ -519,7 +519,7 @@ export default class extends TabulatorController {
     this.#isEdit  = true;
     this.#isCredentialsValidated = true; // ya validadas en el servidor — habilitar save
     this.#resetForm();
-    this.panelTitleTarget.textContent = 'Modificar Bandeja';
+    this.panelTitleTarget.textContent = 'Modificar bandeja';
 
     this.inputEmailTarget.value         = row.Email         || '';
     this.inputPasswordTarget.value      = '';
