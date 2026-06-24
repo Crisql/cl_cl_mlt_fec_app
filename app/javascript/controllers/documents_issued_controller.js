@@ -653,12 +653,12 @@ export default class extends TabulatorController {
     return this.#escapeHtml(str);
   }
 
-  // Renderiza una lista de correos (separados por coma) como chips individuales.
+  // Renderiza una lista de correos (separados por ";") como chips individuales.
   // Si no hay ninguno, devuelve "—".
   #emailChips(value) {
     if (value == null) return '<span class="text-sm text-gray-700">—</span>';
     const emails = String(value)
-      .split(',')
+      .split(';')
       .map((e) => e.trim())
       .filter((e) => e !== '' && e.toLowerCase() !== 'null');
 
@@ -698,7 +698,7 @@ export default class extends TabulatorController {
         ${this.#relativeDateSpan(value, 'text-sm text-gray-700')}
       </div>`;
 
-    // Para/CC pueden traer varios correos concatenados por coma → chips individuales
+    // Para/CC pueden traer varios correos concatenados por ";" → chips individuales
     const chipRow = (label, value) => `
       <div class="flex flex-col gap-1">
         <span class="text-xs font-medium text-gray-400">${label}</span>
@@ -736,7 +736,7 @@ export default class extends TabulatorController {
 
   #isValidEmailList(value) {
     if (!value.trim()) return true; // vacío es válido (campo opcional)
-    return value.split(',').every(e => this.#isValidEmail(e));
+    return value.split(';').every(e => this.#isValidEmail(e));
   }
 
   #validateEmailFields() {
