@@ -35,7 +35,7 @@ export default class extends TabulatorController {
     'inputConsecutivoFE', 'selectDocType',
 
     // Toolbar
-    'statusCounters', 'btnChart', 'btnBulkDownload',
+    'btnChart', 'btnBulkDownload',
 
     // Panel lateral correos
     'emailModal', 'emailPanelBackdrop', 'emailLoader', 'emailTable', 'emailEmpty',
@@ -235,10 +235,9 @@ export default class extends TabulatorController {
       return { data: [], last_page: 1 };
     }
 
-    // Contadores de estado
+    // Cantidades por estado (usadas por el modal de gráfico "Más Información")
     this.#quantities = {};
     (json.Data.DocumentQtyList || []).forEach(q => { this.#quantities[q.Status] = q.Quantity; });
-    this.#renderStatusCounters();
 
     // Mapear documentos
     const docs = (json.Data.DocumentList || []).map(d => this.#mapDocument(d));
@@ -983,29 +982,6 @@ export default class extends TabulatorController {
   }
 
   // ── Modal Confirmación ────────────────────────────────────────────────────
-
-  // ── Contadores de estado ──────────────────────────────────────────────────
-
-  #renderStatusCounters() {
-    const configs = [
-      { status: 1, label: 'Aceptado',    bg: '#e8f5ee', color: '#3a7d52' },
-      { status: 2, label: 'Procesando',  bg: '#e8f0fe', color: '#1a56db' },
-      { status: 3, label: 'En Hacienda', bg: '#e8f0fe', color: '#1a56db' },
-      { status: 4, label: 'Rechazado',   bg: '#fdecea', color: '#c0392b' },
-      { status: 5, label: 'Error',       bg: '#fffbeb', color: '#b45309' },
-      { status: 6, label: 'Reprocesar',  bg: '#fff7ed', color: '#c2410c' },
-      { status: 7, label: 'Anulado',     bg: '#fdecea', color: '#c0392b' },
-    ];
-
-    this.statusCountersTarget.innerHTML = configs
-      .filter(c => (this.#quantities[c.status] || 0) > 0)
-      .map(c => `
-        <span style="background-color:${c.bg}; color:${c.color};"
-              class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">
-          ${c.label}: ${this.#quantities[c.status]}
-        </span>`)
-      .join('');
-  }
 
   // ── Utilidades ─────────────────────────────────────────────────────────────
 
