@@ -181,6 +181,10 @@ export default class extends Controller {
     this.#credentialsDirty = true;
     this.#credentialsValidated = false;
     this.companySelectTarget.disabled = false;
+    this.#setTip(
+      this.companySelectTarget,
+      'Seleccione la compañía con la que desea probar las credenciales'
+    );
     this.#syncButtonStates();
   }
 
@@ -288,8 +292,16 @@ export default class extends Controller {
   // ── Estado de botones ─────────────────────────────────────────────────────
 
   #syncButtonStates() {
+    this.#syncCompanySelectTip();
     this.#syncTestCredentialsBtn();
     this.#syncUpdateBtn();
+  }
+
+  #syncCompanySelectTip() {
+    const tip = this.companySelectTarget.disabled
+      ? 'Modifique el usuario o la contraseña de SAP para habilitar la selección de compañía'
+      : 'Seleccione la compañía con la que desea probar las credenciales';
+    this.#setTip(this.companySelectTarget, tip);
   }
 
   #syncTestCredentialsBtn() {
@@ -306,14 +318,24 @@ export default class extends Controller {
       icon.textContent  = 'hourglass_empty';
       label.textContent = 'Probando...';
       btn.classList.remove('btn-verified');
+      this.#setTip(btn, 'Validando las credenciales de SAP, espere por favor');
     } else if (this.#credentialsValidated) {
       icon.textContent  = 'check_circle';
       label.textContent = 'Credenciales verificadas';
       btn.classList.add('btn-verified');
+      this.#setTip(btn, 'Las credenciales de SAP ya fueron verificadas correctamente');
     } else {
       icon.textContent  = 'wifi_tethering';
       label.textContent = 'Probar credenciales';
       btn.classList.remove('btn-verified');
+      // Tooltip accionable según la condición que mantiene el botón deshabilitado
+      if (!this.#credentialsDirty) {
+        this.#setTip(btn, 'Modifique el usuario o la contraseña de SAP para probar las credenciales');
+      } else if (!companySelected) {
+        this.#setTip(btn, 'Seleccione una compañía para probar las credenciales');
+      } else {
+        this.#setTip(btn, 'Probar las credenciales de SAP en la compañía seleccionada');
+      }
     }
   }
 
@@ -321,6 +343,26 @@ export default class extends Controller {
     const formInvalid = !this.sapUserInputTarget.value.trim();
     const blocked     = this.#updateIsBlocked();
     this.btnUpdateTarget.disabled = formInvalid || blocked;
+
+    // Tooltip accionable según la condición que mantiene el botón deshabilitado
+    if (formInvalid) {
+      this.#setTip(this.btnUpdateTarget, 'Ingrese el usuario de SAP para guardar los cambios');
+    } else if (blocked) {
+      this.#setTip(this.btnUpdateTarget, 'Pruebe las credenciales de SAP antes de guardar los cambios');
+    } else {
+      this.#setTip(this.btnUpdateTarget, 'Guardar los cambios del perfil');
+    }
+  }
+
+  /**
+   * Mantiene sincronizados los dos atributos de tooltip de un control:
+   * `data-tooltip` (convención §2) y `title` (fallback nativo del navegador).
+   * Todo botón/control deshabilitado debe describir la condición para habilitarlo.
+   */
+  #setTip(el, text) {
+    if (!el) return;
+    el.dataset.tooltip = text;
+    el.setAttribute('title', text);
   }
 
   #updateIsBlocked() {

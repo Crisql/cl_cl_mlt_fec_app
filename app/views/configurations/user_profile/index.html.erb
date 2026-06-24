@@ -64,6 +64,8 @@
                   data-testid="company-select"
                   data-action="change->user-profile#onCompanyChange"
                   disabled
+                  data-tooltip="Modifique el usuario o la contraseña de SAP para habilitar la selección de compañía"
+                  title="Modifique el usuario o la contraseña de SAP para habilitar la selección de compañía"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed">
             <option value="">— Seleccione —</option>
           </select>
@@ -123,6 +125,8 @@
                 data-testid="btn-test-credentials"
                 data-action="click->user-profile#testCredentials"
                 disabled
+                data-tooltip="Modifique el usuario o la contraseña de SAP para probar las credenciales"
+                title="Modifique el usuario o la contraseña de SAP para probar las credenciales"
                 class="flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-400 text-blue-600 text-sm font-medium hover:bg-blue-50 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed">
           <span data-user-profile-target="testCredentialsIcon"
                 class="material-icons text-base">wifi_tethering</span>
@@ -133,6 +137,8 @@
         <button type="submit"
                 data-user-profile-target="btnUpdate"
                 data-testid="btn-update"
+                data-tooltip="Guardar los cambios del perfil"
+                title="Guardar los cambios del perfil"
                 class="flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           <span class="material-icons text-base">update</span>
           <span>Actualizar</span>
