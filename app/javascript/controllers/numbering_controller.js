@@ -27,15 +27,19 @@ export default class extends TabulatorController {
   static targets = [
     ...TabulatorController.targets,
 
-    // Secciones colapsables
-    'numberingCard', 'numberingSection', 'numberingChevron',
-    'receptionCard', 'receptionSection', 'receptionChevron',
+    // Tabs
+    'tabNumbering', 'tabReception',
+    'numberingPanelTab', 'receptionPanelTab',
 
     // Tablas
     'numberingTable', 'receptionTable',
 
-    // Loaders (vista completa para carga inicial combinada; por sección para reloads)
-    'viewLoader', 'numberingLoader', 'receptionLoader',
+    // Filtros
+    'numFilterDocType', 'numFilterSucursal', 'numFilterTerminal', 'numFilterEstado',
+    'recFilterSucursal', 'recFilterTerminal', 'recFilterEstado',
+
+    // Loaders por tab/tabla
+    'numberingLoader', 'receptionLoader',
 
     // Panel Numeración
     'numberingPanel', 'numberingPanelBackdrop', 'numberingPanelTitle',
@@ -163,43 +167,34 @@ export default class extends TabulatorController {
   #hideLoader(el) { el?.classList.add('hidden'); }
 
   async #loadInitialData() {
-    const loader = this.hasViewLoaderTarget ? this.viewLoaderTarget : null;
-    this.#showLoader(loader);
+    // Fase 1 — sucursales: prerequisito de ambas tablas (resuelve la etiqueta
+    // de sucursal y los selects de los paneles). Loader visible en ambos tabs.
+    this.#showLoader(this.numberingLoaderTarget);
+    this.#showLoader(this.receptionLoaderTarget);
     try {
-      const [numRes, sucRes, recRes] = await Promise.all([
-        this.#apiFetch(`/api/Numbering?companyId=${this.#companyId}`),
-        this.#apiFetch(`/api/Sucursal/GetSucursalByCompany?companyId=${this.#companyId}`),
-        this.#apiFetch(`/api/Numbering/GetReceptNumberingByCompany?companyId=${this.#companyId}`),
-      ]);
-
+      const sucRes = await this.#apiFetch(`/api/Sucursal/GetSucursalByCompany?companyId=${this.#companyId}`);
       this.#sucursalList = sucRes.Data || [];
       this.#populateSucursalSelects();
-
-      this.#numTable?.setData((numRes.Data || []).map(x => this.#mapNum(x)));
-      this.#recTable?.setData((recRes.Data || []).map(x => this.#mapRec(x)));
-
-      if (!numRes.Data?.length || !recRes.Data?.length) {
-        const msg = numRes.Message || recRes.Message;
-        if (msg) showToast(msg, 'warning');
-      }
     } catch (err) {
-      showToast(err.message || 'Error al cargar la información de numeración.', 'error');
-    } finally {
-      this.#hideLoader(loader);
+      this.#hideLoader(this.numberingLoaderTarget);
+      this.#hideLoader(this.receptionLoaderTarget);
+      showToast(err.message || 'Error al cargar las sucursales.', 'error');
+      return;
     }
+
+    // Fase 2 — numeraciones independientes: cada tab oculta su propio loader
+    // en cuanto termina su consulta, sin esperar a la otra.
+    this.#reloadNum();
+    this.#reloadRec();
   }
 
   async #reloadNum() {
     const loader = this.hasNumberingLoaderTarget ? this.numberingLoaderTarget : null;
     this.#showLoader(loader);
     try {
-      const [numRes, sucRes] = await Promise.all([
-        this.#apiFetch(`/api/Numbering?companyId=${this.#companyId}`),
-        this.#apiFetch(`/api/Sucursal/GetSucursalByCompany?companyId=${this.#companyId}`),
-      ]);
-      this.#sucursalList = sucRes.Data || [];
-      this.#populateSucursalSelects();
+      const numRes = await this.#apiFetch(`/api/Numbering?companyId=${this.#companyId}`);
       this.#numTable?.setData((numRes.Data || []).map(x => this.#mapNum(x)));
+      if (!numRes.Data?.length && numRes.Message) showToast(numRes.Message, 'warning');
     } catch (err) {
       showToast(err.message || 'Error al recargar numeración.', 'error');
     } finally {
@@ -213,6 +208,7 @@ export default class extends TabulatorController {
     try {
       const res = await this.#apiFetch(`/api/Numbering/GetReceptNumberingByCompany?companyId=${this.#companyId}`);
       this.#recTable?.setData((res.Data || []).map(x => this.#mapRec(x)));
+      if (!res.Data?.length && res.Message) showToast(res.Message, 'warning');
     } catch (err) {
       showToast(err.message || 'Error al recargar numeración de recepción.', 'error');
     } finally {
@@ -226,7 +222,7 @@ export default class extends TabulatorController {
     return {
       ...x,
       IntegrationClm: x.Integration === 1 ? 'Integrador' : 'AppFE',
-      SucursalNum: this.#sucursalList.find(s => s.Id === x.SucursalId)?.SucursalNum ?? x.SucursalId,
+      SucursalNum: this.#sucursalLabel(x.SucursalId),
     };
   }
 
@@ -234,8 +230,15 @@ export default class extends TabulatorController {
     return {
       ...x,
       IntegrationClm: x.Integration === 1 ? 'Integrador' : 'AppFE',
-      SucursalNum: this.#sucursalList.find(s => s.Id === x.SucursalId)?.SucursalNum ?? x.SucursalId,
+      SucursalNum: this.#sucursalLabel(x.SucursalId),
     };
+  }
+
+  // Etiqueta de sucursal para tablas: "<código> - <descripción>"
+  #sucursalLabel(sucursalId) {
+    const s = this.#sucursalList.find(s => s.Id === sucursalId);
+    if (!s) return sucursalId;
+    return s.Alias ? `${s.SucursalNum} - ${s.Alias}` : `${s.SucursalNum}`;
   }
 
   // ── Selects de sucursal ────────────────────────────────────────────────────
@@ -244,35 +247,78 @@ export default class extends TabulatorController {
     const opts = this.#sucursalList
       .map(s => `<option value="${s.Id}">${s.SucursalNum}${s.Alias ? ' - ' + s.Alias : ''}</option>`)
       .join('');
-    const base = `<option value="">-- Seleccione --</option>${opts}`;
 
+    // Selects de los paneles (crear/editar) — placeholder "-- Seleccione --"
     [this.numSucursalTarget, this.recSucursalTarget].forEach(sel => {
       const prev = sel.value;
-      sel.innerHTML = base;
+      sel.innerHTML = `<option value="">-- Seleccione --</option>${opts}`;
+      if (prev) sel.value = prev;
+    });
+
+    // Selects de los filtros — placeholder "Todas"
+    [this.numFilterSucursalTarget, this.recFilterSucursalTarget].forEach(sel => {
+      const prev = sel.value;
+      sel.innerHTML = `<option value="">Todas</option>${opts}`;
       if (prev) sel.value = prev;
     });
   }
 
-  // ── Toggle secciones colapsables ──────────────────────────────────────────
+  // ── Tabs ────────────────────────────────────────────────────────────────
 
-  toggleNumbering() {
-    const collapsed = this.numberingSectionTarget.classList.toggle('hidden');
-    this.numberingChevronTarget.classList.toggle('rotate-180', !collapsed);
-    // El card ocupa espacio cuando está expandido, se comprime cuando está colapsado
-    this.numberingCardTarget.classList.toggle('flex-1',   !collapsed);
-    this.numberingCardTarget.classList.toggle('min-h-0',  !collapsed);
-    this.numberingCardTarget.classList.toggle('flex-shrink-0', collapsed);
+  switchTab(event) {
+    const tab = event.currentTarget.dataset.tab;
+
+    const activeClass   = ['border-blue-600', 'text-blue-600', 'bg-white'];
+    const inactiveClass = ['border-transparent', 'text-gray-500'];
+
+    [this.tabNumberingTarget, this.tabReceptionTarget].forEach(btn => {
+      btn.classList.remove(...activeClass, ...inactiveClass);
+      btn.classList.add(...inactiveClass);
+    });
+    event.currentTarget.classList.remove(...inactiveClass);
+    event.currentTarget.classList.add(...activeClass);
+
+    if (tab === 'numbering') {
+      this.numberingPanelTabTarget.classList.remove('hidden');
+      this.receptionPanelTabTarget.classList.add('hidden');
+      requestAnimationFrame(() => this.#numTable?.redraw(true));
+    } else {
+      this.numberingPanelTabTarget.classList.add('hidden');
+      this.receptionPanelTabTarget.classList.remove('hidden');
+      // Tabulator no puede calcular altura dentro de un elemento hidden;
+      // forzamos redibujado al mostrar el panel
+      requestAnimationFrame(() => this.#recTable?.redraw(true));
+    }
   }
 
-  toggleReception() {
-    const collapsed = this.receptionSectionTarget.classList.toggle('hidden');
-    this.receptionChevronTarget.classList.toggle('rotate-180', !collapsed);
-    this.receptionCardTarget.classList.toggle('flex-1',   !collapsed);
-    this.receptionCardTarget.classList.toggle('min-h-0',  !collapsed);
-    this.receptionCardTarget.classList.toggle('flex-shrink-0', collapsed);
-    // Tabulator no puede calcular altura dentro de un elemento hidden;
-    // forzamos redibujado en el siguiente frame de animación
-    if (!collapsed) requestAnimationFrame(() => this.#recTable?.redraw(true));
+  // ── Filtros (cliente, sobre los datos ya cargados) ──────────────────────────
+
+  filterNumbering() {
+    const docType = this.numFilterDocTypeTarget.value;
+    const sucId   = this.numFilterSucursalTarget.value;
+    const term    = this.numFilterTerminalTarget.value.trim();
+    const estado  = this.numFilterEstadoTarget.value;
+
+    this.#numTable?.setFilter((row) => {
+      if (docType && row.DocType !== docType) return false;
+      if (sucId && String(row.SucursalId) !== String(sucId)) return false;
+      if (term && !String(row.Terminal ?? '').includes(term)) return false;
+      if (estado !== '' && (row.Active ? '1' : '0') !== estado) return false;
+      return true;
+    });
+  }
+
+  filterReception() {
+    const sucId  = this.recFilterSucursalTarget.value;
+    const term   = this.recFilterTerminalTarget.value.trim();
+    const estado = this.recFilterEstadoTarget.value;
+
+    this.#recTable?.setFilter((row) => {
+      if (sucId && String(row.SucursalId) !== String(sucId)) return false;
+      if (term && !String(row.Terminal ?? '').includes(term)) return false;
+      if (estado !== '' && (row.Active ? '1' : '0') !== estado) return false;
+      return true;
+    });
   }
 
   // ── Panel Numeración ───────────────────────────────────────────────────────

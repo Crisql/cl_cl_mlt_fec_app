@@ -5,29 +5,40 @@
      data-testid="numbering-page"
      class="p-6 flex flex-col gap-4 h-full relative">
 
-  <%# Loader de toda la sección (carga inicial combinada) — sin texto %>
-  <div data-numbering-target="viewLoader"
-       class="hidden absolute inset-0 z-30 flex items-center justify-center bg-white/60">
-    <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
-      <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
-      <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
-              stroke-linecap="round" stroke-dasharray="80 200">
-        <animateTransform attributeName="transform" attributeType="XML" type="rotate"
-                          from="0 25 25" to="360 25 25" dur="0.8s" repeatCount="indefinite"></animateTransform>
-      </circle>
-    </svg>
+  <%# ================================================================ %>
+  <%# TABS %>
+  <%# ================================================================ %>
+  <div class="flex-shrink-0 border-b border-gray-200">
+    <nav class="flex gap-1" aria-label="Tabs">
+      <button type="button"
+              data-action="click->numbering#switchTab"
+              data-tab="numbering"
+              data-numbering-target="tabNumbering"
+              data-testid="tab-numbering"
+              class="px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 border-blue-600 text-blue-600 bg-white transition-colors">
+        Numeraciones de Emisión
+      </button>
+      <button type="button"
+              data-action="click->numbering#switchTab"
+              data-tab="reception"
+              data-numbering-target="tabReception"
+              data-testid="tab-reception"
+              class="px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors">
+        Numeraciones de Recepción
+      </button>
+    </nav>
   </div>
 
   <%# ================================================================ %>
-  <%# SECCIÓN 1: Numeración %>
+  <%# TAB 1: Numeraciones de Emisión %>
   <%# ================================================================ %>
-  <%# flex-1 min-h-0: ocupa el espacio disponible del flex padre %>
-  <div data-numbering-target="numberingCard"
-       class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-1 min-h-0 relative">
+  <div data-numbering-target="numberingPanelTab"
+       data-testid="panel-numbering"
+       class="flex flex-col flex-1 min-h-0 gap-4 relative">
 
-    <%# Loader de la sección Numeración — sin texto %>
+    <%# Loader de la sección Numeración — cubre filtros y tabla %>
     <div data-numbering-target="numberingLoader"
-         class="hidden absolute inset-0 z-20 flex items-center justify-center bg-white/60 rounded-lg">
+         class="hidden absolute inset-0 z-30 flex items-center justify-center bg-white/60 rounded-lg">
       <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
         <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
         <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
@@ -38,33 +49,80 @@
       </svg>
     </div>
 
-    <%# Header colapsable — flex-shrink-0 para que no se comprima %>
-    <button type="button"
-            data-action="click->numbering#toggleNumbering"
-            data-numbering-target="numberingHeader"
-            class="flex items-center justify-between w-full px-5 py-3 text-left hover:bg-gray-50 transition-colors flex-shrink-0">
-      <span class="text-sm font-semibold text-gray-800">Numeración</span>
-      <span class="material-icons text-gray-500 text-xl transition-transform rotate-180"
-            data-numbering-target="numberingChevron">expand_more</span>
-    </button>
+    <%# Filtros de búsqueda %>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-shrink-0">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
 
-    <%# Cuerpo — flex-1 min-h-0 para que la tabla pueda crecer %>
-    <div data-numbering-target="numberingSection"
-         class="border-t border-gray-100 flex-1 min-h-0 flex flex-col">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo de documento</label>
+          <select data-numbering-target="numFilterDocType"
+                  data-testid="num-filter-doc-type"
+                  class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todos</option>
+            <option value="01">Factura electrónica</option>
+            <option value="02">Nota de débito electrónica</option>
+            <option value="03">Nota de crédito electrónica</option>
+            <option value="04">Tiquete electrónico</option>
+            <option value="08">Factura electrónica de compra</option>
+            <option value="09">Factura electrónica de exportación</option>
+            <option value="10">Recibo electrónico de pago</option>
+          </select>
+        </div>
 
-      <%# Toolbar %>
-      <div class="px-5 py-3 flex justify-end flex-shrink-0">
-        <button type="button"
-                data-action="click->numbering#openCreateNumbering"
-                data-testid="btn-new-numbering"
-                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-          <span class="material-icons text-base">add</span>
-          Nueva Numeración
-        </button>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Sucursal</label>
+          <select data-numbering-target="numFilterSucursal"
+                  data-testid="num-filter-sucursal"
+                  class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todas</option>
+          </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Terminal</label>
+          <input type="text"
+                 inputmode="numeric"
+                 data-numbering-target="numFilterTerminal"
+                 data-testid="num-filter-terminal"
+                 placeholder="Terminal"
+                 class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Estado</label>
+          <select data-numbering-target="numFilterEstado"
+                  data-testid="num-filter-estado"
+                  class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todos</option>
+            <option value="1">Activo</option>
+            <option value="0">Inactivo</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2 lg:col-span-2">
+          <button type="button"
+                  data-action="click->numbering#filterNumbering"
+                  data-testid="num-btn-search"
+                  class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
+            <span class="material-icons text-base">filter_alt</span>
+            Consultar
+          </button>
+          <button type="button"
+                  data-action="click->numbering#openCreateNumbering"
+                  data-testid="btn-new-numbering"
+                  class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
+            <span class="material-icons text-base">add</span>
+            Nueva Numeración de Emisión
+          </button>
+        </div>
       </div>
+    </div>
+
+    <%# Tabla %>
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-1 min-h-0 relative">
 
       <%# Contenedor de tabla — flex-1 min-h-0 para que h-full funcione %>
-      <div class="flex-1 min-h-0 px-5 pb-5">
+      <div class="flex-1 min-h-0 p-5">
         <div data-numbering-target="numberingTable"
              data-testid="numbering-table"
              class="h-full">
@@ -74,15 +132,15 @@
   </div>
 
   <%# ================================================================ %>
-  <%# SECCIÓN 2: Numeración de Recepción %>
+  <%# TAB 2: Numeración de Recepción %>
   <%# ================================================================ %>
-  <%# flex-shrink-0: colapsada por defecto, solo ocupa el header %>
-  <div data-numbering-target="receptionCard"
-       class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-shrink-0 relative">
+  <div data-numbering-target="receptionPanelTab"
+       data-testid="panel-reception"
+       class="hidden flex flex-col flex-1 min-h-0 gap-4 relative">
 
-    <%# Loader de la sección Numeración de Recepción — sin texto %>
+    <%# Loader de la sección Numeración de Recepción — cubre filtros y tabla %>
     <div data-numbering-target="receptionLoader"
-         class="hidden absolute inset-0 z-20 flex items-center justify-center bg-white/60 rounded-lg">
+         class="hidden absolute inset-0 z-30 flex items-center justify-center bg-white/60 rounded-lg">
       <svg width="40" height="40" viewBox="0 0 50 50" aria-hidden="true">
         <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
         <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
@@ -93,33 +151,64 @@
       </svg>
     </div>
 
-    <%# Header colapsable %>
-    <button type="button"
-            data-action="click->numbering#toggleReception"
-            data-numbering-target="receptionHeader"
-            class="flex items-center justify-between w-full px-5 py-3 text-left hover:bg-gray-50 transition-colors flex-shrink-0">
-      <span class="text-sm font-semibold text-gray-800">Numeración de Recepción</span>
-      <span class="material-icons text-gray-500 text-xl transition-transform"
-            data-numbering-target="receptionChevron">expand_more</span>
-    </button>
+    <%# Filtros de búsqueda %>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex-shrink-0">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
 
-    <%# Cuerpo — colapsado por defecto %>
-    <div data-numbering-target="receptionSection"
-         class="border-t border-gray-100 hidden flex-1 min-h-0 flex flex-col">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Sucursal</label>
+          <select data-numbering-target="recFilterSucursal"
+                  data-testid="rec-filter-sucursal"
+                  class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todas</option>
+          </select>
+        </div>
 
-      <%# Toolbar %>
-      <div class="px-5 py-3 flex justify-end flex-shrink-0">
-        <button type="button"
-                data-action="click->numbering#openCreateReception"
-                data-testid="btn-new-reception"
-                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-          <span class="material-icons text-base">add</span>
-          Nueva Numeración de Recepción
-        </button>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Terminal</label>
+          <input type="text"
+                 inputmode="numeric"
+                 data-numbering-target="recFilterTerminal"
+                 data-testid="rec-filter-terminal"
+                 placeholder="Terminal"
+                 class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Estado</label>
+          <select data-numbering-target="recFilterEstado"
+                  data-testid="rec-filter-estado"
+                  class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">Todos</option>
+            <option value="1">Activo</option>
+            <option value="0">Inactivo</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2">
+          <button type="button"
+                  data-action="click->numbering#filterReception"
+                  data-testid="rec-btn-search"
+                  class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
+            <span class="material-icons text-base">filter_alt</span>
+            Consultar
+          </button>
+          <button type="button"
+                  data-action="click->numbering#openCreateReception"
+                  data-testid="btn-new-reception"
+                  class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+            <span class="material-icons text-base">add</span>
+            Nueva Numeración de Recepción
+          </button>
+        </div>
       </div>
+    </div>
+
+    <%# Tabla %>
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col flex-1 min-h-0 relative">
 
       <%# Contenedor de tabla %>
-      <div class="flex-1 min-h-0 px-5 pb-5">
+      <div class="flex-1 min-h-0 p-5">
         <div data-numbering-target="receptionTable"
              data-testid="reception-table"
              class="h-full">
