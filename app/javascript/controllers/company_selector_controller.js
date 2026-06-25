@@ -268,6 +268,10 @@ export default class extends Controller {
       this.#table?.alert('Error al cargar compañías', 'error')
     } finally {
       this.#hidePanelLoader()
+      // Una vez cargadas las empresas, enfocar el input de búsqueda
+      if (this.hasSearchInputTarget) {
+        requestAnimationFrame(() => this.searchInputTarget.focus())
+      }
     }
   }
 
