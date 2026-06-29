@@ -39,6 +39,10 @@ gem 'tzinfo-data', platforms: %i[windows jruby]
 # Assets
 gem 'propshaft'
 
+# Sentry
+gem "sentry-ruby"
+gem "sentry-rails"
+
 group :development, :test do
   gem 'debug', platforms: %i[mri windows], require: 'debug/prelude'
   gem 'brakeman', require: false
