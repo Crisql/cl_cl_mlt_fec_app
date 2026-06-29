@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus'
-import { SStore, getApiHeaders } from 'vendor/clavisco/core'
+import { SStore, getApiHeaders, isSessionValid } from 'vendor/clavisco/core'
 import MENU_NODES from 'data/menu'
 
 // Mapa plano ruta → permiso(s) requerido(s), construido una sola vez desde menu.js.
@@ -21,7 +21,10 @@ export default class extends Controller {
   }
 
   connect() {
-    this.#checkAuth()
+    // Si la sesión no es válida, redirigir a login y NO continuar: chequear
+    // permisos revelaría contenido o dispararía fetches innecesarios mientras
+    // el navegador todavía no completó la navegación a /login.
+    if (!this.#checkAuth()) return
     this.#checkRoutePermission()
   }
 
@@ -35,21 +38,27 @@ export default class extends Controller {
   // Private
   // -------------------------------------------------------------------------
 
+  /**
+   * Verifica la sesión almacenada. Si es válida retorna true; si no, limpia la
+   * sesión (cuando expiró), redirige a login y retorna false.
+   * @returns {boolean}
+   */
   #checkAuth() {
     const session = this.#getSession()
 
     if (!session || !session.access_token) {
       this.#redirectToLogin()
-      return
+      return false
     }
 
-    // expires_at viene del JWT exp (Unix timestamp en ms), sin ambigüedad de formato de fecha
-    const expiresAt = session.expires_at ?? null
-
-    if (expiresAt && Date.now() >= expiresAt) {
+    // isSessionValid centraliza la regla de expiración (expires_at = JWT exp en ms).
+    if (!isSessionValid()) {
       this.#clearSession()
       this.#redirectToLogin()
+      return false
     }
+
+    return true
   }
 
   async #checkRoutePermission() {

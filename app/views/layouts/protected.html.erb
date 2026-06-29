@@ -4,6 +4,33 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="turbo-cache-control" content="no-cache">
+
+    <%# ---------------------------------------------------------------- %>
+    <%# Auth gate — guard SÍNCRONO, corre durante el parseo del <head>,    %>
+    <%# antes de pintar el <body> y antes de que Stimulus (módulos ES      %>
+    <%# diferidos) conecte. Si no hay sesión válida en localStorage,       %>
+    <%# redirige a /login y la shell protegida NUNCA se renderiza →        %>
+    <%# elimina el flash de menú/home vacío que dejaba un redirect async.  %>
+    <%#                                                                     %>
+    <%# Única fuente de la regla de validez para el cold load. La misma    %>
+    <%# regla vive en isSessionValid() (vendor/clavisco/core), que usa el  %>
+    <%# auth_guard_controller para la navegación Turbo in-app. Se inlinea  %>
+    <%# (no se importa) porque debe ser bloqueante; un módulo ES sería     %>
+    <%# diferido y pintaría la página antes de ejecutarse.                 %>
+    <%# ---------------------------------------------------------------- %>
+    <script>
+      (function () {
+        try {
+          var raw = window.localStorage.getItem('Session');
+          var s = raw ? JSON.parse(raw) : null;
+          var valid = !!(s && s.access_token && (!s.expires_at || Date.now() < s.expires_at));
+          if (!valid) window.location.replace('/login');
+        } catch (e) {
+          window.location.replace('/login');
+        }
+      })();
+    </script>
+
     <title>Factura Electrónica</title>
     <% if content_for?(:title) %>
       <meta name="x-page-title" content="<%= yield(:title) + " | Factura Electrónica" %>">

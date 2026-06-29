@@ -405,6 +405,29 @@ export const SStore = {
 }
 
 // ============================================================
+// SESSION VALIDITY HELPER
+// ============================================================
+
+/**
+ * Determina si la sesión almacenada es válida: existe un access_token y,
+ * de tener expiración (expires_at = JWT exp en ms), aún no venció.
+ *
+ * Fuente única de verdad para los guards del layout protegido. El auth-guard
+ * la usa para redirigir a login; los controllers hermanos (menu, company-selector)
+ * la usan para abortar su connect() y NO renderizar ni hacer fetch cuando el
+ * usuario no está autenticado — evita el "menú borroso + loader" que aparece
+ * un instante antes de que el navegador navegue a /login.
+ *
+ * @returns {boolean} true si la sesión es usable, false si falta o expiró.
+ */
+export function isSessionValid() {
+  const session = Storage.getSession()
+  if (!session || !session.access_token) return false
+  const expiresAt = session.expires_at ?? null
+  return !(expiresAt && Date.now() >= expiresAt)
+}
+
+// ============================================================
 // API HEADERS HELPER
 // ============================================================
 
@@ -455,6 +478,7 @@ export default {
   uriDecode,
   uriEncode,
   Storage,
+  isSessionValid,
   getApiHeaders,
   apiRequest
 }
