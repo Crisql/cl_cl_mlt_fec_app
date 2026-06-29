@@ -153,26 +153,28 @@
   <%# ---------------------------------------------------------------- %>
   <%# TOOLBAR DE LA TABLA %>
   <%# ---------------------------------------------------------------- %>
-  <div class="flex-shrink-0 flex items-center justify-end gap-3">
+  <div class="flex-shrink-0 flex items-center justify-end gap-3 -mb-3">
 
-    <%# Botones de acción %>
+    <%# Botones de acción — ícono que despliega el texto en hover (slide) %>
     <div class="flex gap-2">
       <button type="button"
               data-documents-issued-target="btnChart"
               data-action="click->documents-issued#openChartModal"
               data-testid="btn-chart"
-              class="hidden inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-        <span class="material-icons text-base">query_stats</span>
-        Más Información
+              title="Más Información"
+              class="hidden group inline-flex items-center cursor-pointer px-1.5 py-1.5 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-50 transition-colors overflow-hidden">
+        <span class="material-icons text-lg leading-none flex-shrink-0">query_stats</span>
+        <span class="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-1 group-hover:mr-0.5 overflow-hidden whitespace-nowrap transition-all duration-500 ease-out group-hover:duration-1000 group-hover:ease-in-out">Más Información</span>
       </button>
 
       <button type="button"
               data-documents-issued-target="btnBulkDownload"
               data-action="click->documents-issued#bulkDownload"
               data-testid="btn-bulk-download"
-              class="hidden inline-flex items-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
-        <span class="material-icons text-base">file_download</span>
-        Descarga Masiva
+              title="Descarga Masiva"
+              class="hidden group inline-flex items-center cursor-pointer px-1.5 py-1.5 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-50 transition-colors overflow-hidden">
+        <span class="material-icons text-lg leading-none flex-shrink-0">file_download</span>
+        <span class="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-1 group-hover:mr-0.5 overflow-hidden whitespace-nowrap transition-all duration-500 ease-out group-hover:duration-1000 group-hover:ease-in-out">Descarga Masiva</span>
       </button>
     </div>
 

@@ -52,7 +52,7 @@ export default class extends TabulatorController {
     'selectDocType', 'selectBandeja', 'inputCodigoMoneda',
 
     // Toolbar
-    'statusCounters', 'btnChart', 'btnBulkDownload', 'btnRecepcionar',
+    'btnChart', 'btnBulkDownload', 'btnRecepcionar',
 
     // Panel recepcionar
     'receptPanel', 'receptBackdrop',
@@ -303,10 +303,9 @@ export default class extends TabulatorController {
         return { data: [], last_page: 1 };
       }
 
-      // Contadores de estado
+      // Cantidades por estado (usadas para derivar el total de paginación)
       this.#quantities = {};
       (json.Data.DocumentQtyList || []).forEach(q => { this.#quantities[q.Status] = q.Quantity; });
-      this.#renderStatusCounters();
 
       const docs = (json.Data.DocumentList || []).map(d => this.#mapDoc(d));
 
@@ -730,35 +729,6 @@ export default class extends TabulatorController {
     this.infoPanelBackdropTarget.classList.add('hidden');
     document.body.style.overflow = '';
   }
-
-  // ── Contadores de estado ───────────────────────────────────────────────────
-
-  #renderStatusCounters() {
-    const STATUS_MAP = {
-      1: { label: 'Aceptado',                   bg: '#e8f5ee', color: '#3a7d52' },
-      2: { label: 'Procesando',                 bg: '#e8f0fe', color: '#1a56db' },
-      3: { label: 'En Hacienda',                bg: '#e8f0fe', color: '#1a56db' },
-      4: { label: 'Rechazado',                  bg: '#fdecea', color: '#c0392b' },
-      5: { label: 'Error',                      bg: '#fffbeb', color: '#b45309' },
-      6: { label: 'Reprocesar',                 bg: '#e8f0fe', color: '#1a56db' },
-      7: { label: 'Obtenido del Correo',        bg: '#f3f4f6', color: '#4b5563' },
-      8: { label: 'Obtenido Correo Automático', bg: '#f3f4f6', color: '#4b5563' },
-    };
-
-    const container = this.statusCountersTarget;
-    container.innerHTML = '';
-
-    Object.entries(this.#quantities).forEach(([status, qty]) => {
-      if (!qty) return;
-      const cfg = STATUS_MAP[status] ?? { label: `Estado ${status}`, bg: '#f3f4f6', color: '#4b5563' };
-      const chip = document.createElement('span');
-      chip.style.cssText = `background-color:${cfg.bg}; color:${cfg.color};`;
-      chip.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold';
-      chip.textContent = `${cfg.label}: ${qty.toLocaleString('es-CR')}`;
-      container.appendChild(chip);
-    });
-  }
-
 
   #sendToSAP(row) {
     if (row.Status !== 1) {
