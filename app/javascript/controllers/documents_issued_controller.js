@@ -717,6 +717,14 @@ export default class extends TabulatorController {
         <span class="text-sm ${valueClass} break-words">${value}</span>
       </div>`;
 
+    // Fila con scroll propio — el valor crece hasta un máximo y luego hace scroll
+    // vertical interno sin desplazar el resto del contenido del card.
+    const scrollRow = (label, value, valueClass = 'text-gray-700') => `
+      <div class="flex flex-col gap-0.5">
+        <span class="text-xs font-medium text-gray-400">${label}</span>
+        <span class="block text-sm ${valueClass} break-words max-h-24 overflow-y-auto">${value}</span>
+      </div>`;
+
     // Fila de fecha relativa (con tooltip de la fecha original)
     const dateRow = (label, value) => `
       <div class="flex flex-col gap-0.5">
@@ -731,6 +739,14 @@ export default class extends TabulatorController {
         ${this.#emailChips(value)}
       </div>`;
 
+    // CC con scroll propio — los chips crecen hasta un máximo y luego hacen scroll
+    // vertical interno sin desplazar el resto del contenido del card.
+    const scrollChipRow = (label, value) => `
+      <div class="flex flex-col gap-1">
+        <span class="text-xs font-medium text-gray-400">${label}</span>
+        <div class="max-h-24 overflow-y-auto">${this.#emailChips(value)}</div>
+      </div>`;
+
     return `
       <div class="border border-gray-200 rounded-lg p-4 space-y-3">
         <div class="flex items-start justify-between flex-wrap gap-2">
@@ -742,9 +758,9 @@ export default class extends TabulatorController {
         </div>
         ${row('Estado del documento', this.#statusBadge(this.#statusLabel(Number(m.DocStatus))) || '—')}
         ${chipRow('Para', m.OutputTo)}
-        ${chipRow('CC', m.OutputCC)}
+        ${scrollChipRow('CC', m.OutputCC)}
         ${dateRow('Último intento', m.LastAttempt)}
-        ${row('Detalles', this.#mailText(m.Details))}
+        ${scrollRow('Detalles', this.#mailText(m.Details))}
       </div>`;
   }
 
