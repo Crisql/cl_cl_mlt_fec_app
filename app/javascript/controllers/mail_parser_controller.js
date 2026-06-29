@@ -9,7 +9,7 @@ import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'contr
  * Replica: /configurations/mail-parser-config (Angular MailParserConfigComponent)
  *
  * Funcionalidad:
- *   - Filtros: Email, ServerName, Company, Status (2=Ambos/1=Activo/0=Inactivo),
+ *   - Filtros: Email, Company, Status (2=Ambos/1=Activo/0=Inactivo),
  *              UseToken (2=Ambos/1=Sí/0=No)
  *   - Tabla: ID, Servidor, Correo, Puerto, Nombre Compañía, Usa Token, Automática, Activa
  *   - Acciones por fila: Editar (panel lateral), Ver Compañías Emisoras (panel lateral)
@@ -36,7 +36,9 @@ export default class extends TabulatorController {
     ...TabulatorController.targets,
 
     // Filtros
-    'filterEmail', 'filterServer', 'filterCompany', 'filterStatus', 'filterUseToken',
+    // NOTA: 'filterServer' (Nombre del servidor) se eliminó de la vista (ver TODOS.md).
+    // El parámetro mailServer se sigue enviando con valor por defecto hasta actualizar el API.
+    'filterEmail', 'filterCompany', 'filterStatus', 'filterUseToken',
 
     // Panel lateral
     'panel', 'panelBackdrop', 'panelTitle',
@@ -407,7 +409,9 @@ export default class extends TabulatorController {
     const size = params.size || this.#pageSize;
 
     const qp = new URLSearchParams({
-      mailServer: this.filterServerTarget.value.trim(),
+      // El filtro Nombre del servidor se eliminó de la vista — se envía vacío por defecto.
+      // TODO (TODOS.md): quitar este parámetro cuando el API deje de requerirlo.
+      mailServer: '',
       mail:       this.filterEmailTarget.value.trim(),
       emsrNombre: this.filterCompanyTarget.value.trim(),
       status:     this.filterStatusTarget.value,

@@ -9,7 +9,7 @@ import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'contr
  * Replica: /emailInbox (Angular EmailInboxComponent — dos tabs)
  *
  * TAB 1 "Bandeja de Correos" (EmailInboxConfigComponent):
- *   - Filtros: Email, SSL (2=Todos/1=Activo/0=Inactivo), Host (dropdown dinámico)
+ *   - Filtros: Email, SSL (2=Todos/1=Activo/0=Inactivo)
  *   - Tabla: Email, Host, Puerto, SSL, A nombre de (SenderAddress)
  *   - Acciones: Actualizar (edit panel), Visualizar (view panel — form deshabilitado)
  *   - Panel lateral: crear/editar/ver bandeja
@@ -29,7 +29,6 @@ import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'contr
  *   POST  /api/EmailConfig/CreateEmailConfig
  *   PATCH /api/EmailConfig/UpdateEmailConfig
  *   POST  /api/EmailConfig/ValidateEmailConfig
- *   GET   /api/EmailConfig/GetHost
  *   GET   /api/CompanyEmailConfig/GetEmailInboxesByCompanyId?_companyId=X
  *   POST  /api/EmailConfig/EmailInboxAssignment?_companyId=X
  *
@@ -45,7 +44,9 @@ export default class extends TabulatorController {
     'panelConfig', 'panelAssignment',
 
     // TAB 1: Filtros
-    'filterEmail', 'filterSsl', 'filterHost',
+    // NOTA: el filtro 'filterHost' se eliminó de la vista (ver TODOS.md). El campo Host
+    // se sigue enviando en SearchEmailConfig con valor por defecto hasta actualizar el API.
+    'filterEmail', 'filterSsl',
 
     // TAB 1: Tabla — heredado de TabulatorController como 'table'
     'tableLoader',
@@ -85,7 +86,6 @@ export default class extends TabulatorController {
   #isCredentialsValidated = false;
   #isValidating = false;
   #credentialSnapshot = null; // null en create; objeto en edit — se compara al cambiar campos
-  #hostList     = [];
 
   // Tab 2
   #companiesList    = [];          // ICompanyPaginator[]
@@ -102,7 +102,6 @@ export default class extends TabulatorController {
     this.#companyId = company?.companyId ? parseInt(company.companyId) : null;
 
     super.connect();  // inicializa Tabulator; dispara ajaxRequestFunc con page=1 automáticamente
-    this.#loadHosts();
     this.#loadCompanies();
   }
 
@@ -427,22 +426,6 @@ export default class extends TabulatorController {
 
   // ── Métodos privados: datos ───────────────────────────────────────────────
 
-  async #loadHosts() {
-    try {
-      const data = await this.#apiFetch('/api/EmailConfig/GetHost', {
-        headers: { 'API': 'ApiFEUrl' },
-      });
-      this.#hostList = data.HostList || [];
-      const select = this.filterHostTarget;
-      this.#hostList.forEach(h => {
-        const opt = document.createElement('option');
-        opt.value = h;
-        opt.textContent = h;
-        select.appendChild(opt);
-      });
-    } catch (_) { /* no bloquear */ }
-  }
-
   async #loadCompanies() {
     try {
       const data = await this.#apiFetch('/api/Companies/GetCompanies?status=active');
@@ -458,11 +441,12 @@ export default class extends TabulatorController {
   async #fetchPage(params) {
     const page = params.page || 1;
     const size = params.size || 5;
-    const hostVal = this.filterHostTarget.value;
 
     const payload = {
       Email:    this.filterEmailTarget.value.trim(),
-      Host:     hostVal === 'Todos' ? '' : hostVal,
+      // El filtro Host se eliminó de la vista — se envía vacío (= todos) por defecto.
+      // TODO (TODOS.md): quitar este campo del payload cuando el API deje de requerirlo.
+      Host:     '',
       SSL:      this.filterSslTarget.value,
       StartPos: page,
       StepPos:  size,

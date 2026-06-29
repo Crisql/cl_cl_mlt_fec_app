@@ -1257,3 +1257,58 @@ Cuando se haga esa migración, **revisar si este gate inline sigue siendo necesa
 
 > No olvidar: al migrar a IdP, este gate y `auth_guard_controller.js` son los dos puntos
 > que tocan la sesión client-side — ambos deben revisarse en esa tarea.
+
+---
+
+## 24. TODOS.md — deuda técnica pendiente de actualización del API
+
+En el **root del proyecto** existe `TODOS.md`. Es el registro de cambios de UI que
+**ya se aplicaron en las vistas pero que NO se pueden completar todavía en el cliente del
+API** porque el backend aún no se ha actualizado.
+
+### Contexto — por qué existe
+
+Cuando se elimina un campo de un formulario que el usuario considera innecesario, la regla es:
+
+1. **Quitar el campo de la vista** (input/label/panel) — esto sí se hace de una vez.
+2. **NO quitar el campo del fetch ni del parámetro que se envía al API.** El backend todavía
+   espera ese campo; si se elimina ahora, la llamada falla. En su lugar, **enviar un valor
+   por defecto** desde el controller para mantener el contrato vigente.
+3. **Anotar en `TODOS.md`** que, cuando el API se actualice, hay que terminar de eliminar ese
+   campo del `body`/parámetros del fetch y del payload.
+
+### Cuándo se conserva la consulta y cuándo se elimina de una vez
+
+El paso 2 (conservar con valor por defecto + anotar en `TODOS.md`) aplica **solo** cuando la
+consulta es **necesaria para la vista** y el campo eliminado es **uno de sus parámetros**.
+Si la consulta existe **únicamente** para alimentar el campo eliminado, se elimina completa
+en el mismo cambio (no es deuda pendiente).
+
+| Caso | Relación con el campo eliminado | Acción |
+|---|---|---|
+| Consulta necesaria para la vista; el campo es un parámetro más | El campo es **un input** de la consulta | **Conservar** la consulta + enviar valor por defecto + entrada en `TODOS.md` |
+| Consulta cuyo único fin era poblar el campo eliminado | El campo es el **dependiente** de la consulta | **Eliminar** la consulta, su método y su estado ahora mismo |
+
+> Ejemplo real (`email_senders_controller.js`): `POST SearchEmailConfig` es la búsqueda que
+> alimenta la tabla → se conserva y `Host` se manda `''`. `GET GetHost` solo llenaba el
+> dropdown de Host → se eliminó por completo (método `#loadHosts`, llamada y `#hostList`).
+
+### Regla obligatoria
+
+> Cada vez que se elimine un campo visible de un formulario pero se mantenga en la petición
+> al API con un valor por defecto, **DEBE** agregarse una entrada en `TODOS.md` describiendo
+> exactamente qué falta limpiar cuando el backend se actualice (archivo, controller, campo,
+> valor por defecto que se está enviando).
+
+### Formato de cada entrada en `TODOS.md`
+
+```markdown
+## [Módulo / Formulario]
+
+- [ ] Campo `NombreCampo` — eliminado de la vista en `ruta/vista.html.erb`.
+      Aún se envía en el fetch de `controller_x.js` con valor por defecto `"..."`.
+      **Pendiente API:** quitar `NombreCampo` del body/parámetros una vez el endpoint
+      `/api/Endpoint` deje de requerirlo.
+```
+
+Antes de marcar una entrada como hecha (`[x]`) confirmar que el endpoint ya no exige el campo.
