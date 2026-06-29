@@ -1204,3 +1204,56 @@ con su vista y su controller correspondientes.
 
 > ⚠️ Antes de tocar el formulario de conexión, buscá las tres ubicaciones
 > (`grep -rl "Tipo de Servidor" app/views/configurations`) y aplicá el cambio en todas.
+
+---
+
+## 23. Auth gate del layout protected — script SÍNCRONO en el `<head>`
+
+El guard de autenticación del layout `protected` (`app/views/layouts/protected.html.erb`)
+es un **`<script>` clásico síncrono e inline en el `<head>`**, colocado lo más temprano
+posible (antes de stylesheets e importmap). Lee `localStorage['Session']` y, si no hay
+sesión válida (token presente + `expires_at` no vencido), hace
+`window.location.replace('/login')`.
+
+### Por qué vive en el `<head>` y no en un controller Stimulus
+
+Cualquier guard en un controller Stimulus llega **tarde**: los módulos ES son diferidos,
+así que el `<body>` protegido **ya se pintó** antes de que el JS corra. Un redirect async
+(`window.location.href` en un controller) dejaba ver un instante el menú/home vacío antes
+de navegar a login. **Solo un `<script>` síncrono en el `<head>` corre antes del primer
+paint** → cero flash.
+
+> ❌ **NO** poner `if (!isSessionValid()) return` repartido en cada controller
+> (`menu`, `company-selector`, etc.). Es frágil, no escala y **no elimina el flash**
+> (el body ya está pintado cuando Stimulus conecta).
+
+### Reparto de responsabilidades
+
+| Escenario | Quién lo cubre |
+|---|---|
+| Cold load / F5 / clear-storage | Gate inline en el `<head>` (síncrono, sin flash) |
+| Navegación Turbo in-app + token expirado | `auth_guard_controller.js` en `connect()`, vía `isSessionValid()` |
+
+- El gate inline **NO re-corre en navegaciones Turbo** (Turbo fusiona el `<head>` y no
+  reejecuta scripts idénticos) — por eso el `auth_guard` se mantiene para ese caso.
+- `isSessionValid()` (`vendor/clavisco/core`) es la **fuente única** de la regla de validez.
+  El script del head **inlinea** la misma lógica (no la importa) porque debe ser bloqueante;
+  un módulo ES sería diferido y pintaría la página antes de ejecutarse.
+
+### ⚠️ Migración futura a IdP — revisar o eliminar este gate
+
+Próximamente se quitará la página de login de la aplicación y se redirigirá a un **IdP
+externo** (OIDC/SAML). El gem/paquete del IdP (p. ej. `omniauth`, `devise` + `omniauth-oidc`,
+o el SDK del proveedor) **normalmente ya valida la sesión y redirige al login del IdP por sí
+mismo**, típicamente del lado servidor (middleware/before_action) o vía su propio guard.
+
+Cuando se haga esa migración, **revisar si este gate inline sigue siendo necesario**:
+
+- Si el IdP valida y redirige **del lado servidor** (lo más probable): este script del
+  `<head>` queda **redundante** → **eliminarlo** junto con `isSessionValid()` / la lógica
+  de `Session` en `localStorage`, ya que la sesión pasará a vivir en cookie/servidor.
+- Si la app sigue siendo SPA con token en `localStorage` tras el IdP: **adaptar** la regla
+  de validez del gate (y de `isSessionValid()`) al nuevo formato de token/claims del IdP.
+
+> No olvidar: al migrar a IdP, este gate y `auth_guard_controller.js` son los dos puntos
+> que tocan la sesión client-side — ambos deben revisarse en esa tarea.
