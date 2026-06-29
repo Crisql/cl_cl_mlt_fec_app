@@ -1,18 +1,16 @@
 <% content_for :title, "Página no encontrada" %>
 <% content_for :page_title, "Página no encontrada" %>
 
-<div class="flex flex-col items-center justify-center h-full text-center px-6">
-  <span class="material-icons text-8xl text-gray-200 mb-4">search_off</span>
-
-  <h1 class="text-6xl font-bold text-gray-300 mb-2">404</h1>
-  <h2 class="text-xl font-semibold text-gray-700 mb-2">Página no encontrada</h2>
-  <p class="text-sm text-gray-400 mb-8 max-w-sm">
-    La página que buscas no existe o no está disponible.
-  </p>
+<div class="flex flex-col items-center justify-start h-full text-center px-6 pt-12">
+  <%= image_tag "404-not-found.png",
+        alt: "Página no encontrada",
+        class: "w-full max-w-2xl h-auto mb-8",
+        style: "-webkit-mask-image: radial-gradient(ellipse 75% 75% at center, #000 55%, transparent 100%);
+                mask-image: radial-gradient(ellipse 75% 75% at center, #000 55%, transparent 100%);" %>
 
   <button type="button"
           onclick="window.Turbo ? window.Turbo.visit('/home') : (window.location.href = '/home')"
-          class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          class="inline-flex items-center gap-2 px-5 py-2.5 text-blue-600 text-sm font-medium rounded-lg border border-transparent hover:bg-blue-50 transition-colors">
     <span class="material-icons text-base">home</span>
     Ir al inicio
   </button>
