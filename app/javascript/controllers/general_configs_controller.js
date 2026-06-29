@@ -29,6 +29,10 @@ export default class extends Controller {
     'cedulaInput',
     'formatLoader',
     'cedulaLoader',
+    'crystalUserInput',
+    'crystalPasswordInput',
+    'crystalLoader',
+    'crystalPasswordToggle',
   ]
 
   // ----------------------------------------------------------------
@@ -102,14 +106,17 @@ export default class extends Controller {
 
   async #loadSettings() {
     this.#showSectionLoader(this.cedulaLoaderTarget)
+    this.#showSectionLoader(this.crystalLoaderTarget)
     try {
       const data = await this.#apiFetch('/api/settings')
 
       if (data.Data) {
-        const setting = data.Data.find(s => s.Code === 'CedulaProveedorSistemas')
-        if (setting) {
-          this.cedulaInputTarget.value = setting.Json
-        }
+        const cedula   = data.Data.find(s => s.Code === 'CedulaProveedorSistemas')
+        const crystalU = data.Data.find(s => s.Code === 'CrystalUser')
+        const crystalP = data.Data.find(s => s.Code === 'CrystalPassword')
+        if (cedula)   this.cedulaInputTarget.value        = cedula.Json
+        if (crystalU) this.crystalUserInputTarget.value   = crystalU.Json
+        if (crystalP) this.crystalPasswordInputTarget.value = crystalP.Json
       } else {
         showToast(data.Message || 'No se pudieron cargar los ajustes', 'warning')
       }
@@ -117,6 +124,7 @@ export default class extends Controller {
       showToast(err.message || 'Error al cargar ajustes', 'error')
     } finally {
       this.#hideSectionLoader(this.cedulaLoaderTarget)
+      this.#hideSectionLoader(this.crystalLoaderTarget)
     }
   }
 
@@ -258,6 +266,49 @@ export default class extends Controller {
     } finally {
       this.#hideOverlay()
     }
+  }
+
+  // ----------------------------------------------------------------
+  // Actualizar Credenciales Crystal
+  // ----------------------------------------------------------------
+  async updateCrystal() {
+    const user     = this.crystalUserInputTarget.value
+    const password = this.crystalPasswordInputTarget.value
+
+    this.#showOverlay('Actualizando credenciales Crystal, espere por favor...')
+
+    try {
+      const session      = Storage.get('Session') || {}
+      const feSyncToken  = session.access_token
+      const sharedHeaders = { 'X-Authorization-FESync': feSyncToken || '' }
+
+      await this.#apiFetch('/api/settings', {
+        method: 'PATCH',
+        headers: sharedHeaders,
+        body: JSON.stringify({ Code: 'CrystalUser', Json: user, IsActive: true }),
+      })
+
+      await this.#apiFetch('/api/settings', {
+        method: 'PATCH',
+        headers: sharedHeaders,
+        body: JSON.stringify({ Code: 'CrystalPassword', Json: password, IsActive: true }),
+      })
+
+      showToast('Credenciales Crystal actualizadas con éxito!!!', 'success')
+      await this.#loadSettings()
+    } catch (err) {
+      showAlert({ type: ALERT_TYPES.ERROR, title: 'Error al actualizar credenciales Crystal', message: err.message || 'Error desconocido' })
+    } finally {
+      this.#hideOverlay()
+    }
+  }
+
+  toggleCrystalPassword() {
+    const input  = this.crystalPasswordInputTarget
+    const icon   = this.crystalPasswordToggleTarget.querySelector('.material-icons')
+    const isPass = input.type === 'password'
+    input.type       = isPass ? 'text' : 'password'
+    icon.textContent = isPass ? 'visibility' : 'visibility_off'
   }
 
   // ----------------------------------------------------------------
