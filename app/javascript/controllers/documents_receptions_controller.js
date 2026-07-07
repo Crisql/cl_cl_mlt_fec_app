@@ -200,7 +200,7 @@ export default class extends TabulatorController {
       {
         title: 'Consecutivo Emisor',
         field: 'NumeroConsecutivoEmisor',
-        widthGrow: 2,
+        width: 180,
       },
       {
         title: 'Total Impuesto',
@@ -225,7 +225,7 @@ export default class extends TabulatorController {
       {
         title: 'Estado',
         field: 'Statuscambio',
-        width: 160,
+        width: 220,
         hozAlign: 'left',
         formatter: (cell) => this.#statusBadge(cell.getValue()),
       },

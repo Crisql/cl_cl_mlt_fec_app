@@ -178,19 +178,19 @@
       <div class="col-span-full flex justify-end">
         <div class="flex gap-2 w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)] xl:w-[calc(25%-0.75rem)]">
           <button type="button"
+                  data-action="click->documents-receptions#search"
+                  data-testid="btn-search"
+                  class="inline-flex items-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors flex-1 justify-center">
+            <span class="material-icons text-base">filter_alt</span>
+            Consultar
+          </button>
+          <button type="button"
                   data-documents-receptions-target="btnRecepcionar"
                   data-action="click->documents-reception#openPanel"
                   data-testid="btn-recepcionar"
-                  class="hidden inline-flex items-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors flex-1 justify-center">
+                  class="hidden inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex-1 justify-center">
             <span class="material-icons text-base">file_upload</span>
             Recepcionar
-          </button>
-          <button type="button"
-                  data-action="click->documents-receptions#search"
-                  data-testid="btn-search"
-                  class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex-1 justify-center">
-            <span class="material-icons text-base">filter_alt</span>
-            Consultar
           </button>
         </div>
       </div>
