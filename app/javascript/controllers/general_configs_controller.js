@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus'
 import { Storage, SStore } from 'vendor/clavisco/core'
-import { showToast, showAlert, ALERT_TYPES } from 'vendor/clavisco/alerts'
+import { showToast, showAlert, ALERT_TYPES, confirm } from 'vendor/clavisco/alerts'
 import { showLoading, hideLoading } from 'vendor/clavisco/overlay'
 
 /**
@@ -27,12 +27,20 @@ export default class extends Controller {
     'updateFormatWrapper',
     'btnUpdateFormat',
     'cedulaInput',
+    'btnUpdateCedula',
     'formatLoader',
     'cedulaLoader',
     'crystalUserInput',
     'crystalPasswordInput',
+    'btnUpdateCrystal',
     'crystalLoader',
     'crystalPasswordToggle',
+    'formatAudit',
+    'formatAuditText',
+    'cedulaAudit',
+    'cedulaAuditText',
+    'crystalAudit',
+    'crystalAuditText',
   ]
 
   // ----------------------------------------------------------------
@@ -40,6 +48,11 @@ export default class extends Controller {
   // ----------------------------------------------------------------
   #generalConfigId = null
   #selectedFile    = null
+
+  // Valores cargados (baseline) — el botón Actualizar se habilita solo si el valor difiere.
+  #cedulaBaseline           = ''
+  #crystalUserBaseline      = ''
+  #crystalPasswordBaseline  = ''
 
   // ----------------------------------------------------------------
   // Lifecycle
@@ -93,6 +106,8 @@ export default class extends Controller {
         const fileName = fullPath ? fullPath.split('\\').at(-1) : ''
         this.printFormatInputTarget.value = fileName
 
+        this.#renderAudit(this.formatAuditTarget, this.formatAuditTextTarget, config)
+
         showToast('Configuraciones generales obtenidos con éxito!!!', 'success')
       } else {
         showToast(data.Message || 'No se encontraron configuraciones', 'warning')
@@ -117,6 +132,17 @@ export default class extends Controller {
         if (cedula)   this.cedulaInputTarget.value        = cedula.Json
         if (crystalU) this.crystalUserInputTarget.value   = crystalU.Json
         if (crystalP) this.crystalPasswordInputTarget.value = crystalP.Json
+
+        this.#renderAudit(this.cedulaAuditTarget, this.cedulaAuditTextTarget, cedula)
+        // Crystal: la fecha/usuario más reciente entre Usuario y Contraseña
+        this.#renderAudit(this.crystalAuditTarget, this.crystalAuditTextTarget, this.#latestAudit(crystalU, crystalP))
+
+        // Baseline para detectar cambios → habilitar/deshabilitar botones
+        this.#cedulaBaseline          = this.cedulaInputTarget.value
+        this.#crystalUserBaseline     = this.crystalUserInputTarget.value
+        this.#crystalPasswordBaseline = this.crystalPasswordInputTarget.value
+        this.onCedulaInput()
+        this.onCrystalInput()
       } else {
         showToast(data.Message || 'No se pudieron cargar los ajustes', 'warning')
       }
@@ -166,6 +192,12 @@ export default class extends Controller {
   // ----------------------------------------------------------------
   async updatePrintFormat() {
     if (!this.#selectedFile || !this.#generalConfigId) return
+
+    const confirmed = await confirm(
+      '¿Está seguro de que desea actualizar el formato de impresión por defecto?',
+      'Actualizar formato de impresión'
+    )
+    if (!confirmed) return
 
     this.#showOverlay('Editando la configuración general, espere por favor...')
 
@@ -240,6 +272,12 @@ export default class extends Controller {
   async updateCedula() {
     const value = this.cedulaInputTarget.value
 
+    const confirmed = await confirm(
+      '¿Está seguro de que desea actualizar la cédula del proveedor de sistemas?',
+      'Actualizar cédula'
+    )
+    if (!confirmed) return
+
     this.#showOverlay('Actualizando cédula proveedor sistemas, espere por favor...')
 
     try {
@@ -275,6 +313,12 @@ export default class extends Controller {
     const user     = this.crystalUserInputTarget.value
     const password = this.crystalPasswordInputTarget.value
 
+    const confirmed = await confirm(
+      '¿Está seguro de que desea actualizar las credenciales de Crystal?',
+      'Actualizar credenciales Crystal'
+    )
+    if (!confirmed) return
+
     this.#showOverlay('Actualizando credenciales Crystal, espere por favor...')
 
     try {
@@ -309,6 +353,65 @@ export default class extends Controller {
     const isPass = input.type === 'password'
     input.type       = isPass ? 'text' : 'password'
     icon.textContent = isPass ? 'visibility' : 'visibility_off'
+  }
+
+  // ----------------------------------------------------------------
+  // Habilitar botón Actualizar solo si hay cambios respecto al baseline
+  // ----------------------------------------------------------------
+  onCedulaInput() {
+    if (!this.hasBtnUpdateCedulaTarget) return
+    const changed = this.cedulaInputTarget.value !== this.#cedulaBaseline
+    this.btnUpdateCedulaTarget.disabled = !changed
+  }
+
+  onCrystalInput() {
+    if (!this.hasBtnUpdateCrystalTarget) return
+    const changed = this.crystalUserInputTarget.value     !== this.#crystalUserBaseline ||
+                    this.crystalPasswordInputTarget.value !== this.#crystalPasswordBaseline
+    this.btnUpdateCrystalTarget.disabled = !changed
+  }
+
+  // ----------------------------------------------------------------
+  // Helpers: metadato de auditoría (última actualización)
+  //
+  // Campos que expone el API en GetGeneralConfigs y /api/settings:
+  //   fecha  → UpdateDate    usuario → UpdatedBy
+  // ----------------------------------------------------------------
+  /** Devuelve el objeto con la fecha de actualización (UpdateDate) más reciente. */
+  #latestAudit(...sources) {
+    return sources
+      .filter(Boolean)
+      .reduce((latest, curr) => {
+        const t = new Date(curr?.UpdateDate).getTime()
+        const l = latest ? new Date(latest.UpdateDate).getTime() : NaN
+        return (!isNaN(t) && (isNaN(l) || t > l)) ? curr : (latest ?? curr)
+      }, null)
+  }
+
+  #renderAudit(container, textTarget, source) {
+    if (!container || !textTarget) return
+
+    const date = this.#formatDateTime(source?.UpdateDate)
+    const user = source?.UpdatedBy || null
+
+    let text = ''
+    if (date && user) text = `Actualizado el ${date} por ${user}`
+    else if (date)    text = `Actualizado el ${date}`
+    else if (user)    text = `Actualizado por ${user}`
+
+    if (!text) { container.classList.add('hidden'); return }
+
+    textTarget.textContent = text
+    container.classList.remove('hidden')
+  }
+
+  /** Formato yyyy-MM-dd HH:mm:ss (CLAUDE.md §5). */
+  #formatDateTime(dateStr) {
+    if (!dateStr) return ''
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ''
+    const pad = n => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
   }
 
   // ----------------------------------------------------------------
