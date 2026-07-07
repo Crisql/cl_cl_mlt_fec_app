@@ -561,33 +561,43 @@ export default class extends TabulatorController {
 
   // ── Panel lateral Correos ─────────────────────────────────────────────────
 
-  // Badge para EmailSendType (Tipo del correo)
-  #emailTypeBadge(code) {
-    const map = {
-      1: { label: 'Envío',    bg: '#e8f0fe', color: '#1a56db' },
-      2: { label: 'Reenvío',  bg: '#fffbeb', color: '#b45309' },
-      3: { label: 'Receptor', bg: '#e8f5ee', color: '#3a7d52' },
-    };
-    const s = map[Number(code)] ?? { label: String(code ?? ''), bg: '#f3f4f6', color: '#4b5563' };
-    return `<span style="background-color:${s.bg}; color:${s.color};"
-                  class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">
-      ${s.label}
+  // Chip de ícono con tooltip CSS (patrón group-hover, §2 — fuera de Tabulator).
+  // Conserva el look de dos tonos del badge: fondo tenue + ícono en color oscuro.
+  // El tooltip se posiciona DEBAJO del ícono para que no lo recorte el
+  // overflow-hidden del card.
+  #iconTooltip(icon, bg, color, label) {
+    return `<span class="relative group inline-flex items-center">
+      <span class="inline-flex items-center justify-center rounded-full p-1 cursor-default"
+            style="background-color:${bg}; color:${color}">
+        <span class="material-icons" style="font-size:14px; line-height:1">${icon}</span>
+      </span>
+      <span class="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1 z-20
+                   whitespace-nowrap rounded bg-gray-800 text-white text-[11px] px-2 py-1
+                   opacity-0 group-hover:opacity-100 transition-opacity duration-150">${label}</span>
     </span>`;
   }
 
-  // Badge para MessageStatus (Estado del correo)
+  // Ícono + tooltip para EmailSendType (Tipo del correo)
+  #emailTypeBadge(code) {
+    const map = {
+      1: { label: 'Envío',    icon: 'send',             bg: '#e8f0fe', color: '#1a56db' },
+      2: { label: 'Reenvío',  icon: 'forward_to_inbox', bg: '#fffbeb', color: '#b45309' },
+      3: { label: 'Receptor', icon: 'call_received',    bg: '#e8f5ee', color: '#3a7d52' },
+    };
+    const s = map[Number(code)] ?? { label: String(code ?? ''), icon: 'mail', bg: '#f3f4f6', color: '#4b5563' };
+    return this.#iconTooltip(s.icon, s.bg, s.color, s.label);
+  }
+
+  // Ícono + tooltip para MessageStatus (Estado del correo)
   #emailStatusBadge(code) {
     const map = {
-      1: { label: 'Pendiente', bg: '#f3f4f6', color: '#6b7280' },
-      2: { label: 'Enviando',  bg: '#e8f0fe', color: '#1a56db' },
-      3: { label: 'Error',     bg: '#fdecea', color: '#c0392b' },
-      4: { label: 'Enviado',   bg: '#e8f5ee', color: '#3a7d52' },
+      1: { label: 'Pendiente', icon: 'schedule',     bg: '#f3f4f6', color: '#6b7280' },
+      2: { label: 'Enviando',  icon: 'sync',         bg: '#e8f0fe', color: '#1a56db' },
+      3: { label: 'Error',     icon: 'error',        bg: '#fdecea', color: '#c0392b' },
+      4: { label: 'Enviado',   icon: 'check_circle', bg: '#e8f5ee', color: '#3a7d52' },
     };
-    const s = map[Number(code)] ?? { label: String(code ?? ''), bg: '#f3f4f6', color: '#4b5563' };
-    return `<span style="background-color:${s.bg}; color:${s.color};"
-                  class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">
-      ${s.label}
-    </span>`;
+    const s = map[Number(code)] ?? { label: String(code ?? ''), icon: 'help', bg: '#f3f4f6', color: '#4b5563' };
+    return this.#iconTooltip(s.icon, s.bg, s.color, s.label);
   }
 
   async #openEmailModal(docId) {
@@ -666,7 +676,7 @@ export default class extends TabulatorController {
   #buildEmailTable(data) {
     this.emailTableTarget.innerHTML = `
       <div class="space-y-3">
-        ${data.map((m) => this.#emailCard(m)).join('')}
+        ${data.map((m, i) => this.#emailCard(m, i)).join('')}
       </div>`;
   }
 
@@ -679,14 +689,20 @@ export default class extends TabulatorController {
     return this.#escapeHtml(str);
   }
 
-  // Renderiza una lista de correos (separados por ";") como chips individuales.
-  // Si no hay ninguno, devuelve "—".
-  #emailChips(value) {
-    if (value == null) return '<span class="text-sm text-gray-700">—</span>';
-    const emails = String(value)
+  // Parsea una lista de correos concatenados por ";" en un arreglo limpio
+  // (sin vacíos ni el literal "null"). Devuelve [] si no hay ninguno.
+  #parseEmails(value) {
+    if (value == null) return [];
+    return String(value)
       .split(';')
       .map((e) => e.trim())
       .filter((e) => e !== '' && e.toLowerCase() !== 'null');
+  }
+
+  // Renderiza una lista de correos (separados por ";") como chips individuales.
+  // Si no hay ninguno, devuelve "—".
+  #emailChips(value) {
+    const emails = this.#parseEmails(value);
 
     if (!emails.length) return '<span class="text-sm text-gray-700">—</span>';
 
@@ -708,60 +724,109 @@ export default class extends TabulatorController {
     return `<span class="${className} cursor-help" title="${this.#escapeHtml(raw)}">${relativeDate(value)}</span>`;
   }
 
-  // Una tarjeta por correo: cabecera con fecha + badges (estado correo, tipo),
-  // y debajo pares etiqueta/valor que envuelven texto largo (correos, detalles).
-  #emailCard(m) {
-    const row = (label, value, valueClass = 'text-gray-700') => `
-      <div class="flex flex-col gap-0.5">
-        <span class="text-xs font-medium text-gray-400">${label}</span>
-        <span class="text-sm ${valueClass} break-words">${value}</span>
-      </div>`;
+  // Color de la franja lateral según el estado del correo (MessageStatus).
+  // Se usa como estilo inline (igual que los badges de este archivo) para que no
+  // dependa del purge de Tailwind sobre clases presentes solo en strings JS.
+  #emailStripeColor(code) {
+    const map = { 1: '#d1d5db', 2: '#3b82f6', 3: '#ef4444', 4: '#16a34a' };
+    return map[Number(code)] ?? '#d1d5db';
+  }
 
-    // Fila con scroll propio — el valor crece hasta un máximo y luego hace scroll
-    // vertical interno sin desplazar el resto del contenido del card.
-    const scrollRow = (label, value, valueClass = 'text-gray-700') => `
-      <div class="flex flex-col gap-0.5">
-        <span class="text-xs font-medium text-gray-400">${label}</span>
-        <span class="block text-sm ${valueClass} break-words max-h-24 overflow-y-auto">${value}</span>
-      </div>`;
+  // Una tarjeta por correo — diseño "timeline": franja lateral coloreada según
+  // el estado del correo, cabecera con fecha + badges, línea de destinatarios con
+  // CC colapsable, detalle del error truncado en una línea (clic para expandir /
+  // contraer) y el último intento alineado al final.
+  #emailCard(m, i) {
+    const toEmails = this.#parseEmails(m.OutputTo);
+    const ccEmails = this.#parseEmails(m.OutputCC);
+    const detail   = this.#mailText(m.Details);
+    const hasDetail = detail !== '—';
 
-    // Fila de fecha relativa (con tooltip de la fecha original)
-    const dateRow = (label, value) => `
-      <div class="flex flex-col gap-0.5">
-        <span class="text-xs font-medium text-gray-400">${label}</span>
-        ${this.#relativeDateSpan(value, 'text-sm text-gray-700')}
-      </div>`;
+    const toHtml = toEmails.length
+      ? toEmails.map((e) => `<span class="text-gray-700 break-all">${this.#escapeHtml(e)}</span>`)
+          .join('<span class="text-gray-300">,</span> ')
+      : '<span class="text-gray-400">—</span>';
 
-    // Para/CC pueden traer varios correos concatenados por ";" → chips individuales
-    const chipRow = (label, value) => `
-      <div class="flex flex-col gap-1">
-        <span class="text-xs font-medium text-gray-400">${label}</span>
-        ${this.#emailChips(value)}
-      </div>`;
+    const ccPart = ccEmails.length
+      ? `<span class="text-gray-300 mx-1.5">·</span><button type="button"
+                 data-action="documents-issued#toggleEmailCC"
+                 data-cc-target="email-cc-${i}"
+                 data-label-closed="CC (${ccEmails.length})"
+                 data-label-open="Ocultar CC"
+                 class="text-xs font-medium text-blue-600 hover:text-blue-700 cursor-pointer">CC (${ccEmails.length})</button>`
+      : '<span class="text-gray-300 mx-1.5">·</span><span class="text-gray-400">Sin CC</span>';
 
-    // CC con scroll propio — los chips crecen hasta un máximo y luego hacen scroll
-    // vertical interno sin desplazar el resto del contenido del card.
-    const scrollChipRow = (label, value) => `
-      <div class="flex flex-col gap-1">
-        <span class="text-xs font-medium text-gray-400">${label}</span>
-        <div class="max-h-24 overflow-y-auto">${this.#emailChips(value)}</div>
-      </div>`;
+    const ccList = ccEmails.length
+      ? `<div id="email-cc-${i}" class="hidden mt-2 max-h-24 overflow-y-auto">${this.#emailChips(m.OutputCC)}</div>`
+      : '';
+
+    const detailsBlock = hasDetail ? `
+        <div id="email-prev-${i}"
+             data-action="click->documents-issued#showEmailDetails"
+             data-target-full="email-det-${i}"
+             title="Clic para ver el mensaje completo"
+             class="mt-3 font-mono text-xs text-gray-400 hover:text-gray-600 truncate cursor-pointer">${detail}</div>
+        <div id="email-det-${i}" data-email-details
+             class="hidden mt-3 font-mono text-xs text-gray-600 bg-gray-50 rounded-md p-3 break-words max-h-40 overflow-y-auto">
+          ${detail}
+          <div class="text-right mt-2">
+            <button type="button"
+                    data-action="documents-issued#hideEmailDetails"
+                    data-target-prev="email-prev-${i}"
+                    class="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer">Contraer</button>
+          </div>
+        </div>` : '';
 
     return `
-      <div class="border border-gray-200 rounded-lg p-4 space-y-3">
-        <div class="flex items-start justify-between flex-wrap gap-2">
-          ${this.#relativeDateSpan(m.CreateDate, 'text-sm font-semibold text-gray-800')}
-          <div class="flex flex-wrap items-center gap-1.5">
-            ${this.#emailStatusBadge(m.Status)}
-            ${this.#emailTypeBadge(m.Type)}
+      <div data-email-card class="flex overflow-hidden border border-gray-200 rounded-lg">
+        <div class="w-1 flex-shrink-0" style="background-color:${this.#emailStripeColor(m.Status)}"></div>
+        <div class="flex-1 min-w-0 p-4">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center flex-wrap gap-2">
+              ${this.#relativeDateSpan(m.CreateDate, 'text-sm font-semibold text-gray-800')}
+              ${this.#emailStatusBadge(m.Status)}
+              ${this.#emailTypeBadge(m.Type)}
+            </div>
+            <span class="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">último intento: ${this.#relativeDateSpan(m.LastAttempt, 'text-xs text-gray-500')}</span>
           </div>
+
+          <div class="mt-3 text-xs">
+            <span class="text-gray-400 mr-1.5">Para:</span>
+            <span class="text-gray-700 break-all">${toHtml}</span>
+            ${ccPart}
+          </div>
+          ${ccList}
+
+          ${detailsBlock}
         </div>
-        ${row('Estado del documento', this.#statusBadge(this.#statusLabel(Number(m.DocStatus))) || '—')}
-        ${chipRow('Para', m.OutputTo)}
-        ${scrollChipRow('CC', m.OutputCC)}
-        ${dateRow('Último intento', m.LastAttempt)}
-        ${scrollRow('Detalles', this.#mailText(m.Details))}
       </div>`;
+  }
+
+  // Toggle de la lista de CC dentro de un card de correo
+  toggleEmailCC(event) {
+    const btn  = event.currentTarget;
+    const list = document.getElementById(btn.dataset.ccTarget);
+    if (!list) return;
+    const isOpen = !list.classList.contains('hidden');
+    list.classList.toggle('hidden');
+    btn.textContent = isOpen ? btn.dataset.labelClosed : btn.dataset.labelOpen;
+  }
+
+  // Muestra el detalle completo del error (oculta el preview truncado)
+  showEmailDetails(event) {
+    const prev = event.currentTarget;
+    const full = document.getElementById(prev.dataset.targetFull);
+    prev.classList.add('hidden');
+    full?.classList.remove('hidden');
+  }
+
+  // Contrae el detalle del error (vuelve al preview truncado)
+  hideEmailDetails(event) {
+    const btn  = event.currentTarget;
+    const full = btn.closest('[data-email-details]');
+    const prev = document.getElementById(btn.dataset.targetPrev);
+    full?.classList.add('hidden');
+    prev?.classList.remove('hidden');
   }
 
   onEmailRecipientInput() {
