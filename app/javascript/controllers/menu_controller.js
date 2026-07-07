@@ -30,7 +30,7 @@ import MENU_NODES from 'data/menu'
  *  - Mostrar username
  */
 export default class extends Controller {
-  static targets = ['username', 'nav']
+  static targets = ['nav']
 
   // ---------------------------------------------------------------------------
   // Definición del menú — single source of truth en docs/menu.json
@@ -57,7 +57,6 @@ export default class extends Controller {
     // en cada navegación pese a ser data-turbo-permanent.
     this.#captureExpandedFromDom()
 
-    this.#setUsername()
     this.#restoreCollapseState()
     this.#loadPermissionsAndRender()
 
@@ -84,6 +83,9 @@ export default class extends Controller {
 
   toggleSidebar() {
     const collapsed = this.element.dataset.collapsed === 'true'
+    // Al contraer, plegar también los nodos padre expandidos para que el riel
+    // quede consistente (y al re-expandir el sidebar aparezcan cerrados).
+    if (!collapsed) this.#collapseAllGroups()
     this.#setCollapsed(!collapsed)
     Storage.set('menuState', { isCollapsed: !collapsed })
   }
@@ -91,12 +93,6 @@ export default class extends Controller {
   // ---------------------------------------------------------------------------
   // Private
   // ---------------------------------------------------------------------------
-
-  #setUsername() {
-    if (!this.hasUsernameTarget) return
-    const session = Storage.get('Session')
-    this.usernameTarget.textContent = session?.UserEmail ?? ''
-  }
 
   #restoreCollapseState() {
     const state = Storage.get('menuState')
@@ -251,7 +247,7 @@ export default class extends Controller {
       if (!expanded) subList.classList.add('hidden')
       subList.dataset.group = node.key
 
-      btn.addEventListener('click', () => this.#toggleGroup(node.key, subList, chevron))
+      btn.addEventListener('click', () => this.#onGroupClick(node.key, subList, chevron))
 
       node.nodes.forEach(child => {
         const childBtn = document.createElement('button')
@@ -280,16 +276,46 @@ export default class extends Controller {
     return wrapper
   }
 
+  /**
+   * Click en un nodo padre. Si el sidebar está colapsado, los hijos (solo texto,
+   * sin icono) no caben en el riel de 64px: primero expandimos el sidebar y luego
+   * abrimos el grupo, en vez de mostrar texto recortado/envuelto.
+   */
+  #onGroupClick(key, subList, chevron) {
+    if (this.element.dataset.collapsed === 'true') {
+      this.#setCollapsed(false)
+      Storage.set('menuState', { isCollapsed: false })
+      this.#openGroup(key, subList, chevron)
+      return
+    }
+    this.#toggleGroup(key, subList, chevron)
+  }
+
+  #openGroup(key, subList, chevron) {
+    this.#expandedGroups.add(key)
+    subList.classList.remove('hidden')
+    if (chevron) chevron.style.transform = 'rotate(90deg)'
+  }
+
+  /** Pliega todos los grupos abiertos (usado al contraer el sidebar). */
+  #collapseAllGroups() {
+    if (!this.hasNavTarget) return
+    this.navTarget.querySelectorAll('[data-group]').forEach(subList => {
+      subList.classList.add('hidden')
+      const key = subList.dataset.group
+      const chevron = this.navTarget.querySelector(`[data-chevron="${key}"]`)
+      if (chevron) chevron.style.transform = ''
+    })
+    this.#expandedGroups.clear()
+  }
+
   #toggleGroup(key, subList, chevron) {
-    const isOpen = this.#expandedGroups.has(key)
-    if (isOpen) {
+    if (this.#expandedGroups.has(key)) {
       this.#expandedGroups.delete(key)
       subList.classList.add('hidden')
       if (chevron) chevron.style.transform = ''
     } else {
-      this.#expandedGroups.add(key)
-      subList.classList.remove('hidden')
-      if (chevron) chevron.style.transform = 'rotate(90deg)'
+      this.#openGroup(key, subList, chevron)
     }
   }
 

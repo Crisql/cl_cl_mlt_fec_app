@@ -34,6 +34,7 @@ import UsersRegisterController          from 'controllers/users_register_control
 import UsersEditController              from 'controllers/users_edit_controller'
 import UdfsController                  from 'controllers/udfs_controller'
 import AccountVerificationController   from 'controllers/account_verification_controller'
+import UserMenuController              from 'controllers/user_menu_controller'
 
 application.register('login',             LoginController)
 application.register('account-verification', AccountVerificationController)
@@ -66,3 +67,4 @@ application.register('users',           UsersController)
 application.register('users-register',  UsersRegisterController)
 application.register('users-edit',      UsersEditController)
 application.register('udfs',            UdfsController)
+application.register('user-menu',       UserMenuController)

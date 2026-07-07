@@ -67,10 +67,12 @@ test.describe('Layout protegido', () => {
     await expect(page.locator('[data-testid="sidebar-logo"]')).toBeVisible()
   })
 
-  test('muestra el username en el sidebar', async ({ page }) => {
+  test('muestra el username en el menú de usuario del toolbar', async ({ page }) => {
     await injectAuth(page)
     await page.goto(HOME_URL)
-    await expect(page.locator('[data-testid="sidebar-user"]')).toContainText('testuser@clavisco.com')
+    // El nombre ya no vive en el sidebar: se muestra al abrir el menú de usuario del toolbar.
+    await page.locator('[data-testid="user-menu-button"]').click()
+    await expect(page.locator('[data-user-menu-target="username"]')).toContainText('testuser@clavisco.com')
   })
 })
 

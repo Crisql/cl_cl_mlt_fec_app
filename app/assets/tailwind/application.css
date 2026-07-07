@@ -76,3 +76,38 @@
 .tabulator:has(.tabulator-alert)  .tabulator-placeholder {
   display: none !important;
 }
+
+/* ---------------------------------------------------------------------------
+ * Sidebar colapsado (w-16) — riel de solo iconos
+ * El menu_controller marca los textos con .sidebar-label y los sub-grupos con
+ * [data-group]. El estado colapsado vive en #app-sidebar[data-collapsed="true"].
+ * ------------------------------------------------------------------------- */
+
+/* Ocultar los textos (labels de nodos y chevrons) cuando el sidebar colapsa. */
+#app-sidebar[data-collapsed="true"] .sidebar-label {
+  display: none;
+}
+
+/* Centrar los iconos en el riel angosto y neutralizar el padding lateral. */
+#app-sidebar[data-collapsed="true"] nav button {
+  justify-content: center;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+/* Los sub-grupos son SOLO texto (los hijos no tienen icono): no caben en 64px
+   y se envolvían en varias líneas. En modo colapsado se ocultan por completo;
+   al expandir el sidebar (o al hacer click en el padre, que lo expande) vuelven
+   a mostrarse correctamente. */
+#app-sidebar[data-collapsed="true"] nav [data-group] {
+  display: none;
+}
+
+/* Logo: el logotipo completo se contrae ilegible en 64px → mostrar el favicon
+   circular. El selector con ID gana especificidad sobre la clase .hidden. */
+#app-sidebar[data-collapsed="true"] .logo-full {
+  display: none;
+}
+#app-sidebar[data-collapsed="true"] .logo-collapsed {
+  display: block;
+}
