@@ -180,30 +180,34 @@
             <span data-auth-content class="text-sm font-medium text-gray-700 invisible"><%= content_for?(:page_title) ? yield(:page_title) : '' %></span>
           </div>
 
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-500">Compañía:</span>
+          <div class="flex items-center">
 
-            <%# Botón selección de empresa %>
-            <div class="relative">
-              <button data-action="click->company-selector#open contextmenu->company-selector#onContextMenu"
-                      data-testid="company-button"
-                      class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors max-w-xs truncate"
-                      title="">
-                <span class="material-icons text-base">business</span>
-                <span data-company-selector-target="toolbarLabel" class="truncate">No seleccionada</span>
-              </button>
-
-              <%# Context menu — solo visible con F_ModifyCompany %>
-              <div data-company-selector-target="contextMenu"
-                   class="hidden absolute right-0 top-full mt-1 z-[9999] bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]">
-                <button type="button"
-                        data-action="click->company-selector#navigateToCompanyEdit"
-                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                  <span class="material-icons text-base text-gray-500">info_outline</span>
-                  Ver información
+            <%# Selección de empresa — botón transparente, texto azulado %>
+            <div class="flex items-center gap-2">
+              <div class="relative">
+                <button data-action="click->company-selector#open contextmenu->company-selector#onContextMenu"
+                        data-testid="company-button"
+                        class="flex items-center gap-1.5 px-3 py-1.5 bg-transparent text-blue-600 text-sm font-medium rounded-md hover:bg-blue-50 transition-colors cursor-pointer max-w-xs truncate"
+                        title="">
+                  <span class="material-icons text-sm">business</span>
+                  <span data-company-selector-target="toolbarLabel" class="truncate">No seleccionada</span>
                 </button>
+
+                <%# Context menu — solo visible con F_ModifyCompany %>
+                <div data-company-selector-target="contextMenu"
+                     class="hidden absolute right-0 top-full mt-1 z-[9999] bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]">
+                  <button type="button"
+                          data-action="click->company-selector#navigateToCompanyEdit"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <span class="material-icons text-base text-gray-500">info_outline</span>
+                    Ver información
+                  </button>
+                </div>
               </div>
             </div>
+
+            <%# Divisor vertical entre compañía y usuario %>
+            <div class="w-px h-6 bg-gray-200 ml-2 mr-5"></div>
 
             <%# ===================================================== %>
             <%# Menú de usuario — ícono con contorno tenue al final    %>
@@ -211,10 +215,11 @@
             <div class="relative" data-controller="user-menu">
               <button type="button"
                       data-action="click->user-menu#toggle"
+                      data-user-menu-target="avatar"
                       data-testid="user-menu-button"
-                      class="group relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-300 text-gray-700 hover:bg-gray-400 transition-colors cursor-pointer">
+                      class="group relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-300 hover:opacity-90 transition-opacity cursor-pointer">
                 <span data-user-menu-target="initial"
-                      class="text-sm font-semibold uppercase leading-none"></span>
+                      class="text-sm font-semibold uppercase leading-none text-gray-700"></span>
 
                 <%# Tooltip con el nombre de usuario (hover) %>
                 <span data-user-menu-target="tooltip"

@@ -13,7 +13,24 @@ import { Storage } from 'vendor/clavisco/core'
  * visita Turbo, por eso el nombre se lee de la sesión en connect().
  */
 export default class extends Controller {
-  static targets = ['menu', 'tooltip', 'username', 'initial']
+  static targets = ['menu', 'tooltip', 'username', 'initial', 'avatar']
+
+  // Paleta de avatares — fondo tenue + letra oscura (misma familia que los
+  // badges del proyecto). El color se elige por hash del correo: varía entre
+  // usuarios pero es estable para el mismo (el toolbar reconecta en cada visita
+  // Turbo, un color aleatorio por render parpadearía al navegar).
+  static PALETTE = [
+    { bg: '#e8f0fe', color: '#1a56db' }, // azul
+    { bg: '#e8f5ee', color: '#065f46' }, // verde
+    { bg: '#fffbeb', color: '#b45309' }, // ambar
+    { bg: '#f5f3ff', color: '#6d28d9' }, // violeta
+    { bg: '#fce7f3', color: '#9d174d' }, // rosa
+    { bg: '#ccfbf1', color: '#115e59' }, // teal
+    { bg: '#fff7ed', color: '#c2410c' }, // naranja
+    { bg: '#e0e7ff', color: '#3730a3' }, // indigo
+    { bg: '#cffafe', color: '#155e75' }, // cian
+    { bg: '#fdecea', color: '#c0392b' }, // rojo
+  ]
 
   #dismissHandler = null
 
@@ -50,6 +67,24 @@ export default class extends Controller {
     if (this.hasUsernameTarget) this.usernameTarget.textContent = name
     if (this.hasTooltipTarget) this.tooltipTarget.textContent = name
     if (this.hasInitialTarget) this.initialTarget.textContent = name ? name.charAt(0).toUpperCase() : '?'
+    this.#applyAvatarColor(name)
+  }
+
+  /** Colorea el avatar con un tono de la paleta elegido por hash del correo. */
+  #applyAvatarColor(seed) {
+    const palette = this.constructor.PALETTE
+    let hash = 0
+    for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0
+    const { bg, color } = palette[Math.abs(hash) % palette.length]
+
+    if (this.hasAvatarTarget) {
+      this.avatarTarget.classList.remove('bg-gray-300')
+      this.avatarTarget.style.backgroundColor = bg
+    }
+    if (this.hasInitialTarget) {
+      this.initialTarget.classList.remove('text-gray-700')
+      this.initialTarget.style.color = color
+    }
   }
 
   #openMenu() {
