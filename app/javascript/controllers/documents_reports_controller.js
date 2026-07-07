@@ -22,18 +22,25 @@ export default class extends Controller {
   static targets = [
     'startDate',
     'endDate',
-    'radioDocWrapper',
-    'radioRecepWrapper',
+    'docTab',
+    'recepTab',
     'submitBtn',
     'overlay',
     'validationModal',
     'modalMessage',
-    'pageTitle',
+    'viewer',
+    'viewerEmpty',
   ]
 
-  // ── Permisos ──────────────────────────────────────────────────────────────
+  // ── Estado ──────────────────────────────────────────────────────────────
   #permissions = []
   #companyId   = null
+  #reportType  = '1'
+  #pdfBlobUrl  = null
+
+  // Clases del toggle segmentado (tipo de reporte)
+  #tabActive   = ['bg-blue-600', 'text-white', 'shadow-sm']
+  #tabInactive = ['text-gray-600', 'hover:text-gray-800']
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -45,6 +52,10 @@ export default class extends Controller {
     this.#initDefaults()
     this.#applyPermissions()
     this.#updateSubmitState()
+  }
+
+  disconnect() {
+    this.#revokePdf()
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -59,50 +70,39 @@ export default class extends Controller {
     const hasDoc   = this.#hasPerm('S_DocumentReport')
     const hasRecep = this.#hasPerm('S_DocumentReceptionReport')
 
-    if (hasDoc) {
-      this.radioDocWrapperTarget.classList.remove('hidden')
-      this.radioDocWrapperTarget.classList.add('flex')
-      // Seleccionar por defecto
-      const radio = this.radioDocWrapperTarget.querySelector('input[type="radio"]')
-      if (radio) radio.checked = true
-      this.#setTitle('Reporte de Documentos')
-    }
+    if (hasDoc)   this.docTabTarget.classList.remove('hidden')
+    if (hasRecep) this.recepTabTarget.classList.remove('hidden')
 
-    if (hasRecep) {
-      this.radioRecepWrapperTarget.classList.remove('hidden')
-      this.radioRecepWrapperTarget.classList.add('flex')
-      // Si no tiene S_DocumentReport, seleccionar recepción por defecto
-      if (!hasDoc) {
-        const radio = this.radioRecepWrapperTarget.querySelector('input[type="radio"]')
-        if (radio) radio.checked = true
-        this.#setTitle('Reporte de Documentos Recepcionados')
-      }
-    }
+    // Selección por defecto: documentos si tiene permiso, si no recepción
+    if (hasDoc)        this.#setReportType('1')
+    else if (hasRecep) this.#setReportType('2')
+    else               this.#updateTabStyles()
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  setTodayStart() {
-    this.startDateTarget.value = this.#formatDate(new Date())
-    this.#updateSubmitState()
+  selectReportType(event) {
+    this.#setReportType(event.currentTarget.dataset.reportType)
   }
 
-  setTodayEnd() {
-    this.endDateTarget.value = this.#formatDate(new Date())
+  quickRange(event) {
+    const range = event.currentTarget.dataset.range
+    const today = new Date()
+    let start   = new Date(today)
+
+    if (range === '7') {
+      start.setDate(today.getDate() - 6)
+    } else if (range === 'month') {
+      start = new Date(today.getFullYear(), today.getMonth(), 1)
+    }
+
+    this.startDateTarget.value = this.#formatDate(start)
+    this.endDateTarget.value   = this.#formatDate(today)
     this.#updateSubmitState()
   }
 
   validateDates() {
     this.#updateSubmitState()
-  }
-
-  onReportTypeChange(event) {
-    const value = event.target.value
-    if (value === '1') {
-      this.#setTitle('Reporte de Documentos')
-    } else {
-      this.#setTitle('Reporte de Documentos Recepcionados')
-    }
   }
 
   submit() {
@@ -124,7 +124,7 @@ export default class extends Controller {
       return
     }
 
-    const reportType = this.#selectedReportType()
+    const reportType = this.#reportType
     if (reportType === '1') {
       this.#fetchReport('GetDocReport', startDate, endDate)
     } else {
@@ -146,7 +146,7 @@ export default class extends Controller {
       const data = await this.#apiFetch(url)
 
       if (data?.Data) {
-        this.#openPdfInNewTab(data.Data)
+        this.#renderPdf(data.Data)
       } else {
         showToast('Lo sentimos, no hay información disponible para generar el reporte en el rango de fechas proporcionados', 'warning')
       }
@@ -202,17 +202,29 @@ export default class extends Controller {
 
   // ── PDF ───────────────────────────────────────────────────────────────────
 
-  #openPdfInNewTab(base64) {
+  // Convierte el base64 en un blob URL, lo muestra en el visor y revela las acciones.
+  #renderPdf(base64) {
+    this.#revokePdf()
+
     const binary      = atob(base64)
     const arrayBuffer = new ArrayBuffer(binary.length)
     const uintArray   = new Uint8Array(arrayBuffer)
     for (let i = 0; i < binary.length; i++) {
       uintArray[i] = binary.charCodeAt(i)
     }
-    const blob    = new Blob([uintArray], { type: 'application/pdf' })
-    const fileUrl = URL.createObjectURL(blob)
-    const tab     = window.open()
-    if (tab) tab.location.href = fileUrl
+    const blob = new Blob([uintArray], { type: 'application/pdf' })
+    this.#pdfBlobUrl = URL.createObjectURL(blob)
+
+    this.viewerTarget.src = this.#pdfBlobUrl
+    this.viewerTarget.classList.remove('hidden')
+    this.viewerEmptyTarget.classList.add('hidden')
+  }
+
+  #revokePdf() {
+    if (this.#pdfBlobUrl) {
+      URL.revokeObjectURL(this.#pdfBlobUrl)
+      this.#pdfBlobUrl = null
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -226,13 +238,18 @@ export default class extends Controller {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
   }
 
-  #selectedReportType() {
-    const checked = this.element.querySelector('input[name="report_type"]:checked')
-    return checked ? checked.value : '1'
+  #setReportType(value) {
+    this.#reportType = value
+    this.#updateTabStyles()
   }
 
-  #setTitle(text) {
-    if (this.hasPageTitleTarget) this.pageTitleTarget.textContent = text
+  #updateTabStyles() {
+    const set = (el, isActive) => {
+      el.classList.remove(...this.#tabActive, ...this.#tabInactive)
+      el.classList.add(...(isActive ? this.#tabActive : this.#tabInactive))
+    }
+    if (this.hasDocTabTarget)   set(this.docTabTarget,   this.#reportType === '1')
+    if (this.hasRecepTabTarget) set(this.recepTabTarget, this.#reportType === '2')
   }
 
   #updateSubmitState() {

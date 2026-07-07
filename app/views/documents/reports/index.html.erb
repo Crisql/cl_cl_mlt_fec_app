@@ -3,97 +3,121 @@
 
 <div data-controller="documents-reports"
      data-testid="documents-reports-page"
-     class="p-6 flex flex-col h-full">
+     class="h-full flex gap-6 overflow-hidden">
 
-  <%# ── Formulario de filtros ── %>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-shrink-0">
-    <h2 class="text-base font-semibold text-gray-800 mb-5"
-        data-documents-reports-target="pageTitle">
-      Reporte de Documentos
-    </h2>
+  <%# ══════════════════════════════════════════════════════════════ %>
+  <%# PANEL IZQUIERDO — formulario, siempre visible, altura completa  %>
+  <%# ══════════════════════════════════════════════════════════════ %>
+  <aside class="w-full max-w-sm flex-shrink-0 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto">
+    <div class="p-6">
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <%# Encabezado con ícono %>
+      <div class="flex items-center gap-3 mb-6">
+        <span class="flex items-center justify-center w-11 h-11 rounded-lg bg-blue-600 text-white flex-shrink-0">
+          <span class="material-icons">picture_as_pdf</span>
+        </span>
+        <div>
+          <h2 class="text-base font-semibold text-gray-800">Generar reporte</h2>
+          <p class="text-xs text-gray-500">Se mostrará en el visor de la derecha</p>
+        </div>
+      </div>
 
-      <%# StartDate %>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
-        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+      <%# Tipo de reporte — toggle segmentado %>
+      <div class="mb-5">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de reporte</label>
+        <div class="flex gap-1 p-1 bg-gray-100 rounded-lg">
+          <button type="button"
+                  data-report-type="1"
+                  data-documents-reports-target="docTab"
+                  data-action="click->documents-reports#selectReportType"
+                  class="hidden flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors">
+            Emitidos
+          </button>
+          <button type="button"
+                  data-report-type="2"
+                  data-documents-reports-target="recepTab"
+                  data-action="click->documents-reports#selectReportType"
+                  class="hidden flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors">
+            Recepcionados
+          </button>
+        </div>
+      </div>
+
+      <%# Rango de fechas %>
+      <div class="grid grid-cols-2 gap-4 mb-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
           <input type="date"
                  data-documents-reports-target="startDate"
                  data-action="change->documents-reports#validateDates"
-                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
-          <button type="button"
-                  data-action="click->documents-reports#setTodayStart"
-                  data-tooltip="Fecha de hoy"
-                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors flex-shrink-0 text-sm font-medium">
-            Hoy
-          </button>
+                 class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-      </div>
-
-      <%# EndDate %>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
-        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Fecha final</label>
           <input type="date"
                  data-documents-reports-target="endDate"
                  data-action="change->documents-reports#validateDates"
-                 class="flex-1 px-3 py-2 text-sm bg-transparent outline-none">
-          <button type="button"
-                  data-action="click->documents-reports#setTodayEnd"
-                  data-tooltip="Fecha de hoy"
-                  class="self-stretch flex items-center px-3 border-l border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors flex-shrink-0 text-sm font-medium">
-            Hoy
-          </button>
+                 class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
       </div>
 
-    </div>
-
-    <%# Tipo de reporte %>
-    <div class="mt-5">
-      <p class="text-sm font-medium text-gray-700 mb-2">Tipo de reporte:</p>
-      <div class="flex flex-wrap gap-6">
-
-        <label data-documents-reports-target="radioDocWrapper"
-               class="hidden items-center gap-2 cursor-pointer">
-          <input type="radio"
-                 name="report_type"
-                 value="1"
-                 data-report-type="1"
-                 data-action="change->documents-reports#onReportTypeChange"
-                 class="text-blue-600 focus:ring-blue-500">
-          <span class="text-sm text-gray-700">Reporte de Documentos</span>
-        </label>
-
-        <label data-documents-reports-target="radioRecepWrapper"
-               class="hidden items-center gap-2 cursor-pointer">
-          <input type="radio"
-                 name="report_type"
-                 value="2"
-                 data-report-type="2"
-                 data-action="change->documents-reports#onReportTypeChange"
-                 class="text-blue-600 focus:ring-blue-500">
-          <span class="text-sm text-gray-700">Reporte de Documentos Recepcionados</span>
-        </label>
-
+      <%# Chips de rango rápido %>
+      <div class="flex flex-wrap gap-2 mb-6">
+        <button type="button"
+                data-range="today"
+                data-action="click->documents-reports#quickRange"
+                class="px-3 py-1 text-xs font-medium text-gray-600 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors">
+          Hoy
+        </button>
+        <button type="button"
+                data-range="7"
+                data-action="click->documents-reports#quickRange"
+                class="px-3 py-1 text-xs font-medium text-gray-600 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors">
+          7 días
+        </button>
+        <button type="button"
+                data-range="month"
+                data-action="click->documents-reports#quickRange"
+                class="px-3 py-1 text-xs font-medium text-gray-600 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors">
+          Este mes
+        </button>
       </div>
-    </div>
-  </div>
 
-  <%# ── Toolbar ── %>
-  <div class="mt-4 flex-shrink-0 flex justify-end">
-    <button type="button"
-            data-action="click->documents-reports#submit"
-            data-documents-reports-target="submitBtn"
-            disabled
-            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium
-                   rounded-lg hover:bg-blue-700 transition-colors
-                   disabled:opacity-50 disabled:cursor-not-allowed">
-      <span class="material-icons text-base">filter_alt</span>
-      Consultar
-    </button>
-  </div>
+      <%# Botón generar %>
+      <button type="button"
+              data-action="click->documents-reports#submit"
+              data-documents-reports-target="submitBtn"
+              disabled
+              class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium
+                     rounded-lg hover:bg-blue-700 transition-colors
+                     disabled:opacity-50 disabled:cursor-not-allowed">
+        <span class="material-icons text-base">description</span>
+        Generar reporte
+      </button>
+
+      <p class="mt-3 text-center text-xs text-gray-400">La generación puede tardar unos segundos</p>
+
+    </div>
+  </aside>
+
+  <%# ══════════════════════════════════════════════════════════════ %>
+  <%# ÁREA DERECHA — visor PDF con scroll propio                       %>
+  <%# ══════════════════════════════════════════════════════════════ %>
+  <section class="flex-1 min-w-0 relative bg-gray-100 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+
+    <%# Estado vacío (sin reporte generado) %>
+    <div data-documents-reports-target="viewerEmpty"
+         class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400 pointer-events-none">
+      <span class="material-icons text-6xl">picture_as_pdf</span>
+      <p class="text-sm">Genere un reporte para visualizarlo aquí</p>
+    </div>
+
+    <%# Visor del PDF — su propio scroll interno %>
+    <iframe data-documents-reports-target="viewer"
+            title="Visor de reporte"
+            class="hidden w-full h-full border-0"></iframe>
+
+  </section>
 
   <%# ── Overlay de carga ── %>
   <%= render 'shared/overlay_loader',
