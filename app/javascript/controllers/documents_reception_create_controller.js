@@ -14,6 +14,10 @@ const TAX_FACTOR_CONDITIONS = new Set(['03', '05'])
 // Mensajes que requieren DetalleMensaje
 const DETAIL_REQUIRED_MESSAGES = new Set(['2', '3'])
 
+// Longitud del DetalleMensaje: máximo 160; mínimo 5 solo si se ingresa texto
+const DETAIL_MIN_LENGTH = 5
+const DETAIL_MAX_LENGTH = 160
+
 // DocTypes.Factura
 const DOC_TYPE_FACTURA = 1
 
@@ -27,7 +31,7 @@ export default class extends Controller {
     // Acordeón recepción
     'receptAccordion', 'receptAccordionBody', 'receptAccordionIcon',
     'receptMensaje', 'receptCondicionImpuesto', 'receptTaxFactor', 'receptCodigoActividad', 'receptDetalleMensaje',
-    'errorReceptMensaje', 'errorReceptTaxFactor', 'errorReceptCodigoActividad', 'errorReceptDetalleMensaje',
+    'errorReceptMensaje', 'errorReceptTaxFactor', 'errorReceptCodigoActividad', 'errorReceptDetalleMensaje', 'counterReceptDetalleMensaje',
     // Tabs
     'tabsContainer',
     'tabBtnCabecera', 'tabBtnLineas', 'tabBtnOtrosCargos',
@@ -1124,6 +1128,7 @@ export default class extends Controller {
           if (r.CodigoActividad)    this.receptCodigoActividadTarget.value = r.CodigoActividad
           if (r.DetalleMensaje)     this.receptDetalleMensajeTarget.value = r.DetalleMensaje
         }
+        this.#updateReceptDetalleCounter()
         // Aplicar lógica inicial de TaxFactor
         this.onReceptCondicionChange()
       }
@@ -1159,6 +1164,24 @@ export default class extends Controller {
       textarea.placeholder  = 'Detalle del mensaje (opcional)'
       this.errorReceptDetalleMensajeTarget.classList.add('hidden')
     }
+  }
+
+  // Contador de caracteres del detalle: N/160. En rojo cuando hay texto pero por
+  // debajo del mínimo (5); el mínimo solo aplica si se ingresó algún mensaje.
+  onReceptDetalleMensajeInput() {
+    this.errorReceptDetalleMensajeTarget.classList.add('hidden')
+    this.#updateReceptDetalleCounter()
+  }
+
+  #updateReceptDetalleCounter() {
+    if (!this.hasCounterReceptDetalleMensajeTarget) return
+    const len   = this.receptDetalleMensajeTarget.value.trim().length
+    const short = len > 0 && len < DETAIL_MIN_LENGTH
+    this.counterReceptDetalleMensajeTarget.textContent = short
+      ? `Mínimo ${DETAIL_MIN_LENGTH} caracteres · ${len}/${DETAIL_MAX_LENGTH}`
+      : `${len}/${DETAIL_MAX_LENGTH}`
+    this.counterReceptDetalleMensajeTarget.classList.toggle('text-red-600', short)
+    this.counterReceptDetalleMensajeTarget.classList.toggle('text-gray-400', !short)
   }
 
   // ── Previsualización (acordeón) ────────────────────────
@@ -2483,12 +2506,18 @@ export default class extends Controller {
     const sel = this.receptCodigoActividadTarget
     const current = sel.value
     sel.innerHTML = '<option value="">-- Seleccione --</option>'
+    // El popup nativo del <select> se ensancha hasta la opción más larga; un
+    // nombre de actividad largo desborda el panel hacia la izquierda. Se trunca
+    // el nombre en la etiqueta (el código queda íntegro) y el completo va en `title`.
+    const MAX = 45
     this.#activityCodes.forEach(a => {
       const code = a.Code ?? a.code ?? ''
       const name = a.Name ?? a.Description ?? a.name ?? ''
+      const short = name.length > MAX ? `${name.slice(0, MAX).trimEnd()}…` : name
       const opt  = document.createElement('option')
       opt.value       = code
-      opt.textContent = `${code} - ${name}`
+      opt.textContent = `${code} - ${short}`
+      opt.title       = `${code} - ${name}`
       sel.appendChild(opt)
     })
     if (current) sel.value = current
@@ -2499,9 +2528,27 @@ export default class extends Controller {
 
   #validateReceptForm() {
     if (!this.#shouldRecept) return true
-    const msg    = this.receptMensajeTarget.value
-    const codigo = this.receptCodigoActividadTarget.value
-    return !!msg && codigo.length === 6
+    const msg     = this.receptMensajeTarget.value
+    const codigo  = this.receptCodigoActividadTarget.value
+    const detalle = this.receptDetalleMensajeTarget.value.trim()
+
+    // DetalleMensaje: requerido según el tipo de mensaje + longitud.
+    // El mínimo de 5 caracteres solo aplica cuando se ingresó texto.
+    let detalleValid = true
+    if (DETAIL_REQUIRED_MESSAGES.has(msg) && !detalle) {
+      this.errorReceptDetalleMensajeTarget.textContent = 'El detalle del mensaje es requerido para esta respuesta.'
+      this.errorReceptDetalleMensajeTarget.classList.remove('hidden')
+      detalleValid = false
+    } else if (detalle && detalle.length < DETAIL_MIN_LENGTH) {
+      this.errorReceptDetalleMensajeTarget.textContent = `El detalle del mensaje debe tener al menos ${DETAIL_MIN_LENGTH} caracteres.`
+      this.errorReceptDetalleMensajeTarget.classList.remove('hidden')
+      this.#updateReceptDetalleCounter()
+      detalleValid = false
+    } else {
+      this.errorReceptDetalleMensajeTarget.classList.add('hidden')
+    }
+
+    return !!msg && codigo.length === 6 && detalleValid
   }
 
   // ── Modal de moneda mismatch ───────────────────────────

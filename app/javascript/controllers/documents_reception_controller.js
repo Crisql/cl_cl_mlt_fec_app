@@ -16,6 +16,10 @@ const TAX_FACTOR_CONDITIONS = new Set(['03', '05'])
 // Mensaje que requiere DetalleMensaje
 const DETAIL_REQUIRED_MESSAGES = new Set(['2', '3'])
 
+// Longitud del DetalleMensaje: máximo 160; mínimo 5 solo si se ingresa texto
+const DETAIL_MIN_LENGTH = 5
+const DETAIL_MAX_LENGTH = 160
+
 export default class extends Controller {
   static targets = [
     // Panel lateral contenedor
@@ -26,7 +30,7 @@ export default class extends Controller {
     'selectCondicionImpuesto',
     'inputTaxFactor', 'errorTaxFactor',
     'inputCodigoActividad', 'errorCodigoActividad',
-    'inputDetalleMensaje', 'errorDetalleMensaje',
+    'inputDetalleMensaje', 'errorDetalleMensaje', 'counterDetalleMensaje',
     // Panel lateral de previsualización
     'previewBackdrop', 'previewPanel',
     'previewNumeroConsecutivo', 'previewFechaEmision',
@@ -87,6 +91,7 @@ export default class extends Controller {
     this.inputDetalleMensajeTarget.value     = ''
     this.errorDetalleMensajeTarget.classList.add('hidden')
     this.errorCodigoActividadTarget.classList.add('hidden')
+    this.#updateDetalleCounter()
 
     this.#populateActivitySelect()
 
@@ -138,6 +143,24 @@ export default class extends Controller {
       textarea.placeholder = 'Detalle del mensaje (opcional)'
       this.errorDetalleMensajeTarget.classList.add('hidden')
     }
+  }
+
+  // Contador de caracteres del detalle: N/160. En rojo cuando hay texto pero por
+  // debajo del mínimo (5); el mínimo solo aplica si se ingresó algún mensaje.
+  onDetalleMensajeInput() {
+    this.errorDetalleMensajeTarget.classList.add('hidden')
+    this.#updateDetalleCounter()
+  }
+
+  #updateDetalleCounter() {
+    if (!this.hasCounterDetalleMensajeTarget) return
+    const len   = this.inputDetalleMensajeTarget.value.trim().length
+    const short = len > 0 && len < DETAIL_MIN_LENGTH
+    this.counterDetalleMensajeTarget.textContent = short
+      ? `Mínimo ${DETAIL_MIN_LENGTH} caracteres · ${len}/${DETAIL_MAX_LENGTH}`
+      : `${len}/${DETAIL_MAX_LENGTH}`
+    this.counterDetalleMensajeTarget.classList.toggle('text-red-500', short)
+    this.counterDetalleMensajeTarget.classList.toggle('text-gray-400', !short)
   }
 
   // ──────────────────────────────────────────────
@@ -195,16 +218,22 @@ export default class extends Controller {
       }
     }
 
-    // DetalleMensaje cuando es requerido
-    const mensaje = this.selectMensajeTarget.value
-    if (DETAIL_REQUIRED_MESSAGES.has(mensaje)) {
-      const detalle = this.inputDetalleMensajeTarget.value.trim()
-      if (!detalle) {
-        this.errorDetalleMensajeTarget.classList.remove('hidden')
-        valid = false
-      } else {
-        this.errorDetalleMensajeTarget.classList.add('hidden')
-      }
+    // DetalleMensaje: requerido según el tipo de mensaje + longitud.
+    // El mínimo de 5 caracteres solo aplica cuando se ingresó texto.
+    const mensaje  = this.selectMensajeTarget.value
+    const detalle  = this.inputDetalleMensajeTarget.value.trim()
+    const required = DETAIL_REQUIRED_MESSAGES.has(mensaje)
+    if (required && !detalle) {
+      this.errorDetalleMensajeTarget.textContent = 'El detalle del mensaje es requerido para esta respuesta'
+      this.errorDetalleMensajeTarget.classList.remove('hidden')
+      valid = false
+    } else if (detalle && detalle.length < DETAIL_MIN_LENGTH) {
+      this.errorDetalleMensajeTarget.textContent = `El detalle del mensaje debe tener al menos ${DETAIL_MIN_LENGTH} caracteres`
+      this.errorDetalleMensajeTarget.classList.remove('hidden')
+      this.#updateDetalleCounter()
+      valid = false
+    } else {
+      this.errorDetalleMensajeTarget.classList.add('hidden')
     }
 
     return valid
@@ -446,13 +475,24 @@ export default class extends Controller {
     }
   }
 
+  // El popup nativo del <select> se ensancha hasta la opción más larga; como el
+  // panel está pegado al borde derecho, un nombre de actividad largo lo desborda
+  // hacia la izquierda. Se trunca el nombre en la etiqueta (el código queda íntegro)
+  // y el nombre completo va en `title` como respaldo.
+  #activityLabel(code, name) {
+    const MAX = 45
+    const short = name.length > MAX ? `${name.slice(0, MAX).trimEnd()}…` : name
+    return `${code} — ${short}`
+  }
+
   #populateActivitySelect() {
     const select = this.inputCodigoActividadTarget
     select.innerHTML = '<option value="">-- Seleccione --</option>'
     for (const item of this.#activityCodes) {
       const opt = document.createElement('option')
       opt.value       = item.Code
-      opt.textContent = `${item.Code} — ${item.Name}`
+      opt.textContent = this.#activityLabel(item.Code, item.Name ?? '')
+      opt.title       = `${item.Code} — ${item.Name ?? ''}`
       if (item.Code === this.#codigoActividad) opt.selected = true
       select.appendChild(opt)
     }

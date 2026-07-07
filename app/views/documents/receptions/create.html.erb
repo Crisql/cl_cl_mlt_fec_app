@@ -85,15 +85,20 @@
 
       <%# Detalle Mensaje (full width) %>
       <div class="mt-4">
-        <label class="block text-xs font-medium text-gray-600 mb-1">Mensaje</label>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Detalle del mensaje</label>
         <textarea data-documents-reception-create-target="receptDetalleMensaje"
+                  data-action="input->documents-reception-create#onReceptDetalleMensajeInput"
                   data-testid="recept-detalle-mensaje"
                   rows="4"
-                  maxlength="254"
+                  maxlength="160"
                   placeholder="Detalle del mensaje (opcional)"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
-        <p data-documents-reception-create-target="errorReceptDetalleMensaje"
-           class="hidden mt-1 text-xs text-red-600">El detalle del mensaje es requerido.</p>
+        <div class="mt-1 flex items-start justify-between gap-3">
+          <p data-documents-reception-create-target="errorReceptDetalleMensaje"
+             class="hidden text-xs text-red-600">El detalle del mensaje es requerido.</p>
+          <p data-documents-reception-create-target="counterReceptDetalleMensaje"
+             class="ml-auto flex-shrink-0 text-xs text-gray-400">0/160</p>
+        </div>
       </div>
 
       <%# Botón Previsualizar %>

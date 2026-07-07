@@ -35,6 +35,13 @@ const DOC_STATUS = {
 
 const MESSAGE_TYPES = { 1: 'Aceptado', 2: 'Aceptado Parcialmente', 3: 'Rechazado' };
 
+// Mensajes que requieren DetalleMensaje
+const DETAIL_REQUIRED_MESSAGES = new Set(['2', '3']);
+
+// Longitud del DetalleMensaje: máximo 160; mínimo 5 solo si se ingresa texto
+const DETAIL_MIN_LENGTH = 5;
+const DETAIL_MAX_LENGTH = 160;
+
 const DOC_TYPES = {
   '01': 'FE', '02': 'ND', '03': 'NC', '04': 'TE',
   '08': 'FEC', '09': 'FEE', '10': 'REP',
@@ -58,6 +65,7 @@ export default class extends TabulatorController {
     'receptPanel', 'receptBackdrop',
     'receptDocName', 'receptMensaje', 'receptCondicionImpuesto',
     'receptTaxFactor', 'receptCodigoActividad', 'receptDetalleMensaje',
+    'errorReceptDetalleMensaje', 'counterReceptDetalleMensaje',
 
     // Modal info simple (bandeja, detalle mensaje)
     'infoModal', 'infoTitle', 'infoBody',
@@ -615,10 +623,30 @@ export default class extends TabulatorController {
     this.receptTaxFactorTarget.value           = row.TaxFactor ?? '';
     this.receptDetalleMensajeTarget.value      = row.DetalleMensaje || '';
     this.#populateActivitySelect(row.CodigoActividadReceptor || '');
+    this.errorReceptDetalleMensajeTarget?.classList.add('hidden');
+    this.#updateReceptDetalleCounter();
 
     this.receptBackdropTarget.classList.remove('hidden');
     this.receptPanelTarget.classList.remove('translate-x-full');
     document.body.style.overflow = 'hidden';
+  }
+
+  // Contador de caracteres del detalle: N/160. En rojo cuando hay texto pero por
+  // debajo del mínimo (5); el mínimo solo aplica si se ingresó algún mensaje.
+  onReceptDetalleMensajeInput() {
+    this.errorReceptDetalleMensajeTarget?.classList.add('hidden');
+    this.#updateReceptDetalleCounter();
+  }
+
+  #updateReceptDetalleCounter() {
+    if (!this.hasCounterReceptDetalleMensajeTarget) return;
+    const len   = this.receptDetalleMensajeTarget.value.trim().length;
+    const short = len > 0 && len < DETAIL_MIN_LENGTH;
+    this.counterReceptDetalleMensajeTarget.textContent = short
+      ? `Mínimo ${DETAIL_MIN_LENGTH} caracteres · ${len}/${DETAIL_MAX_LENGTH}`
+      : `${len}/${DETAIL_MAX_LENGTH}`;
+    this.counterReceptDetalleMensajeTarget.classList.toggle('text-red-500', short);
+    this.counterReceptDetalleMensajeTarget.classList.toggle('text-gray-400', !short);
   }
 
   closeReceptPanel() {
@@ -627,8 +655,31 @@ export default class extends TabulatorController {
     document.body.style.overflow = '';
   }
 
+  // DetalleMensaje: requerido según el tipo de mensaje + longitud.
+  // El mínimo de 5 caracteres solo aplica cuando se ingresó texto.
+  #validateReceptDetalle() {
+    const mensaje  = this.receptMensajeTarget.value;
+    const detalle  = this.receptDetalleMensajeTarget.value.trim();
+    const required = DETAIL_REQUIRED_MESSAGES.has(mensaje);
+
+    if (required && !detalle) {
+      this.errorReceptDetalleMensajeTarget.textContent = 'El detalle del mensaje es requerido para esta respuesta';
+      this.errorReceptDetalleMensajeTarget.classList.remove('hidden');
+      return false;
+    }
+    if (detalle && detalle.length < DETAIL_MIN_LENGTH) {
+      this.errorReceptDetalleMensajeTarget.textContent = `El detalle del mensaje debe tener al menos ${DETAIL_MIN_LENGTH} caracteres`;
+      this.errorReceptDetalleMensajeTarget.classList.remove('hidden');
+      this.#updateReceptDetalleCounter();
+      return false;
+    }
+    this.errorReceptDetalleMensajeTarget.classList.add('hidden');
+    return true;
+  }
+
   async saveFromReceptPanel() {
     if (!this.#activeReceptDoc) return;
+    if (!this.#validateReceptDetalle()) return;
     try {
       showLoading('Procesando documento, espere por favor...');
       await this.#apiFetch('/api/Documents/ReceptMessageFromMailParser/', {
