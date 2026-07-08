@@ -82,6 +82,7 @@ export default class extends Controller {
     'currencyMappingList', 'currencyMappingEmpty', 'currencyMappingsDupError',
     'btnReloadSap',
     'btnSaveSap',
+    'sapErrorIcon', 'sapErrorDetail',
 
     // Loaders de sección
     'loaderGeneral', 'loaderAdditional', 'loaderAtv', 'loaderAttachments', 'loaderActivityCodes', 'loaderSap',
@@ -252,6 +253,18 @@ export default class extends Controller {
       if (currenciesResp.status === 'fulfilled' && currenciesResp.value?.Data?.length) {
         this.#currenciesList = currenciesResp.value.Data;
       }
+
+      // Si la compañía usa factura a proveedor, las listas SAP (almacén, impuestos,
+      // monedas) son necesarias: reportar cualquier fallo de esas consultas.
+      const usesFactProv = companyResp.status === 'fulfilled' && !!companyResp.value?.Data?.UseFactProv;
+      if (usesFactProv) {
+        const sapListErrors = this.#collectSapListErrors(warehouseResp, taxResp, currenciesResp);
+        if (sapListErrors.length) {
+          showToast('No se pudieron cargar los datos para factura proveedor', 'error');
+        }
+        this.#setSapListError(sapListErrors);
+      }
+
       if (companyResp.status === 'fulfilled' && companyResp.value.Data) {
         this.#companyData = companyResp.value.Data;
         this.#fillForms(this.#companyData);
@@ -847,6 +860,29 @@ export default class extends Controller {
     return !dupErr;
   }
 
+  // ── Errores de listas SAP (almacén, impuestos, monedas) ─────────────────────
+
+  #collectSapListErrors(warehouseResp, taxResp, currenciesResp) {
+    const errors = [];
+    if (warehouseResp.status  === 'rejected') errors.push(`Almacenes: ${warehouseResp.reason?.message || 'error desconocido'}`);
+    if (taxResp.status        === 'rejected') errors.push(`Impuestos: ${taxResp.reason?.message || 'error desconocido'}`);
+    if (currenciesResp.status === 'rejected') errors.push(`Monedas: ${currenciesResp.reason?.message || 'error desconocido'}`);
+    return errors;
+  }
+
+  // Muestra/oculta el ícono rojo palpitante en el encabezado de la sección y
+  // rellena el tooltip con el detalle de las consultas que fallaron.
+  #setSapListError(errors) {
+    if (!this.hasSapErrorIconTarget) return;
+    if (errors?.length) {
+      this.sapErrorDetailTarget.textContent = errors.join('\n');
+      this.sapErrorIconTarget.classList.remove('hidden');
+    } else {
+      this.sapErrorDetailTarget.textContent = '';
+      this.sapErrorIconTarget.classList.add('hidden');
+    }
+  }
+
   // ── Recargar listas SAP ────────────────────────────────────────────────────
 
   async reloadSapDependentLists() {
@@ -868,6 +904,14 @@ export default class extends Controller {
         this.#currenciesList = currenciesResp.value.Data;
         this.#renderXmlTolerances();
         this.#renderCurrencyMappings();
+      }
+
+      // allSettled nunca rechaza: hay que inspeccionar cada resultado para reportar fallos.
+      const sapListErrors = this.#collectSapListErrors(warehouseResp, taxResp, currenciesResp);
+      this.#setSapListError(sapListErrors);
+      if (sapListErrors.length) {
+        showToast('No se pudieron cargar los datos para factura proveedor', 'error');
+        return;
       }
       showToast('Información recargada correctamente', 'success');
     } catch (err) {
@@ -930,7 +974,9 @@ export default class extends Controller {
   }
 
   async saveSapData() {
-    if (!this.useFactProvTarget.checked || !this.#xmlTolerances.length || !this.#validateTolerances()) {
+    // Solo se validan tolerancias/monedas cuando la funcionalidad está activa.
+    // Si el usuario desactiva "Usa factura a proveedor", se guarda igual para apagarla.
+    if (this.useFactProvTarget.checked && (!this.#xmlTolerances.length || !this.#validateTolerances())) {
       showToast('Verifique los datos de factura proveedor (tolerancias requeridas, sin duplicados).', 'error');
       return;
     }

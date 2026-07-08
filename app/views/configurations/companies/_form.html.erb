@@ -573,7 +573,20 @@
          data-company-form-target="sectionSap"
          class="bg-white rounded-xl shadow-sm border border-gray-100 mb-3">
   <summary class="flex items-center justify-between px-5 py-4 cursor-pointer select-none list-none">
-    <span class="text-sm font-semibold text-gray-700">Datos para Factura a Proveedor</span>
+    <span class="flex items-center gap-2">
+      <span class="text-sm font-semibold text-gray-700">Datos para Factura a Proveedor</span>
+
+      <%# Ícono de error — se muestra cuando fallan las consultas SAP (almacén, impuestos, monedas) %>
+      <span data-company-form-target="sapErrorIcon"
+            data-testid="sap-error-icon"
+            class="hidden relative group">
+        <span class="material-icons text-red-600 text-base animate-pulse cursor-help align-middle">error</span>
+        <span data-company-form-target="sapErrorDetail"
+              class="pointer-events-none absolute left-1/2 top-full z-20 mt-1 -translate-x-1/2 hidden group-hover:block
+                     whitespace-pre-line rounded-md bg-gray-900 px-3 py-2 text-xs font-normal text-white shadow-lg
+                     w-64 normal-case"></span>
+      </span>
+    </span>
     <span class="material-icons text-gray-400 text-base">expand_more</span>
   </summary>
 
