@@ -26,8 +26,6 @@ export default class extends Controller {
     'recepTab',
     'submitBtn',
     'overlay',
-    'validationModal',
-    'modalMessage',
     'viewer',
     'viewerEmpty',
   ]
@@ -110,7 +108,7 @@ export default class extends Controller {
     const endDate   = this.endDateTarget.value
 
     if (!startDate || !endDate) {
-      this.#showModal('El formulario no puede enviarse con campos vacíos. Complete todos los campos antes de continuar.')
+      showToast('El formulario no puede enviarse con campos vacíos. Complete todos los campos antes de continuar.', 'warning')
       return
     }
 
@@ -120,7 +118,7 @@ export default class extends Controller {
     today.setHours(23, 59, 59, 999)
 
     if (start > today || end > today || start > end) {
-      this.#showModal('La fecha de búsqueda es futura o la fecha de inicio es posterior a la fecha final. Por favor, verifica y ajusta las fechas para asegurarte de que el rango de búsqueda sea válido.')
+      showToast('La fecha de búsqueda es futura o la fecha de inicio es posterior a la fecha final. Por favor, verifica y ajusta las fechas para asegurarte de que el rango de búsqueda sea válido.', 'warning')
       return
     }
 
@@ -130,10 +128,6 @@ export default class extends Controller {
     } else {
       this.#fetchReport('GetDocReceptReport', startDate, endDate)
     }
-  }
-
-  closeModal() {
-    this.validationModalTarget.classList.add('hidden')
   }
 
   // ── API ───────────────────────────────────────────────────────────────────
@@ -263,10 +257,5 @@ export default class extends Controller {
 
   #hideOverlay() {
     this.overlayTarget.classList.add('hidden')
-  }
-
-  #showModal(message) {
-    this.modalMessageTarget.textContent = message
-    this.validationModalTarget.classList.remove('hidden')
   }
 }

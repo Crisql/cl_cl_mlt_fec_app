@@ -3,7 +3,7 @@
 
 <div data-controller="documents-reports"
      data-testid="documents-reports-page"
-     class="h-full flex gap-6 overflow-hidden">
+     class="relative h-full flex gap-6 overflow-hidden">
 
   <%# ══════════════════════════════════════════════════════════════ %>
   <%# PANEL IZQUIERDO — formulario, siempre visible, altura completa  %>
@@ -119,34 +119,18 @@
 
   </section>
 
-  <%# ── Overlay de carga ── %>
-  <%= render 'shared/overlay_loader',
-        ctrl:       'documents-reports',
-        target:     'overlay',
-        msg_target: nil,
-        message:    'Generando reporte, espere por favor...' %>
-
-  <%# ── Modal de validación ── %>
-  <div data-documents-reports-target="validationModal"
-       class="hidden fixed inset-0 z-50 flex items-center justify-center">
-    <div class="fixed inset-0 bg-black/40"
-         data-action="click->documents-reports#closeModal"></div>
-    <div class="relative bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 z-10">
-      <div class="flex items-start gap-3">
-        <span class="material-icons text-blue-500 text-2xl flex-shrink-0">info</span>
-        <p data-documents-reports-target="modalMessage"
-           class="text-sm text-gray-700 mt-0.5"></p>
-      </div>
-      <div class="mt-5 flex justify-end">
-        <button type="button"
-                data-action="click->documents-reports#closeModal"
-                class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm
-                       font-medium rounded-lg hover:bg-blue-700 transition-colors">
-          <span class="material-icons text-base">check</span>
-          Continuar
-        </button>
-      </div>
-    </div>
+  <%# ── Overlay de carga — acotado a la vista (form + visor), estilo blur suave (selector de compañías) ── %>
+  <div data-documents-reports-target="overlay"
+       class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-white/40 backdrop-blur-[2px]">
+    <svg width="44" height="44" viewBox="0 0 50 50" aria-hidden="true">
+      <circle cx="25" cy="25" r="20" fill="none" stroke="#e5e7eb" stroke-width="5"></circle>
+      <circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="5"
+              stroke-linecap="round" stroke-dasharray="80 200">
+        <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                          from="0 25 25" to="360 25 25" dur="0.8s" repeatCount="indefinite"></animateTransform>
+      </circle>
+    </svg>
+    <p class="text-sm text-gray-500">Generando reporte, espere por favor...</p>
   </div>
 
 </div>
