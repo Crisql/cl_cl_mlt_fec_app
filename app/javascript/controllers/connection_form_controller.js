@@ -32,7 +32,7 @@ export default class extends Controller {
     'dbEngine',     'dbEngineError',
     'serverType',   'serverTypeError', 'serverTypeHint',
     'dbUser',       'dbUserError', 'dbUserRequired',
-    'dbPass',       'dbPassError', 'dbPassRequired',
+    'dbPass',       'dbPassError', 'dbPassRequired', 'dbPassHint',
     'boSuppLangs',
     'dst',
     'useTrusted',
@@ -177,11 +177,14 @@ export default class extends Controller {
   /**
    * Usuario y contraseña de base de datos solo son obligatorios cuando el tipo
    * de servidor es HANASERVER. Refleja la condición en los asteriscos del label.
+   * La contraseña nunca se marca requerida en edición: el API no la devuelve por
+   * seguridad y, si se deja en blanco, el backend conserva la contraseña actual.
    */
   #updateCredentialRequirement() {
     const required = this.serverTypeTarget.value === 'HANASERVER';
     this.dbUserRequiredTarget.classList.toggle('hidden', !required);
-    this.dbPassRequiredTarget.classList.toggle('hidden', !required);
+    this.dbPassRequiredTarget.classList.toggle('hidden', !required || this.#isEditMode);
+    this.dbPassHintTarget.classList.toggle('hidden', !this.#isEditMode);
   }
 
   /** Habilita el botón de guardar solo cuando todos los campos requeridos están completos. */
@@ -196,7 +199,7 @@ export default class extends Controller {
              filled(this.odbcTypeTarget) && filled(this.dbEngineTarget) &&
              filled(this.serverTypeTarget);
     if (this.serverTypeTarget.value === 'HANASERVER') {
-      ok = ok && filled(this.dbUserTarget) && filled(this.dbPassTarget);
+      ok = ok && filled(this.dbUserTarget) && (this.#isEditMode || filled(this.dbPassTarget));
     }
     return ok;
   }
@@ -246,9 +249,12 @@ export default class extends Controller {
     ];
 
     // Usuario y contraseña solo son obligatorios para servidores HANASERVER.
+    // La contraseña se exime en edición: en blanco significa "no cambiar".
     if (this.serverTypeTarget.value === 'HANASERVER') {
       required.push({ target: this.dbUserTarget, error: this.dbUserErrorTarget });
-      required.push({ target: this.dbPassTarget, error: this.dbPassErrorTarget });
+      if (!this.#isEditMode) {
+        required.push({ target: this.dbPassTarget, error: this.dbPassErrorTarget });
+      }
     }
 
     for (const { target, error } of required) {

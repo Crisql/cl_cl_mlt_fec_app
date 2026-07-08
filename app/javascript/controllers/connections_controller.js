@@ -38,7 +38,7 @@ export default class extends TabulatorController {
     'fDbEngine', 'fDbEngineError',
     'fServerType', 'fServerTypeError', 'fServerTypeHint',
     'fDbUser', 'fDbUserError', 'fDbUserRequired',
-    'fDbPass', 'fDbPassError', 'fDbPassRequired',
+    'fDbPass', 'fDbPassError', 'fDbPassRequired', 'fDbPassHint',
     'fBoSuppLangs',
     'fDst',
     'fUseTrusted',
@@ -253,11 +253,14 @@ export default class extends TabulatorController {
   /**
    * Usuario y contraseña de base de datos solo son obligatorios cuando el tipo
    * de servidor es HANASERVER. Refleja la condición en los asteriscos del label.
+   * La contraseña nunca se marca requerida en edición: el API no la devuelve por
+   * seguridad y, si se deja en blanco, el backend conserva la contraseña actual.
    */
   #updateCredentialRequirement() {
     const required = this.fServerTypeTarget.value === 'HANASERVER';
     this.fDbUserRequiredTarget.classList.toggle('hidden', !required);
-    this.fDbPassRequiredTarget.classList.toggle('hidden', !required);
+    this.fDbPassRequiredTarget.classList.toggle('hidden', !required || this.#editMode);
+    this.fDbPassHintTarget.classList.toggle('hidden', !this.#editMode);
   }
 
   /** Habilita el botón de guardar solo cuando todos los campos requeridos están completos. */
@@ -272,7 +275,7 @@ export default class extends TabulatorController {
              filled(this.fOdbcTypeTarget) && filled(this.fDbEngineTarget) &&
              filled(this.fServerTypeTarget);
     if (this.fServerTypeTarget.value === 'HANASERVER') {
-      ok = ok && filled(this.fDbUserTarget) && filled(this.fDbPassTarget);
+      ok = ok && filled(this.fDbUserTarget) && (this.#editMode || filled(this.fDbPassTarget));
     }
     return ok;
   }
@@ -389,9 +392,12 @@ export default class extends TabulatorController {
     ];
 
     // Usuario y contraseña solo son obligatorios para servidores HANASERVER.
+    // La contraseña se exime en edición: en blanco significa "no cambiar".
     if (this.fServerTypeTarget.value === 'HANASERVER') {
       required.push({ target: this.fDbUserTarget, error: this.fDbUserErrorTarget });
-      required.push({ target: this.fDbPassTarget, error: this.fDbPassErrorTarget });
+      if (!this.#editMode) {
+        required.push({ target: this.fDbPassTarget, error: this.fDbPassErrorTarget });
+      }
     }
 
     for (const { target, error } of required) {
