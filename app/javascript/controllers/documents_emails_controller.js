@@ -3,6 +3,7 @@ import { Storage, SStore } from 'vendor/clavisco/core';
 import { showToast, ALERT_TYPES } from 'vendor/clavisco/alerts';
 import { TABULATOR_LOCALE, TABULATOR_LANGS, TABULATOR_LOADING_HTML } from 'controllers/tabulator_locale';
 import { showLoading, hideLoading } from 'vendor/clavisco/overlay';
+import { relativeDate } from 'vendor/clavisco/format/dates';
 
 /**
  * DocumentsEmailsController — Reporte de correos enviados.
@@ -37,8 +38,9 @@ export default class extends TabulatorController {
 
   // ── Estado interno ────────────────────────────────────────────────────────
 
-  #companyId    = null;
-  #totalRecords = 0;
+  #companyId       = null;
+  #totalRecords    = 0;
+  #detailDocClave  = null;   // clave del documento del correo abierto en el panel de detalle
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -92,6 +94,12 @@ export default class extends TabulatorController {
     this.panelTarget.classList.add('translate-x-full');
     this.panelBackdropTarget.classList.add('hidden');
     document.body.style.overflow = '';
+  }
+
+  // Navega al documento del correo abierto en el panel de detalle (misma acción
+  // que el botón "Ver documento" de la fila, para que el usuario no cierre el panel).
+  viewDocumentFromPanel() {
+    this.#goToDocument({ DocClave: this.#detailDocClave });
   }
 
   // ── Config Tabulator ──────────────────────────────────────────────────────
@@ -225,13 +233,129 @@ export default class extends TabulatorController {
     }
   }
 
+  // Panel de detalle — muestra la misma información que un card del panel
+  // "Historial de correos" (/documents/issued) pero sin el envoltorio de card,
+  // ya que aquí siempre es un único correo: cabecera con fecha + estado, campos
+  // de remitente/destinatarios/clave/receptor y el bloque de detalle al final.
   #openDetail(rowData) {
-    if (!rowData.Details || rowData.Details.trim() === '') {
-      showToast('Este registro no posee detalle.', 'info');
-      return;
-    }
-    this.panelContentTarget.textContent = rowData.Details;
+    this.#detailDocClave = rowData.DocClave ?? null;
+
+    const detail    = this.#mailText(rowData.Details);
+    const hasDetail = detail !== '—';
+
+    const detailBlock = hasDetail
+      ? `<p class="text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed">${detail}</p>`
+      : `<p class="text-sm text-gray-400 italic">Sin detalle registrado.</p>`;
+
+    this.panelContentTarget.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs text-gray-400 mb-0.5">Fecha de creación</p>
+          ${this.#relativeDateSpan(rowData.EmailCreateDate, 'text-sm font-semibold text-gray-800')}
+        </div>
+        ${this.#emailStatusIcon(rowData.EmailStatus)}
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        ${this.#field('Último intento', this.#relativeDateSpan(rowData.EmailLastAttempt, 'text-sm text-gray-700'))}
+        ${this.#field('Clave del documento', this.#mailText(rowData.DocClave))}
+      </div>
+
+      ${this.#field('Remitente', this.#mailText(rowData.SenderEmail))}
+      ${this.#field('Para', this.#emailChips(rowData.EmailOutputTo))}
+      ${this.#field('CC', this.#emailChips(rowData.EmailOutputCC))}
+
+      <div class="grid grid-cols-2 gap-4">
+        ${this.#field('Nombre del receptor', this.#mailText(rowData.RcprNombre))}
+        ${this.#field('ID del receptor', this.#mailText(rowData.RcprIdeNumero))}
+      </div>
+
+      <div>
+        <p class="text-xs text-gray-400 mb-1.5">Detalle de error</p>
+        ${detailBlock}
+      </div>`;
+
     this.openPanel();
+  }
+
+  // Span de fecha relativa (relativeDate compartido) con la fecha original
+  // completa en el tooltip. Mismo formato que el panel Historial de correos.
+  #relativeDateSpan(value, className) {
+    const raw = (value == null) ? '' : String(value).trim();
+    const hasValue = raw !== '' && raw.toLowerCase() !== 'null';
+    if (!hasValue) return `<span class="${className}">—</span>`;
+    return `<span class="${className} cursor-help" title="${this.#escapeHtml(raw)}">${relativeDate(value)}</span>`;
+  }
+
+  // Ícono + tooltip para el estado del correo (mismo estilo que Historial de correos).
+  #iconTooltip(icon, bg, color, label) {
+    return `<span class="relative group inline-flex items-center flex-shrink-0">
+      <span class="inline-flex items-center justify-center rounded-full p-1.5 cursor-default"
+            style="background-color:${bg}; color:${color}">
+        <span class="material-icons" style="font-size:22px; line-height:1">${icon}</span>
+      </span>
+      <span class="pointer-events-none absolute top-full right-0 mt-1 z-20
+                   whitespace-nowrap rounded bg-gray-800 text-white text-[11px] px-2 py-1
+                   opacity-0 group-hover:opacity-100 transition-opacity duration-150">${label}</span>
+    </span>`;
+  }
+
+  #emailStatusIcon(code) {
+    const map = {
+      1: { label: 'Pendiente', icon: 'schedule',     bg: '#f3f4f6', color: '#6b7280' },
+      2: { label: 'Enviando',  icon: 'sync',         bg: '#e8f0fe', color: '#1a56db' },
+      3: { label: 'Error',     icon: 'error',        bg: '#fdecea', color: '#c0392b' },
+      4: { label: 'Enviado',   icon: 'check_circle', bg: '#e8f5ee', color: '#3a7d52' },
+    };
+    const s = map[Number(code)] ?? { label: String(code ?? ''), icon: 'help', bg: '#f3f4f6', color: '#4b5563' };
+    return this.#iconTooltip(s.icon, s.bg, s.color, s.label);
+  }
+
+  // Renderiza un campo etiqueta + valor. valueHtml puede ser texto ya escapado
+  // (via #mailText) o HTML (via #emailChips).
+  #field(label, valueHtml) {
+    return `<div>
+      <p class="text-xs text-gray-400 mb-1">${label}</p>
+      <div class="text-sm text-gray-700 break-all">${valueHtml}</div>
+    </div>`;
+  }
+
+  // Normaliza un valor de texto de la API: null/undefined/""/"null" → "—".
+  #mailText(value) {
+    if (value == null) return '—';
+    const str = String(value).trim();
+    if (str === '' || str.toLowerCase() === 'null') return '—';
+    return this.#escapeHtml(str);
+  }
+
+  // Parsea una lista de correos concatenados por ";" en un arreglo limpio.
+  #parseEmails(value) {
+    if (value == null) return [];
+    return String(value)
+      .split(';')
+      .map((e) => e.trim())
+      .filter((e) => e !== '' && e.toLowerCase() !== 'null');
+  }
+
+  // Renderiza una lista de correos como chips individuales. Si no hay, "—".
+  #emailChips(value) {
+    const emails = this.#parseEmails(value);
+    if (!emails.length) return '<span class="text-sm text-gray-400">—</span>';
+    return `
+      <div class="flex flex-wrap gap-1.5">
+        ${emails.map((e) => `
+          <span class="inline-flex items-center max-w-full bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-md break-all">
+            ${this.#escapeHtml(e)}
+          </span>`).join('')}
+      </div>`;
+  }
+
+  #escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   #goToDocument(rowData) {

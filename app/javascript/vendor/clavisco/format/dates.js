@@ -52,9 +52,10 @@ export function relativeDate(value) {
   if (diffDays <= 3)  return `Hace ${diffDays} días`;
 
   const sameYear = d.getFullYear() === now.getFullYear();
+  const mes = MESES[d.getMonth()].substring(0, 3); // nombre corto: "noviembre" → "nov"
   return sameYear
-    ? `${d.getDate()} de ${MESES[d.getMonth()]}`
-    : `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+    ? `${d.getDate()} de ${mes}`
+    : `${d.getDate()} de ${mes} de ${d.getFullYear()}`;
 }
 
 // Fecha absoluta en formato "yyyy-MM-dd HH:mm:ss" (ISO 8601 con espacio).
