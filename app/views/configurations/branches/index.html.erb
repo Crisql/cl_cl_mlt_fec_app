@@ -5,15 +5,68 @@
      data-testid="branches-page"
      class="p-6 flex flex-col h-full">
 
-  <%# ── Toolbar ──────────────────────────────────────────────────────── %>
-  <div class="mb-4 flex justify-end flex-shrink-0">
-    <button type="button"
-            data-action="click->branches#openCreatePanel"
-            data-testid="btn-new-branch"
-            class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-      <span class="material-icons text-base">add</span>
-      Nueva Sucursal
-    </button>
+  <%# ---------------------------------------------------------------- %>
+  <%# FILTROS DE BÚSQUEDA %>
+  <%# ---------------------------------------------------------------- %>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4 flex-shrink-0">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Alias</label>
+        <input type="text"
+               data-branches-target="filterAlias"
+               data-testid="filter-alias"
+               placeholder="Alias de la sucursal"
+               class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Provincia</label>
+        <select data-branches-target="filterProvincia"
+                data-testid="filter-provincia"
+                data-action="change->branches#onFilterProvinciaChange"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">Todas</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Cantón</label>
+        <select data-branches-target="filterCanton"
+                data-testid="filter-canton"
+                data-action="change->branches#onFilterCantonChange"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Distrito</label>
+        <select data-branches-target="filterDistrito"
+                data-testid="filter-distrito"
+                class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="button"
+                data-action="click->branches#search"
+                data-testid="btn-search"
+                class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
+          <span class="material-icons text-base">filter_alt</span>
+          Consultar
+        </button>
+
+        <button type="button"
+                data-action="click->branches#openCreatePanel"
+                data-testid="btn-new-branch"
+                class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <span class="material-icons text-base">add</span>
+          Nueva Sucursal
+        </button>
+      </div>
+    </div>
   </div>
 
   <%# ── Tabla ───────────────────────────────────────────────────────── %>

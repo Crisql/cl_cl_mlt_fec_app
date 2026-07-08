@@ -30,6 +30,9 @@ export default class extends TabulatorController {
   static targets = [
     ...TabulatorController.targets,
 
+    // Filtros
+    'filterAlias', 'filterProvincia', 'filterCanton', 'filterDistrito',
+
     // Panel lateral
     'panel', 'panelBackdrop', 'panelTitle',
     'saveBtn', 'saveIcon', 'saveLabel',
@@ -146,6 +149,7 @@ export default class extends TabulatorController {
       this.#country   = countryRes.Country   || [];
       this.#provinces = provincesRes.Provinces || [];
       this.#populateProvinceSelect();
+      this.#populateFilterProvinciaSelect();
     } catch (err) {
       showToast('Error al cargar datos de ubicación.', 'error');
     }
@@ -310,6 +314,72 @@ export default class extends TabulatorController {
     );
     this.inputBarrioTarget.value = this.#neighborhoodList[0]?.NeighborhoodName || '';
     this.barrioDropdownTarget.classList.add('hidden');
+  }
+
+  // ── Filtros de búsqueda ───────────────────────────────────────────────────
+
+  onFilterProvinciaChange(e) {
+    this.#populateFilterCantonSelect(e.target.value);
+    this.#resetSelectTo(this.filterDistritoTarget, 'Todos');
+  }
+
+  onFilterCantonChange(e) {
+    const provinciaId = this.filterProvinciaTarget.value;
+    this.#populateFilterDistritoSelect(provinciaId, e.target.value);
+  }
+
+  search() {
+    const alias      = this.filterAliasTarget.value.trim().toLowerCase();
+    const provinciaId = this.filterProvinciaTarget.value;
+    const cantonId    = this.filterCantonTarget.value;
+    const distritoId  = this.filterDistritoTarget.value;
+
+    const filtered = this.#branches.filter(b => {
+      if (alias && !(b.Alias || '').toLowerCase().includes(alias)) return false;
+      if (provinciaId && b.EmsrUbProvincia !== provinciaId) return false;
+      if (cantonId && b.EmsrUbCanton !== cantonId) return false;
+      if (distritoId && b.EmsrUbDistrito !== distritoId) return false;
+      return true;
+    });
+
+    this.table?.setData(filtered);
+  }
+
+  #populateFilterProvinciaSelect() {
+    const sel = this.filterProvinciaTarget;
+    sel.innerHTML = '<option value="">Todas</option>';
+    this.#provinces.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value       = p.ProvinceId;
+      opt.textContent = p.ProvinceName;
+      sel.appendChild(opt);
+    });
+  }
+
+  #populateFilterCantonSelect(provinciaId) {
+    const sel = this.filterCantonTarget;
+    sel.innerHTML = '<option value="">Todos</option>';
+    if (provinciaId) {
+      this.#getUniqueCantons(provinciaId).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value       = c.CantonId;
+        opt.textContent = c.CantonName;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  #populateFilterDistritoSelect(provinciaId, cantonId) {
+    const sel = this.filterDistritoTarget;
+    sel.innerHTML = '<option value="">Todos</option>';
+    if (provinciaId && cantonId) {
+      this.#getUniqueDistritos(provinciaId, cantonId).forEach(d => {
+        const opt = document.createElement('option');
+        opt.value       = d.DistrictId;
+        opt.textContent = d.DistrictName;
+        sel.appendChild(opt);
+      });
+    }
   }
 
   // ── Autocomplete barrio ───────────────────────────────────────────────────
