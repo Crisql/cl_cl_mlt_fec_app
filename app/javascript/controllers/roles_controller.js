@@ -347,7 +347,9 @@ export default class extends TabulatorController {
   #filteredPerms() {
     const q = this.#permsFilter.trim().toLowerCase();
     if (!q) return this.#allPerms;
-    return this.#allPerms.filter((p) => (p.Description || '').toLowerCase().includes(q));
+    return this.#allPerms.filter((p) =>
+      (p.Description || '').toLowerCase().includes(q) ||
+      (p.Name || '').toLowerCase().includes(q));
   }
 
   #renderPermsList() {
@@ -376,6 +378,7 @@ export default class extends TabulatorController {
                class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
         <div class="flex flex-col flex-1 gap-0.5 min-w-0">
           <span class="font-medium text-gray-800 text-sm">${this.#escapeHtml(perm.Description)}</span>
+          ${perm.Name ? `<span class="text-[11px] text-gray-400 font-mono truncate">${this.#escapeHtml(perm.Name)}</span>` : ''}
         </div>`;
 
       this.permsListTarget.appendChild(label);
