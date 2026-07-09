@@ -59,7 +59,7 @@ export default class extends TabulatorController {
     'selectDocType', 'selectBandeja', 'inputCodigoMoneda',
 
     // Toolbar
-    'btnChart', 'btnBulkDownload', 'btnRecepcionar',
+    'btnChart', 'btnBulkDownload', 'btnBulkDownloadWrap', 'btnRecepcionar', 'btnRecepcionarWrap',
 
     // Panel recepcionar
     'receptPanel', 'receptBackdrop',
@@ -117,14 +117,24 @@ export default class extends TabulatorController {
       this.receptCodigoActividadTarget.value = company.codigoActividad;
     }
 
-    // Mostrar botón descarga masiva si tiene permiso
-    if (this.#hasPerm('F_CreateBulkDownloadOfDocuments')) {
-      this.btnBulkDownloadTarget.classList.remove('hidden');
+    // Botón descarga masiva: habilitado solo con permiso; si no, queda
+    // deshabilitado con tooltip explicativo (ver CLAUDE.md §26).
+    if (this.hasBtnBulkDownloadTarget) {
+      if (this.#hasPerm('F_CreateBulkDownloadOfDocuments')) {
+        this.#enableBulkDownloadButton();
+      } else if (this.hasBtnBulkDownloadWrapTarget) {
+        this.#attachTooltip(this.btnBulkDownloadWrapTarget);
+      }
     }
 
-    // Mostrar botón "Recepcionar" (carga de XML) si tiene permiso
-    if (this.hasBtnRecepcionarTarget && this.#hasPerm('S_ReceptDocs')) {
-      this.btnRecepcionarTarget.classList.remove('hidden');
+    // Botón "Recepcionar" (carga de XML): habilitado solo con permiso; si no,
+    // queda deshabilitado con tooltip explicativo (ver CLAUDE.md §26).
+    if (this.hasBtnRecepcionarTarget) {
+      if (this.#hasPerm('S_ReceptDocs')) {
+        this.#enableRecepcionarButton();
+      } else if (this.hasBtnRecepcionarWrapTarget) {
+        this.#attachTooltip(this.btnRecepcionarWrapTarget);
+      }
     }
 
     // Escuchar cambios en el formulario para ocultar btnChart
@@ -1057,6 +1067,72 @@ export default class extends TabulatorController {
 
   #hasPerm(name) {
     return this.#permissions.includes(name);
+  }
+
+  // Habilita el botón "Recepcionar" (nace deshabilitado/gris con tooltip de
+  // "sin permisos" en su <span> envolvente). Ver CLAUDE.md §26.
+  #enableRecepcionarButton() {
+    const btn = this.btnRecepcionarTarget;
+    btn.disabled = false;
+    btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'pointer-events-none');
+    btn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700');
+    if (this.hasBtnRecepcionarWrapTarget) this.btnRecepcionarWrapTarget.removeAttribute('data-tooltip');
+  }
+
+  // Habilita el botón "Descarga masiva" (botón-ícono ghost que expande texto en
+  // hover; nace deshabilitado/gris con tooltip en su <span> envolvente). Ver §26.
+  #enableBulkDownloadButton() {
+    const btn = this.btnBulkDownloadTarget;
+    btn.disabled = false;
+    btn.classList.remove('text-gray-300', 'cursor-not-allowed', 'pointer-events-none');
+    btn.classList.add('text-blue-600', 'cursor-pointer', 'hover:bg-blue-50');
+    if (this.hasBtnBulkDownloadWrapTarget) this.btnBulkDownloadWrapTarget.removeAttribute('data-tooltip');
+  }
+
+  // Tooltip flotante scoped a un elemento del toolbar (fuera de la tabla, que el
+  // setupTooltip base no cubre). Reposiciona dentro del viewport. Ver CLAUDE.md §25/§26.
+  #attachTooltip(el) {
+    let tip = document.getElementById('cl-tabulator-tooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'cl-tabulator-tooltip';
+      tip.style.cssText = [
+        'position:fixed', 'z-index:9999', 'pointer-events:none',
+        'background:#1f2937', 'color:#fff', 'padding:4px 8px',
+        'border-radius:4px', 'font-size:12px', 'line-height:1.35',
+        'max-width:min(320px, calc(100vw - 16px))',
+        'white-space:normal', 'word-break:break-word', 'text-align:left',
+        'opacity:0', 'transition:opacity 0.15s',
+      ].join(';');
+      document.body.appendChild(tip);
+    }
+
+    const place = (e) => {
+      const margin = 8;
+      const { width: w, height: h } = tip.getBoundingClientRect();
+      let left = e.clientX + 12;
+      let top  = e.clientY - h - 10;
+      if (left + w + margin > window.innerWidth) left = e.clientX - w - 12;
+      if (left < margin) left = margin;
+      if (left + w + margin > window.innerWidth) left = window.innerWidth - w - margin;
+      if (top < margin) top = e.clientY + 18;
+      if (top + h + margin > window.innerHeight) top = window.innerHeight - h - margin;
+      tip.style.left = left + 'px';
+      tip.style.top  = top + 'px';
+    };
+
+    el.addEventListener('mouseenter', (e) => {
+      if (!el.dataset.tooltip) return;
+      tip.textContent = el.dataset.tooltip;
+      place(e);
+      tip.style.opacity = '1';
+    });
+    el.addEventListener('mousemove', (e) => {
+      if (tip.style.opacity === '1') place(e);
+    });
+    el.addEventListener('mouseleave', () => {
+      tip.style.opacity = '0';
+    });
   }
 
   #todayISO() {

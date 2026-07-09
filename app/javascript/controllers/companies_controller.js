@@ -28,7 +28,7 @@ export default class extends TabulatorController {
     'searchLegalName',
     'searchComercialName',
     'searchIdentification',
-    'btnCreate',
+    'btnCreate', 'btnCreateWrap',
   ];
 
   static values = { ...TabulatorController.values };
@@ -44,9 +44,12 @@ export default class extends TabulatorController {
   connect() {
     this.#permissions = SStore.get('Permissions') || [];
 
+    // Botón "Nueva Compañía": habilitado solo con permiso; si no, queda
+    // deshabilitado con tooltip explicativo (ver CLAUDE.md §26).
     if (this.#hasPerm('F_CreateCompany')) {
-      this.btnCreateTarget.classList.remove('hidden');
-      this.btnCreateTarget.classList.add('inline-flex');
+      this.#enableCreateButton();
+    } else if (this.hasBtnCreateWrapTarget) {
+      this.#attachTooltip(this.btnCreateWrapTarget);
     }
 
     super.connect();   // construye la tabla y dispara la carga remota de la página 1
@@ -209,11 +212,20 @@ export default class extends TabulatorController {
               class="p-1.5 rounded transition-colors ${isFavorite ? 'cursor-default' : 'hover:bg-yellow-50 cursor-pointer'}">
         <span class="material-icons text-base" style="${starStyle}">star</span>
       </button>`;
-    const editBtn = `
-      <button type="button" data-action-type="edit" data-tooltip="Editar"
-              class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-        <span class="material-icons text-base">edit</span>
-      </button>`;
+    // Editar: deshabilitado con tooltip si no tiene permiso (ver CLAUDE.md §26).
+    // El data-tooltip va en el <span> envolvente porque un <button disabled> no
+    // emite eventos de mouse; el setupTooltip base (tabla) lo detecta ahí.
+    const editBtn = this.#hasPerm('F_ModifyCompany')
+      ? `<button type="button" data-action-type="edit" data-tooltip="Editar"
+                 class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+           <span class="material-icons text-base">edit</span>
+         </button>`
+      : `<span data-tooltip="No cuenta con permisos para editar compañías">
+           <button type="button" disabled
+                   class="p-1.5 text-gray-300 rounded cursor-not-allowed pointer-events-none">
+             <span class="material-icons text-base">edit</span>
+           </button>
+         </span>`;
     return `<div class="flex items-center justify-center gap-1">${starBtn}${editBtn}</div>`;
   }
 
@@ -222,6 +234,62 @@ export default class extends TabulatorController {
   /** Permissions es string[] — e.g. ["F_CreateCompany", "S_Company"] */
   #hasPerm(name) {
     return this.#permissions.includes(name);
+  }
+
+  // Habilita el botón "Nueva Compañía" (nace deshabilitado/gris con tooltip de
+  // "sin permisos" en su <span> envolvente). Ver CLAUDE.md §26.
+  #enableCreateButton() {
+    const btn = this.btnCreateTarget;
+    btn.disabled = false;
+    btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'pointer-events-none');
+    btn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700');
+    if (this.hasBtnCreateWrapTarget) this.btnCreateWrapTarget.removeAttribute('data-tooltip');
+  }
+
+  // Tooltip flotante scoped a un elemento del toolbar (fuera de la tabla, que el
+  // setupTooltip base no cubre). Reposiciona dentro del viewport. Ver CLAUDE.md §25/§26.
+  #attachTooltip(el) {
+    let tip = document.getElementById('cl-tabulator-tooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'cl-tabulator-tooltip';
+      tip.style.cssText = [
+        'position:fixed', 'z-index:9999', 'pointer-events:none',
+        'background:#1f2937', 'color:#fff', 'padding:4px 8px',
+        'border-radius:4px', 'font-size:12px', 'line-height:1.35',
+        'max-width:min(320px, calc(100vw - 16px))',
+        'white-space:normal', 'word-break:break-word', 'text-align:left',
+        'opacity:0', 'transition:opacity 0.15s',
+      ].join(';');
+      document.body.appendChild(tip);
+    }
+
+    const place = (e) => {
+      const margin = 8;
+      const { width: w, height: h } = tip.getBoundingClientRect();
+      let left = e.clientX + 12;
+      let top  = e.clientY - h - 10;
+      if (left + w + margin > window.innerWidth) left = e.clientX - w - 12;
+      if (left < margin) left = margin;
+      if (left + w + margin > window.innerWidth) left = window.innerWidth - w - margin;
+      if (top < margin) top = e.clientY + 18;
+      if (top + h + margin > window.innerHeight) top = window.innerHeight - h - margin;
+      tip.style.left = left + 'px';
+      tip.style.top  = top + 'px';
+    };
+
+    el.addEventListener('mouseenter', (e) => {
+      if (!el.dataset.tooltip) return;
+      tip.textContent = el.dataset.tooltip;
+      place(e);
+      tip.style.opacity = '1';
+    });
+    el.addEventListener('mousemove', (e) => {
+      if (tip.style.opacity === '1') place(e);
+    });
+    el.addEventListener('mouseleave', () => {
+      tip.style.opacity = '0';
+    });
   }
 
   async #apiFetch(url, options = {}) {

@@ -167,15 +167,19 @@
         <span class="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-1 group-hover:mr-0.5 overflow-hidden whitespace-nowrap transition-all duration-500 ease-out group-hover:duration-1000 group-hover:ease-in-out">Más Información</span>
       </button>
 
-      <button type="button"
-              data-documents-issued-target="btnBulkDownload"
-              data-action="click->documents-issued#bulkDownload"
-              data-testid="btn-bulk-download"
-              title="Descarga Masiva"
-              class="hidden group inline-flex items-center cursor-pointer px-1.5 py-1.5 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-50 transition-colors overflow-hidden">
-        <span class="material-icons text-lg leading-none flex-shrink-0">file_download</span>
-        <span class="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-1 group-hover:mr-0.5 overflow-hidden whitespace-nowrap transition-all duration-500 ease-out group-hover:duration-1000 group-hover:ease-in-out">Descarga Masiva</span>
-      </button>
+      <span data-documents-issued-target="btnBulkDownloadWrap"
+            data-tooltip="No cuenta con permisos para realizar descargas masivas"
+            class="inline-flex">
+        <button type="button"
+                data-documents-issued-target="btnBulkDownload"
+                data-action="click->documents-issued#bulkDownload"
+                data-testid="btn-bulk-download"
+                disabled
+                class="group inline-flex items-center px-1.5 py-1.5 text-gray-300 text-xs font-medium rounded-md cursor-not-allowed pointer-events-none transition-colors overflow-hidden">
+          <span class="material-icons text-lg leading-none flex-shrink-0">file_download</span>
+          <span class="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-1 group-hover:mr-0.5 overflow-hidden whitespace-nowrap transition-all duration-500 ease-out group-hover:duration-1000 group-hover:ease-in-out">Descarga Masiva</span>
+        </button>
+      </span>
     </div>
 
   </div>

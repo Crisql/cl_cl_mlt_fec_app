@@ -33,7 +33,7 @@ export default [
     icon: 'print',
     route: '/documents-reports',
     visible: false,
-    requiredPermission: ['S_DocumentReport', 'S_DocumentReceptionReport'],
+    requiredPermission: ['S_DocumentReport'],
     nodes: []
   },
   {
@@ -44,7 +44,7 @@ export default [
     visible: false,
     requiredPermission: 'M_Config',
     nodes: [
-      { key: 'user-profile',     label: 'Perfil de usuario',              route: '/configurations/user-profile',   requiredPermission: 'S_UpdateUserInfo' },
+      { key: 'user-profile',     label: 'Perfil de usuario',              route: '/configurations/user-profile' },
       { key: 'company',          label: 'Compañías',                      route: '/configurations/companies',      requiredPermission: 'S_Company' },
       { key: 'connections',      label: 'Conexiones',                     route: '/configurations/connections',    requiredPermission: 'Configurations_Connections_Access' },
       { key: 'udfs',             label: 'Campos definidos por usuario',   route: '/configurations/udfs',           requiredPermission: 'S_Udfs' },

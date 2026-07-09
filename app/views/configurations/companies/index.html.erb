@@ -49,14 +49,19 @@
           Consultar
         </button>
 
-        <button type="button"
-                data-companies-target="btnCreate"
-                data-testid="btn-create-company"
-                data-action="click->companies#navigateCreate"
-                class="hidden flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-          <span class="material-icons text-base">add</span>
-          Nueva Compañía
-        </button>
+        <span data-companies-target="btnCreateWrap"
+              data-tooltip="No cuenta con permisos para crear compañías"
+              class="flex-1">
+          <button type="button"
+                  data-companies-target="btnCreate"
+                  data-testid="btn-create-company"
+                  data-action="click->companies#navigateCreate"
+                  disabled
+                  class="w-full inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed pointer-events-none transition-colors">
+            <span class="material-icons text-base">add</span>
+            Nueva Compañía
+          </button>
+        </span>
       </div>
     </div>
   </div>

@@ -34,6 +34,10 @@ export default class extends TabulatorController {
     // Tablas
     'numberingTable', 'receptionTable',
 
+    // Botones de creación (habilitación según permisos)
+    'btnCreateNumbering', 'btnCreateNumberingWrap',
+    'btnCreateReception', 'btnCreateReceptionWrap',
+
     // Filtros
     'numFilterDocType', 'numFilterSucursal', 'numFilterTerminal', 'numFilterEstado',
     'recFilterSucursal', 'recFilterTerminal', 'recFilterEstado',
@@ -74,12 +78,27 @@ export default class extends TabulatorController {
   #recTable     = null;
   #editingNum   = null;   // null = crear, objeto = editar
   #editingRec   = null;
+  #permissions  = [];
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   connect() {
     const company   = SStore.get('CurrentCompany');
     this.#companyId = company?.companyId ? parseInt(company.companyId) : null;
+
+    const perms = SStore.get('Permissions');
+    this.#permissions = Array.isArray(perms) ? perms : [];
+
+    // Botones de creación: deshabilitados por defecto (con tooltip explicativo);
+    // se habilitan solo cuando el usuario tiene el permiso correspondiente.
+    if (this.#hasPerm('Configurations_Numbering_Create')) {
+      this.#enableCreateButton(this.btnCreateNumberingTarget, this.btnCreateNumberingWrapTarget);
+    }
+    if (this.#hasPerm('Configurations_Numbering_CreateReception')) {
+      this.#enableCreateButton(this.btnCreateReceptionTarget, this.btnCreateReceptionWrapTarget);
+    }
+
+    this.#setupTooltips();
 
     this.#numTable = this.#buildTable(this.numberingTableTarget, this.#numColumns());
     this.#recTable = this.#buildTable(this.receptionTableTarget, this.#recColumns());
@@ -112,7 +131,7 @@ export default class extends TabulatorController {
   }
 
   #numColumns() {
-    return [
+    const columns = [
       { title: 'Tipo de Integración', field: 'IntegrationClm', widthGrow: 1 },
       {
         title: 'Tipo de Documento', field: 'DocType', widthGrow: 1,
@@ -126,20 +145,24 @@ export default class extends TabulatorController {
         title: 'Estado', field: 'Active', width: 110,
         formatter: (cell) => this.#statusBadge(cell.getValue()),
       },
-      {
-        title: 'Acciones', field: 'Id', width: 100, hozAlign: 'center',
-        formatter: () => this.#editButton(),
-        cellClick: (_e, cell) => {
-          if (_e.target.closest('[data-action-type="edit"]')) {
-            this.#openEditNum(cell.getRow().getData());
-          }
-        },
-      },
     ];
+
+    const canEdit = this.#hasPerm('Configurations_Numbering_Update');
+    columns.push({
+      title: 'Acciones', field: 'Id', width: 100, hozAlign: 'center',
+      formatter: () => this.#editButton(canEdit, 'No cuenta con permisos para editar numeraciones de emisión'),
+      cellClick: (_e, cell) => {
+        if (_e.target.closest('[data-action-type="edit"]')) {
+          this.#openEditNum(cell.getRow().getData());
+        }
+      },
+    });
+
+    return columns;
   }
 
   #recColumns() {
-    return [
+    const columns = [
       { title: 'Tipo de Integración', field: 'IntegrationClm', widthGrow: 1 },
       { title: 'Número Siguiente',    field: 'NextNumber',     widthGrow: 1 },
       { title: 'Sucursal',            field: 'SucursalNum',    widthGrow: 1 },
@@ -149,16 +172,20 @@ export default class extends TabulatorController {
         title: 'Estado', field: 'Active', width: 110,
         formatter: (cell) => this.#statusBadge(cell.getValue()),
       },
-      {
-        title: 'Acciones', field: 'Id', width: 100, hozAlign: 'center',
-        formatter: () => this.#editButton(),
-        cellClick: (_e, cell) => {
-          if (_e.target.closest('[data-action-type="edit"]')) {
-            this.#openEditRec(cell.getRow().getData());
-          }
-        },
-      },
     ];
+
+    const canEdit = this.#hasPerm('Configurations_Numbering_UpdateReception');
+    columns.push({
+      title: 'Acciones', field: 'Id', width: 100, hozAlign: 'center',
+      formatter: () => this.#editButton(canEdit, 'No cuenta con permisos para editar numeraciones de recepción'),
+      cellClick: (_e, cell) => {
+        if (_e.target.closest('[data-action-type="edit"]')) {
+          this.#openEditRec(cell.getRow().getData());
+        }
+      },
+    });
+
+    return columns;
   }
 
   // ── Carga de datos ─────────────────────────────────────────────────────────
@@ -324,6 +351,10 @@ export default class extends TabulatorController {
   // ── Panel Numeración ───────────────────────────────────────────────────────
 
   openCreateNumbering() {
+    if (!this.#hasPerm('Configurations_Numbering_Create')) {
+      showToast('No cuenta con permisos para realizar esta acción.', 'info');
+      return;
+    }
     this.#editingNum = null;
     this.#resetNumPanel();
     this.numberingPanelTitleTarget.textContent = 'Nueva Numeración';
@@ -340,6 +371,10 @@ export default class extends TabulatorController {
   }
 
   #openEditNum(row) {
+    if (!this.#hasPerm('Configurations_Numbering_Update')) {
+      showToast('No cuenta con permisos para realizar esta acción.', 'info');
+      return;
+    }
     this.#editingNum = row;
     this.#resetNumPanel();
     this.numberingPanelTitleTarget.textContent = 'Editar Numeración';
@@ -449,6 +484,10 @@ export default class extends TabulatorController {
   // ── Panel Recepción ────────────────────────────────────────────────────────
 
   openCreateReception() {
+    if (!this.#hasPerm('Configurations_Numbering_CreateReception')) {
+      showToast('No cuenta con permisos para realizar esta acción.', 'info');
+      return;
+    }
     this.#editingRec = null;
     this.#resetRecPanel();
     this.receptionPanelTitleTarget.textContent = 'Nueva Numeración de Recepción';
@@ -464,6 +503,10 @@ export default class extends TabulatorController {
   }
 
   #openEditRec(row) {
+    if (!this.#hasPerm('Configurations_Numbering_UpdateReception')) {
+      showToast('No cuenta con permisos para realizar esta acción.', 'info');
+      return;
+    }
     this.#editingRec = row;
     this.#resetRecPanel();
     this.receptionPanelTitleTarget.textContent = 'Editar Numeración de Recepción';
@@ -580,12 +623,108 @@ export default class extends TabulatorController {
                class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide">Inactivo</span>`;
   }
 
-  #editButton() {
+  // El tooltip vive en el <span> envolvente (no en el <button>): un botón
+  // deshabilitado no emite eventos de mouse, así que el hover se detecta sobre
+  // el span. `pointer-events-none` en el botón deshabilitado deja pasar el hover.
+  #editButton(canEdit, disabledReason) {
+    if (canEdit) {
+      return `
+        <span data-tooltip="Editar">
+          <button type="button" data-action-type="edit"
+                  class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+            <span class="material-icons text-base">edit</span>
+          </button>
+        </span>`;
+    }
     return `
-      <button type="button" data-action-type="edit" data-tooltip="Editar"
-              class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-        <span class="material-icons text-base">edit</span>
-      </button>`;
+      <span data-tooltip="${disabledReason}">
+        <button type="button" disabled
+                class="p-1.5 text-gray-300 rounded cursor-not-allowed pointer-events-none">
+          <span class="material-icons text-base">edit</span>
+        </button>
+      </span>`;
+  }
+
+  // ── Permisos ────────────────────────────────────────────────────────────────
+
+  #hasPerm(name) {
+    return this.#permissions.includes(name);
+  }
+
+  // Habilita un botón de creación que en el HTML nace deshabilitado (gris) con
+  // un tooltip de "sin permisos" en su <span> envolvente.
+  #enableCreateButton(btn, wrap) {
+    btn.disabled = false;
+    btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'pointer-events-none');
+    btn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700');
+    wrap?.removeAttribute('data-tooltip');
+  }
+
+  // ── Tooltips ─────────────────────────────────────────────────────────────────
+  // Delegación fija (position:fixed) sobre el elemento raíz del controller, para
+  // cubrir tanto los botones del toolbar como los de las filas Tabulator. Este
+  // controller construye sus tablas manualmente (no usa el setupTooltip base, que
+  // apunta a un único tableTarget), por eso se instala aquí.
+
+  #setupTooltips() {
+    let tip = document.getElementById('cl-tabulator-tooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'cl-tabulator-tooltip';
+      // max-width + wrapping: el tooltip NUNCA excede el ancho del viewport, así
+      // que su contenido siempre queda completo (los textos largos envuelven).
+      tip.style.cssText = [
+        'position:fixed', 'z-index:9999', 'pointer-events:none',
+        'background:#1f2937', 'color:#fff', 'padding:4px 8px',
+        'border-radius:4px', 'font-size:12px', 'line-height:1.35',
+        'max-width:min(320px, calc(100vw - 16px))',
+        'white-space:normal', 'word-break:break-word', 'text-align:left',
+        'opacity:0', 'transition:opacity 0.15s',
+      ].join(';');
+      document.body.appendChild(tip);
+    }
+
+    let activeEl = null;
+
+    // Reposiciona el tooltip dentro del viewport: por defecto arriba del cursor;
+    // hace flip horizontal/vertical y clamp contra los bordes para que nunca
+    // quede cortado. (Ver CLAUDE.md §25 — estándar de tooltips flotantes.)
+    const place = (e) => {
+      const margin = 8;
+      const { width: w, height: h } = tip.getBoundingClientRect();
+      let left = e.clientX + 12;
+      let top  = e.clientY - h - 10;               // arriba del cursor
+      if (left + w + margin > window.innerWidth) left = e.clientX - w - 12;   // flip a la izquierda
+      if (left < margin) left = margin;
+      if (left + w + margin > window.innerWidth) left = window.innerWidth - w - margin;
+      if (top < margin) top = e.clientY + 18;      // sin espacio arriba → abajo del cursor
+      if (top + h + margin > window.innerHeight) top = window.innerHeight - h - margin;
+      tip.style.left = left + 'px';
+      tip.style.top  = top + 'px';
+    };
+
+    this.element.addEventListener('mouseover', (e) => {
+      const el = e.target.closest('[data-tooltip]');
+      if (el && el.dataset.tooltip && el !== activeEl) {
+        activeEl = el;
+        tip.textContent = el.dataset.tooltip;
+        place(e);
+        tip.style.opacity = '1';
+      } else if (!el) {
+        activeEl = null;
+        tip.style.opacity = '0';
+      }
+    });
+
+    this.element.addEventListener('mousemove', (e) => {
+      if (!activeEl) return;
+      place(e);
+    });
+
+    this.element.addEventListener('mouseleave', () => {
+      activeEl = null;
+      tip.style.opacity = '0';
+    });
   }
 
   // ── apiFetch ───────────────────────────────────────────────────────────────

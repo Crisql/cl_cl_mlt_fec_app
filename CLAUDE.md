@@ -1312,3 +1312,137 @@ en el mismo cambio (no es deuda pendiente).
 ```
 
 Antes de marcar una entrada como hecha (`[x]`) confirmar que el endpoint ya no exige el campo.
+
+---
+
+## 25. Tooltips flotantes — SIEMPRE completamente visibles dentro del viewport
+
+Todo tooltip flotante (`position: fixed`, el `#cl-tabulator-tooltip` y cualquier variante)
+**DEBE** quedar **completamente visible**: nunca cortado por los bordes de la página. El bug
+recurrente es posicionarlo con un offset fijo respecto al cursor (`clientX + 10`,
+`clientY - 32`) sin considerar los límites del viewport → cerca del borde derecho o superior
+se recorta y el texto queda ilegible.
+
+### Reglas obligatorias
+
+1. **Límite de ancho** — el tooltip nunca puede exceder el ancho de la ventana. Usar
+   `max-width: min(320px, calc(100vw - 16px))` + `white-space: normal` + `word-break: break-word`.
+   Así los textos largos **envuelven** en varias líneas en vez de desbordarse.
+   **NO** usar `white-space: nowrap` sin `max-width` (esa combinación es la causa del recorte horizontal).
+2. **Reposicionamiento (flip + clamp)** — antes de mostrarlo, medir su tamaño con
+   `getBoundingClientRect()` y colocarlo así:
+   - Por defecto **arriba** del cursor (`top = clientY - h - 10`).
+   - Si se sale por la **derecha** → flip a la izquierda del cursor (`left = clientX - w - 12`).
+   - **Clamp** final contra los cuatro bordes con un margen (`8px`): `left`/`top` nunca
+     menores al margen ni mayores a `innerWidth/innerHeight - tamaño - margen`.
+   - Si no hay espacio **arriba** → mostrarlo **abajo** del cursor (`top = clientY + 18`).
+3. **Posicionar en `mouseover` y en `mousemove`** — llamar al reposicionamiento en ambos
+   eventos (no solo en `mousemove`) para que el primer render ya aparezca en el lugar correcto,
+   sin parpadeo en coordenadas viejas.
+
+### Implementación de referencia
+
+```js
+const place = (e) => {
+  const margin = 8;
+  const { width: w, height: h } = tip.getBoundingClientRect();
+  let left = e.clientX + 12;
+  let top  = e.clientY - h - 10;                               // arriba del cursor
+  if (left + w + margin > window.innerWidth) left = e.clientX - w - 12;   // flip izquierda
+  if (left < margin) left = margin;
+  if (left + w + margin > window.innerWidth) left = window.innerWidth - w - margin;
+  if (top < margin) top = e.clientY + 18;                     // sin espacio arriba → abajo
+  if (top + h + margin > window.innerHeight) top = window.innerHeight - h - margin;
+  tip.style.left = left + 'px';
+  tip.style.top  = top + 'px';
+};
+```
+
+Estilo del elemento tooltip (garantiza el ajuste horizontal):
+
+```js
+tip.style.cssText = [
+  'position:fixed', 'z-index:9999', 'pointer-events:none',
+  'background:#1f2937', 'color:#fff', 'padding:4px 8px',
+  'border-radius:4px', 'font-size:12px', 'line-height:1.35',
+  'max-width:min(320px, calc(100vw - 16px))',
+  'white-space:normal', 'word-break:break-word', 'text-align:left',
+  'opacity:0', 'transition:opacity 0.15s',
+].join(';');
+```
+
+### Alcance
+
+- Aplica a **todos** los tooltips flotantes de la app: los de botones de acción en tablas
+  Tabulator (§2), los de botones deshabilitados (§2) y los del toolbar.
+- **Ya aplicado de forma global** en el `setupTooltip()` base de `TabulatorController`
+  (`app/javascript/vendor/clavisco/tabulator/controllers/tabulator_controller.js`): todos los
+  controllers que hacen `super.connect()` heredan el reposicionamiento automáticamente, sin
+  cambios por vista.
+- Cualquier delegación **local** de tooltips (ej. `#setupTooltips()` en controllers que
+  construyen sus tablas manualmente sin usar el base, como `numbering_controller.js`) **debe**
+  replicar el mismo `place()` con clamp. Al crear una nueva, copiar el patrón del base.
+
+---
+
+## 26. Acciones sin permiso — DESHABILITAR + tooltip explicativo, NO ocultar
+
+Cuando el usuario **no** tiene el permiso requerido para una acción (crear, editar, anular,
+reprocesar, etc.), el control **NO se oculta**: se **deshabilita** y muestra un **tooltip con
+el motivo**. Ocultar el botón deja al usuario sin pistas de que la acción existe ni de cómo
+obtenerla; deshabilitarlo con explicación le dice qué falta.
+
+### Regla
+
+> Acción no permitida ⇒ botón/control **`disabled`** (estilo gris) **+ `data-tooltip` con el
+> motivo específico**. Nunca `hidden`/`display:none` para gating por permisos.
+
+- El texto del tooltip sigue §2 (específico, responde *¿cuándo SÍ podré usarlo?*). Para
+  permisos el patrón es **`"No cuenta con permisos para <acción concreta>"`**
+  (ej. `"No cuenta con permisos para crear numeraciones de emisión"`).
+- El tooltip flotante se posiciona según §25 (siempre completamente visible).
+- **Defensa en profundidad:** además de deshabilitar en la UI, el método de la acción debe
+  reverificar el permiso al inicio y abortar (con toast `info`) si falta — la UI puede ser
+  manipulada.
+
+### Detalle de implementación — botón deshabilitado + tooltip
+
+Un `<button disabled>` **no emite eventos de mouse**, así que el `data-tooltip` debe ir en un
+**`<span>` envolvente** (que sí los recibe) y el botón lleva `pointer-events-none` para dejar
+pasar el hover al span:
+
+```html
+<span data-tooltip="No cuenta con permisos para editar numeraciones de emisión">
+  <button type="button" disabled
+          class="p-1.5 text-gray-300 rounded cursor-not-allowed pointer-events-none">
+    <span class="material-icons text-base">edit</span>
+  </button>
+</span>
+```
+
+Botones del **toolbar** (fuera de Tabulator): nacen deshabilitados (gris) con el tooltip en su
+`<span>` envolvente y se **habilitan desde el controller** solo si hay permiso (quitando
+`disabled`, cambiando el color y removiendo el `data-tooltip`). Referencia:
+`numbering_controller.js` (`#enableCreateButton`) + `configurations/numbering/index.html.erb`.
+
+```js
+// connect() — habilitar solo con permiso; si no, queda gris + tooltip del HTML
+if (this.#hasPerm('Configurations_Numbering_Create')) {
+  this.#enableCreateButton(this.btnCreateNumberingTarget, this.btnCreateNumberingWrapTarget);
+}
+
+// action pública — reverificar (defensa en profundidad)
+openCreateNumbering() {
+  if (!this.#hasPerm('Configurations_Numbering_Create')) {
+    showToast('No cuenta con permisos para realizar esta acción.', 'info');
+    return;
+  }
+  // ...
+}
+```
+
+### Excepción
+
+Los **botones de submit dentro de un formulario** que se deshabilitan por **validación**
+(campos incompletos), no por permisos, siguen §22/§12 (`disabled:opacity-50` mientras falte
+algo). Esta sección aplica al **gating por permisos** de acciones.

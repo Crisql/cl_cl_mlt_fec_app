@@ -107,13 +107,19 @@
             <span class="material-icons text-base">filter_alt</span>
             Consultar
           </button>
-          <button type="button"
-                  data-action="click->numbering#openCreateNumbering"
-                  data-testid="btn-new-numbering"
-                  class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
-            <span class="material-icons text-base">add</span>
-            Nueva Numeración de Emisión
-          </button>
+          <span data-numbering-target="btnCreateNumberingWrap"
+                data-tooltip="No cuenta con permisos para crear numeraciones de emisión"
+                class="flex-1">
+            <button type="button"
+                    data-action="click->numbering#openCreateNumbering"
+                    data-numbering-target="btnCreateNumbering"
+                    data-testid="btn-new-numbering"
+                    disabled
+                    class="w-full inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed pointer-events-none transition-colors whitespace-nowrap">
+              <span class="material-icons text-base">add</span>
+              Nueva Numeración de Emisión
+            </button>
+          </span>
         </div>
       </div>
     </div>
@@ -189,13 +195,19 @@
             <span class="material-icons text-base">filter_alt</span>
             Consultar
           </button>
-          <button type="button"
-                  data-action="click->numbering#openCreateReception"
-                  data-testid="btn-new-reception"
-                  class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-            <span class="material-icons text-base">add</span>
-            Nueva Numeración de Recepción
-          </button>
+          <span data-numbering-target="btnCreateReceptionWrap"
+                data-tooltip="No cuenta con permisos para crear numeraciones de recepción"
+                class="flex-1">
+            <button type="button"
+                    data-action="click->numbering#openCreateReception"
+                    data-numbering-target="btnCreateReception"
+                    data-testid="btn-new-reception"
+                    disabled
+                    class="w-full inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed pointer-events-none transition-colors">
+              <span class="material-icons text-base">add</span>
+              Nueva Numeración de Recepción
+            </button>
+          </span>
         </div>
       </div>
     </div>

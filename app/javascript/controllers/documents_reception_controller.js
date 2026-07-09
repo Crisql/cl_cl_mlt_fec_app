@@ -48,6 +48,7 @@ export default class extends Controller {
   #companyId       = null
   #codigoActividad = ''
   #activityCodes   = []
+  #permissions     = []
 
   connect() {
     const company = SStore.get('CurrentCompany')
@@ -55,6 +56,9 @@ export default class extends Controller {
       this.#companyId       = company.companyId
       this.#codigoActividad = company.codigoActividad ?? ''
     }
+
+    const permissions = SStore.get('Permissions')
+    this.#permissions = Array.isArray(permissions) ? permissions : []
 
     if (this.#companyId) {
       this.#loadActivityCodes()
@@ -68,6 +72,12 @@ export default class extends Controller {
   // ──────────────────────────────────────────────
 
   openPanel() {
+    // Defensa en profundidad: el botón se deshabilita en la UI sin permiso,
+    // pero reverificamos aquí (ver CLAUDE.md §26).
+    if (!this.#permissions.includes('S_ReceptDocs')) {
+      showToast('No cuenta con permisos para recepcionar documentos.', 'info')
+      return
+    }
     this.#resetForm()
     this.panelBackdropTarget.classList.remove('hidden')
     this.panelTarget.classList.remove('translate-x-full')

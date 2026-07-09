@@ -31,7 +31,6 @@ export default class extends Controller {
   ]
 
   // ── Estado ──────────────────────────────────────────────────────────────
-  #permissions = []
   #companyId   = null
   #reportType  = '1'
   #pdfBlobUrl  = null
@@ -43,12 +42,11 @@ export default class extends Controller {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   connect() {
-    this.#permissions = SStore.get('Permissions') || []
-    const company     = SStore.get('CurrentCompany') || {}
-    this.#companyId   = company.companyId ?? null
+    const company   = SStore.get('CurrentCompany') || {}
+    this.#companyId = company.companyId ?? null
 
     this.#initDefaults()
-    this.#applyPermissions()
+    this.#setReportType('1')   // ambos tipos disponibles; por defecto "Emitidos"
     this.#updateSubmitState()
   }
 
@@ -62,19 +60,6 @@ export default class extends Controller {
     const today = this.#formatDate(new Date())
     this.startDateTarget.value = today
     this.endDateTarget.value   = today
-  }
-
-  #applyPermissions() {
-    const hasDoc   = this.#hasPerm('S_DocumentReport')
-    const hasRecep = this.#hasPerm('S_DocumentReceptionReport')
-
-    if (hasDoc)   this.docTabTarget.classList.remove('hidden')
-    if (hasRecep) this.recepTabTarget.classList.remove('hidden')
-
-    // Selección por defecto: documentos si tiene permiso, si no recepción
-    if (hasDoc)        this.#setReportType('1')
-    else if (hasRecep) this.#setReportType('2')
-    else               this.#updateTabStyles()
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -222,10 +207,6 @@ export default class extends Controller {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-
-  #hasPerm(name) {
-    return this.#permissions.includes(name)
-  }
 
   #formatDate(date) {
     const pad = n => String(n).padStart(2, '0')

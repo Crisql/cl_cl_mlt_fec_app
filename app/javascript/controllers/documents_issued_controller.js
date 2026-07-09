@@ -35,7 +35,7 @@ export default class extends TabulatorController {
     'inputConsecutivoFE', 'selectDocType',
 
     // Toolbar
-    'btnChart', 'btnBulkDownload',
+    'btnChart', 'btnBulkDownload', 'btnBulkDownloadWrap',
 
     // Panel lateral correos
     'emailModal', 'emailPanelBackdrop', 'emailLoader', 'emailTable', 'emailEmpty',
@@ -89,9 +89,14 @@ export default class extends TabulatorController {
     this.#companyId   = company?.companyId ? parseInt(company.companyId) : null;
     this.#permissions = Array.isArray(permissions) ? permissions : [];
 
-    // Mostrar botón descarga masiva si tiene permiso
-    if (this.#hasPerm('F_CreateBulkDownloadOfDocuments')) {
-      this.btnBulkDownloadTarget.classList.remove('hidden');
+    // Botón descarga masiva: habilitado solo con permiso; si no, queda
+    // deshabilitado con tooltip explicativo (ver CLAUDE.md §26).
+    if (this.hasBtnBulkDownloadTarget) {
+      if (this.#hasPerm('F_CreateBulkDownloadOfDocuments')) {
+        this.#enableBulkDownloadButton();
+      } else if (this.hasBtnBulkDownloadWrapTarget) {
+        this.#attachTooltip(this.btnBulkDownloadWrapTarget);
+      }
     }
 
     // Inicializar fechas con hoy
@@ -1094,6 +1099,62 @@ export default class extends TabulatorController {
 
   #hasPerm(name) {
     return this.#permissions.includes(name);
+  }
+
+  // Habilita el botón "Descarga masiva" (botón-ícono ghost que expande texto en
+  // hover; nace deshabilitado/gris con tooltip en su <span> envolvente). Ver §26.
+  #enableBulkDownloadButton() {
+    const btn = this.btnBulkDownloadTarget;
+    btn.disabled = false;
+    btn.classList.remove('text-gray-300', 'cursor-not-allowed', 'pointer-events-none');
+    btn.classList.add('text-blue-600', 'cursor-pointer', 'hover:bg-blue-50');
+    if (this.hasBtnBulkDownloadWrapTarget) this.btnBulkDownloadWrapTarget.removeAttribute('data-tooltip');
+  }
+
+  // Tooltip flotante scoped a un elemento del toolbar (fuera de la tabla, que el
+  // setupTooltip base no cubre). Reposiciona dentro del viewport. Ver CLAUDE.md §25/§26.
+  #attachTooltip(el) {
+    let tip = document.getElementById('cl-tabulator-tooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'cl-tabulator-tooltip';
+      tip.style.cssText = [
+        'position:fixed', 'z-index:9999', 'pointer-events:none',
+        'background:#1f2937', 'color:#fff', 'padding:4px 8px',
+        'border-radius:4px', 'font-size:12px', 'line-height:1.35',
+        'max-width:min(320px, calc(100vw - 16px))',
+        'white-space:normal', 'word-break:break-word', 'text-align:left',
+        'opacity:0', 'transition:opacity 0.15s',
+      ].join(';');
+      document.body.appendChild(tip);
+    }
+
+    const place = (e) => {
+      const margin = 8;
+      const { width: w, height: h } = tip.getBoundingClientRect();
+      let left = e.clientX + 12;
+      let top  = e.clientY - h - 10;
+      if (left + w + margin > window.innerWidth) left = e.clientX - w - 12;
+      if (left < margin) left = margin;
+      if (left + w + margin > window.innerWidth) left = window.innerWidth - w - margin;
+      if (top < margin) top = e.clientY + 18;
+      if (top + h + margin > window.innerHeight) top = window.innerHeight - h - margin;
+      tip.style.left = left + 'px';
+      tip.style.top  = top + 'px';
+    };
+
+    el.addEventListener('mouseenter', (e) => {
+      if (!el.dataset.tooltip) return;
+      tip.textContent = el.dataset.tooltip;
+      place(e);
+      tip.style.opacity = '1';
+    });
+    el.addEventListener('mousemove', (e) => {
+      if (tip.style.opacity === '1') place(e);
+    });
+    el.addEventListener('mouseleave', () => {
+      tip.style.opacity = '0';
+    });
   }
 
   #todayISO() {

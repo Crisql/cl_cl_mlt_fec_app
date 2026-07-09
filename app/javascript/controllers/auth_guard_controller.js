@@ -14,6 +14,20 @@ const ROUTE_PERMISSION_MAP = (() => {
   return map
 })()
 
+// Rutas DINÁMICAS (con :id u otros segmentos variables) que no viven en menu.js
+// pero requieren permiso al navegar manualmente por URL. Se evalúan por patrón
+// cuando no hay match exacto en ROUTE_PERMISSION_MAP. `permission` acepta string
+// o array (misma semántica: se permite si el usuario tiene AL MENOS uno).
+const ROUTE_PATTERN_PERMISSIONS = [
+  // Crear factura de proveedor desde un documento recepcionado:
+  // /documents/receptions/:id/create?xmlDocType=...
+  { pattern: /^\/documents\/receptions\/[^/]+\/create\/?$/, permission: 'F_CreateAPInvoice' },
+  // Crear compañía: /configurations/companies/new
+  { pattern: /^\/configurations\/companies\/new\/?$/, permission: 'F_CreateCompany' },
+  // Editar compañía: /configurations/companies/:id/edit
+  { pattern: /^\/configurations\/companies\/[^/]+\/edit\/?$/, permission: 'F_ModifyCompany' },
+]
+
 export default class extends Controller {
   static values = {
     loginPath:   { type: String, default: '/login' },
@@ -62,7 +76,10 @@ export default class extends Controller {
   }
 
   async #checkRoutePermission() {
-    const required = ROUTE_PERMISSION_MAP[window.location.pathname]
+    const path = window.location.pathname
+    // 1) match exacto (rutas estáticas de menu.js); 2) match por patrón (rutas dinámicas)
+    const required = ROUTE_PERMISSION_MAP[path]
+      ?? ROUTE_PATTERN_PERMISSIONS.find(r => r.pattern.test(path))?.permission
 
     if (!required) {
       this.#revealContent()

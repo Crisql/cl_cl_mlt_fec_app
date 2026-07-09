@@ -132,21 +132,30 @@ export default class extends Controller {
    * Uses event delegation on the table container to avoid being clipped
    * by Tabulator's overflow:hidden on cells.
    * Buttons must carry a data-tooltip="..." attribute to activate.
+   *
+   * Posicionamiento: el tooltip SIEMPRE queda completamente visible dentro del
+   * viewport (flip + clamp + límite de ancho). Ver CLAUDE.md §25.
    */
   setupTooltip() {
     if (!document.getElementById('cl-tabulator-tooltip')) {
       const tip = document.createElement('div')
       tip.id = 'cl-tabulator-tooltip'
+      // max-width + wrapping: el tooltip NUNCA excede el ancho del viewport, así
+      // que su contenido siempre queda completo (los textos largos envuelven).
       tip.style.cssText = [
         'position:fixed',
         'z-index:9999',
         'pointer-events:none',
         'background:#1f2937',
         'color:#fff',
-        'padding:2px 8px',
+        'padding:4px 8px',
         'border-radius:4px',
         'font-size:12px',
-        'white-space:nowrap',
+        'line-height:1.35',
+        'max-width:min(320px, calc(100vw - 16px))',
+        'white-space:normal',
+        'word-break:break-word',
+        'text-align:left',
         'opacity:0',
         'transition:opacity 0.15s',
       ].join(';')
@@ -155,11 +164,29 @@ export default class extends Controller {
     const tip = document.getElementById('cl-tabulator-tooltip')
     let activeBtn = null
 
+    // Reposiciona el tooltip dentro del viewport: por defecto arriba del cursor;
+    // hace flip horizontal/vertical y clamp contra los bordes para que nunca
+    // quede cortado. (Ver CLAUDE.md §25 — estándar de tooltips flotantes.)
+    const place = (e) => {
+      const margin = 8
+      const { width: w, height: h } = tip.getBoundingClientRect()
+      let left = e.clientX + 12
+      let top  = e.clientY - h - 10                                       // arriba del cursor
+      if (left + w + margin > window.innerWidth) left = e.clientX - w - 12   // flip a la izquierda
+      if (left < margin) left = margin
+      if (left + w + margin > window.innerWidth) left = window.innerWidth - w - margin
+      if (top < margin) top = e.clientY + 18                             // sin espacio arriba → abajo
+      if (top + h + margin > window.innerHeight) top = window.innerHeight - h - margin
+      tip.style.left = left + 'px'
+      tip.style.top  = top + 'px'
+    }
+
     this.tableTarget.addEventListener('mouseover', (e) => {
       const btn = e.target.closest('[data-tooltip]')
       if (btn && btn !== activeBtn) {
         activeBtn = btn
         tip.textContent = btn.dataset.tooltip
+        place(e)
         tip.style.opacity = '1'
       } else if (!btn) {
         activeBtn = null
@@ -169,8 +196,7 @@ export default class extends Controller {
 
     this.tableTarget.addEventListener('mousemove', (e) => {
       if (!activeBtn) return
-      tip.style.left = (e.clientX + 10) + 'px'
-      tip.style.top  = (e.clientY - 32) + 'px'
+      place(e)
     })
 
     this.tableTarget.addEventListener('mouseleave', () => {

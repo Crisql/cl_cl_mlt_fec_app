@@ -165,7 +165,9 @@ export default class extends Controller {
       }
 
       const hasPermission = (req) => {
-        if (!req) return false
+        // Sin permiso requerido = nodo público (visible para todos).
+        // Ej.: "Perfil de usuario" — accesible sin permiso asignado.
+        if (!req) return true
         return Array.isArray(req)
           ? req.some(p => permSet.has(p))
           : permSet.has(req)
