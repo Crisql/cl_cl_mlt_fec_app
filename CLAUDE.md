@@ -1091,7 +1091,7 @@ entidad. Nunca un genérico `Crear` ni solo `Nuevo`/`Nueva` sin la entidad.
 | Sucursales | Sucursal (f) | `Nueva Sucursal` |
 | Numeración | Numeración (f) | `Nueva Numeración` |
 | Bandejas de emisión | Bandeja (f) | `Nueva Bandeja` |
-| Bandejas de recepción | Configuración (f) | `Nueva Configuración` |
+| Bandejas de recepción | Bandeja (f) | `Nueva Bandeja` |
 
 ### Patrón
 

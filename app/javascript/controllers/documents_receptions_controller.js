@@ -399,7 +399,8 @@ export default class extends TabulatorController {
     const canBandeja          = row.Bandeja != null && row.Bandeja !== '';
     const canReprocess        = row.Status === 4;
     const alreadyInSAP        = row.ConsecutivoDoc > 0;
-    const canSAP              = row.Status === 1 && this.#hasPerm('F_CreateAPInvoice') && !alreadyInSAP;
+    const useFactProv         = !!this.#companyInfo?.UseFactProv;
+    const canSAP              = row.Status === 1 && this.#hasPerm('F_CreateAPInvoice') && !alreadyInSAP && useFactProv;
     const xmlHaciendaAvail    = row.Status === 1 || row.Status === 4;
 
     const options = [
@@ -455,7 +456,9 @@ export default class extends TabulatorController {
         disabled: !canSAP,
         disabledReason: alreadyInSAP
           ? `N° Consecutivo ${row.ConsecutivoDoc} — El documento ya fue creado en SAP`
-          : 'Solo disponible para documentos Aceptados y con el permiso necesario',
+          : !useFactProv
+            ? 'La compañía seleccionada no tiene habilitada la facturación de proveedor'
+            : 'Solo disponible para documentos Aceptados y con el permiso necesario',
       },
       {
         label: 'Reprocesar',
@@ -798,6 +801,10 @@ export default class extends TabulatorController {
     }
     if (!this.#hasPerm('F_CreateAPInvoice')) {
       showToast('No tiene permiso para realizar esta acción', 'info');
+      return;
+    }
+    if (!this.#companyInfo?.UseFactProv) {
+      showToast('La compañía seleccionada no tiene habilitada la facturación de proveedor.', 'info');
       return;
     }
     if (!this.#companyInfo?.DefaultTaxForXML) {

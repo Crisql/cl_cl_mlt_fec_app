@@ -57,13 +57,19 @@
           <span class="material-icons text-base">filter_alt</span>
           Consultar
         </button>
-        <button type="button"
-                data-action="click->mail-parser#openCreatePanel"
-                data-testid="btn-new"
-                class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
-          <span class="material-icons text-base">add</span>
-          Nueva Configuración
-        </button>
+        <span data-mail-parser-target="btnCreateWrap"
+              data-tooltip="No cuenta con permisos para crear bandejas"
+              class="flex-1">
+          <button type="button"
+                  data-mail-parser-target="btnCreate"
+                  data-action="click->mail-parser#openCreatePanel"
+                  data-testid="btn-new"
+                  disabled
+                  class="w-full inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed pointer-events-none transition-colors whitespace-nowrap">
+            <span class="material-icons text-base">add</span>
+            Nueva Bandeja
+          </button>
+        </span>
       </div>
 
     </div>
@@ -154,7 +160,7 @@
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
       <h3 data-mail-parser-target="panelTitle"
           data-testid="panel-title"
-          class="text-base font-semibold text-gray-800">Nueva Configuración</h3>
+          class="text-base font-semibold text-gray-800">Nueva bandeja</h3>
       <button type="button"
               data-action="click->mail-parser#closePanel"
               class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors">

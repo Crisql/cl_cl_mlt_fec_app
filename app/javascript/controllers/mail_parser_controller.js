@@ -40,6 +40,9 @@ export default class extends TabulatorController {
     // El parámetro mailServer se sigue enviando con valor por defecto hasta actualizar el API.
     'filterEmail', 'filterCompany', 'filterStatus', 'filterUseToken',
 
+    // Toolbar
+    'btnCreate', 'btnCreateWrap',
+
     // Panel lateral
     'panel', 'panelBackdrop', 'panelTitle',
     'saveBtn', 'btnValidate', 'validateIcon', 'validateLabel',
@@ -92,6 +95,16 @@ export default class extends TabulatorController {
     const company    = SStore.get('CurrentCompany');
     this.#companyId  = company?.companyId ? parseInt(company.companyId) : null;
     this.#permissions = SStore.get('Permissions') || [];
+
+    // Botón "Nueva Bandeja": habilitado solo con permiso; si no, queda
+    // deshabilitado con tooltip explicativo (ver CLAUDE.md §26).
+    if (this.hasBtnCreateTarget) {
+      if (this.#hasPerm('Configurations_MailParser_Create')) {
+        this.#enableCreateButton();
+      } else if (this.hasBtnCreateWrapTarget) {
+        this.#attachTooltip(this.btnCreateWrapTarget);
+      }
+    }
 
     super.connect(); // inicializa Tabulator; dispara ajaxRequestFunc con page=1 automáticamente
     this.#loadCompanies();
@@ -162,19 +175,30 @@ export default class extends TabulatorController {
         width: 110,
         hozAlign: 'center',
         headerSort: false,
-        formatter: () => `
-          <button type="button"
-                  data-action-type="edit"
-                  data-tooltip="Editar"
-                  class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-            <span class="material-icons text-base">edit</span>
-          </button>
-          <button type="button"
-                  data-action-type="view-companies"
-                  data-tooltip="Ver Compañías"
-                  class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-            <span class="material-icons text-base">business</span>
-          </button>`,
+        formatter: () => {
+          // Editar sin permiso: deshabilitado + tooltip (CLAUDE.md §26). El
+          // data-tooltip va en el <span> envolvente (un <button disabled> no
+          // emite eventos de mouse); el setupTooltip base (tabla) lo detecta.
+          const editBtn = this.#hasPerm('Configurations_MailParser_Update')
+            ? `<button type="button" data-action-type="edit" data-tooltip="Editar"
+                       class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+                 <span class="material-icons text-base">edit</span>
+               </button>`
+            : `<span data-tooltip="No cuenta con permisos para editar bandejas">
+                 <button type="button" disabled
+                         class="p-1.5 text-gray-300 rounded cursor-not-allowed pointer-events-none">
+                   <span class="material-icons text-base">edit</span>
+                 </button>
+               </span>`;
+          return `
+            ${editBtn}
+            <button type="button"
+                    data-action-type="view-companies"
+                    data-tooltip="Ver Compañías"
+                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+              <span class="material-icons text-base">business</span>
+            </button>`;
+        },
         cellClick: (_e, cell) => {
           const btn = _e.target.closest('[data-action-type]');
           if (!btn) return;
@@ -197,10 +221,16 @@ export default class extends TabulatorController {
   }
 
   openCreatePanel() {
+    // Defensa en profundidad: el botón se deshabilita sin permiso, pero
+    // reverificamos aquí (ver CLAUDE.md §26).
+    if (!this.#hasPerm('Configurations_MailParser_Create')) {
+      showToast('No cuenta con permisos para crear bandejas.', 'info');
+      return;
+    }
     this.#editingRecord = null;
     this.#isCredentialsValidated = false;
     this.#resetForm();
-    this.panelTitleTarget.textContent = 'Nueva Configuración';
+    this.panelTitleTarget.textContent = 'Nueva bandeja';
     this.#updateValidateButton();
     this.saveBtnTarget.disabled = true;
     this.#openPanel();
@@ -464,9 +494,13 @@ export default class extends TabulatorController {
   // ── Métodos privados: panel lateral ──────────────────────────────────────
 
   #openEditPanel(row) {
+    if (!this.#hasPerm('Configurations_MailParser_Update')) {
+      showToast('No cuenta con permisos para editar bandejas.', 'info');
+      return;
+    }
     this.#editingRecord = row;
     this.#resetForm();
-    this.panelTitleTarget.textContent = 'Editar Configuración';
+    this.panelTitleTarget.textContent = 'Editar bandeja';
 
     // Poblar formulario
     this.inputServerTarget.value    = row.MailServer  || '';
@@ -700,6 +734,66 @@ export default class extends TabulatorController {
     return value
       ? `<span class="material-icons text-base" style="color:#1a56db;">check_circle_outline</span>`
       : `<span class="material-icons text-base" style="color:#9ca3af;">radio_button_unchecked</span>`;
+  }
+
+  #hasPerm(name) {
+    return this.#permissions.includes(name);
+  }
+
+  // Habilita el botón "Nueva Bandeja" (nace deshabilitado/gris con tooltip de
+  // "sin permisos" en su <span> envolvente). Ver CLAUDE.md §26.
+  #enableCreateButton() {
+    const btn = this.btnCreateTarget;
+    btn.disabled = false;
+    btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'pointer-events-none');
+    btn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700');
+    if (this.hasBtnCreateWrapTarget) this.btnCreateWrapTarget.removeAttribute('data-tooltip');
+  }
+
+  // Tooltip flotante scoped a un elemento del toolbar (fuera de la tabla, que el
+  // setupTooltip base no cubre). Reposiciona dentro del viewport. Ver CLAUDE.md §25/§26.
+  #attachTooltip(el) {
+    let tip = document.getElementById('cl-tabulator-tooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'cl-tabulator-tooltip';
+      tip.style.cssText = [
+        'position:fixed', 'z-index:9999', 'pointer-events:none',
+        'background:#1f2937', 'color:#fff', 'padding:4px 8px',
+        'border-radius:4px', 'font-size:12px', 'line-height:1.35',
+        'max-width:min(320px, calc(100vw - 16px))',
+        'white-space:normal', 'word-break:break-word', 'text-align:left',
+        'opacity:0', 'transition:opacity 0.15s',
+      ].join(';');
+      document.body.appendChild(tip);
+    }
+
+    const place = (e) => {
+      const margin = 8;
+      const { width: w, height: h } = tip.getBoundingClientRect();
+      let left = e.clientX + 12;
+      let top  = e.clientY - h - 10;
+      if (left + w + margin > window.innerWidth) left = e.clientX - w - 12;
+      if (left < margin) left = margin;
+      if (left + w + margin > window.innerWidth) left = window.innerWidth - w - margin;
+      if (top < margin) top = e.clientY + 18;
+      if (top + h + margin > window.innerHeight) top = window.innerHeight - h - margin;
+      tip.style.left = left + 'px';
+      tip.style.top  = top + 'px';
+    };
+
+    el.addEventListener('mouseenter', (e) => {
+      if (!el.dataset.tooltip) return;
+      tip.textContent = el.dataset.tooltip;
+      place(e);
+      tip.style.opacity = '1';
+    });
+    el.addEventListener('mousemove', (e) => {
+      if (tip.style.opacity === '1') place(e);
+    });
+    el.addEventListener('mouseleave', () => {
+      tip.style.opacity = '0';
+    });
   }
 
   #statusBadge(status, labelOverride = null) {

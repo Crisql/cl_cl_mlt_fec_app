@@ -25,7 +25,7 @@ export default class extends TabulatorController {
     // Tabs nav
     'tabBtn', 'tabContent',
     // Tab Lista
-    'searchName', 'searchEmail', 'createBtn',
+    'searchName', 'searchEmail', 'createBtn', 'createBtnWrap',
     // Tab Completar Registro
     'completeTable',
     // Tab Asignación
@@ -137,6 +137,16 @@ export default class extends TabulatorController {
       return;
     }
 
+    // Botón "Nuevo Usuario": habilitado solo con permiso S_RegUser; si no, queda
+    // deshabilitado con tooltip explicativo (ver CLAUDE.md §26).
+    if (this.hasCreateBtnTarget) {
+      if (this.#hasPerm('S_RegUser')) {
+        this.#enableCreateButton();
+      } else if (this.hasCreateBtnWrapTarget) {
+        this.#attachTooltip(this.createBtnWrapTarget);
+      }
+    }
+
     // Activar el tab ANTES de super.connect() para que Tabulator inicialice
     // en un contenedor visible (evita null en offsetWidth / elVisible)
     this.#activateTab(this.#visibleTabs[0]);
@@ -180,7 +190,6 @@ export default class extends TabulatorController {
   getColumns() {
     const canEdit         = this.#hasPerm('Configurations_Users_Update');
     const canManageAccess = this.#hasPerm('Configurations_Users_ManageAccess');
-    const actionCount     = (canEdit ? 1 : 0) + (canManageAccess ? 1 : 0);
     return [
       { title: 'Nombre Completo',    field: 'FullName',         flexGrow: 2, minWidth: 150 },
       { title: 'Correo Electrónico', field: 'Email',            flexGrow: 2, minWidth: 180 },
@@ -203,20 +212,22 @@ export default class extends TabulatorController {
         width: 100, hozAlign: 'center',
         formatter: (cell) => this.#statusBadge(cell.getValue() ? 'active' : 'inactive'),
       },
-      ...(actionCount > 0 ? [{
+      {
         title: 'Acciones',
         field: '_actions',
-        width: actionCount > 1 ? 110 : 80, hozAlign: 'center', headerSort: false,
+        width: 110, hozAlign: 'center', headerSort: false,
+        // Acciones sin permiso: deshabilitadas + tooltip explicativo (CLAUDE.md §26),
+        // no se ocultan. El data-tooltip lo detecta el setupTooltip base (tabla).
         formatter: () => `
           <div class="flex items-center justify-center gap-1">
-            ${canEdit ? `<button type="button" data-action-type="edit" data-tooltip="Editar"
-                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-              <span class="material-icons text-base">edit</span>
-            </button>` : ''}
-            ${canManageAccess ? `<button type="button" data-action-type="manage-access" data-tooltip="Gestionar accesos"
-                    class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-              <span class="material-icons text-base">admin_panel_settings</span>
-            </button>` : ''}
+            ${this.#rowActionButton({
+              canDo: canEdit, type: 'edit', icon: 'edit',
+              enabledTip: 'Editar', disabledTip: 'No cuenta con permisos para editar usuarios',
+            })}
+            ${this.#rowActionButton({
+              canDo: canManageAccess, type: 'manage-access', icon: 'admin_panel_settings',
+              enabledTip: 'Gestionar accesos', disabledTip: 'No cuenta con permisos para gestionar accesos',
+            })}
           </div>`,
         cellClick: (e, cell) => {
           const data = cell.getRow().getData();
@@ -226,8 +237,25 @@ export default class extends TabulatorController {
             this.#openAccessPanel(data);
           }
         },
-      }] : []),
+      },
     ];
+  }
+
+  // Botón de acción de fila: habilitado (azul) o deshabilitado (gris + tooltip
+  // envuelto en <span>, porque un <button disabled> no emite eventos de mouse).
+  #rowActionButton({ canDo, type, icon, enabledTip, disabledTip }) {
+    if (canDo) {
+      return `<button type="button" data-action-type="${type}" data-tooltip="${enabledTip}"
+                class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+        <span class="material-icons text-base">${icon}</span>
+      </button>`;
+    }
+    return `<span data-tooltip="${disabledTip}">
+      <button type="button" disabled
+              class="p-1.5 text-gray-300 rounded cursor-not-allowed pointer-events-none">
+        <span class="material-icons text-base">${icon}</span>
+      </button>
+    </span>`;
   }
 
   // ── Tabs ─────────────────────────────────────────────────────────────────────
@@ -296,12 +324,6 @@ export default class extends TabulatorController {
       );
       const rows = data.Data || [];
       if (!rows.length) showToast(data.Message || 'No se encontraron usuarios.', 'warning');
-
-      // Mostrar botón Crear si tiene permiso
-      if (this.#hasPerm('S_RegUser')) {
-        this.createBtnTarget.classList.remove('hidden');
-        this.createBtnTarget.classList.add('inline-flex');
-      }
       return rows;
     } catch (err) {
       showToast(err.message || 'Error al cargar usuarios.', 'error');
@@ -314,6 +336,10 @@ export default class extends TabulatorController {
   }
 
   #onEditClick(row) {
+    if (!this.#hasPerm('Configurations_Users_Update')) {
+      showToast('No cuenta con permisos para editar usuarios.', 'info');
+      return;
+    }
     this.#openEditPanel(row.Id);
   }
 
@@ -506,6 +532,12 @@ export default class extends TabulatorController {
   // ── Create panel ──────────────────────────────────────────────────────────────
 
   openCreatePanel() {
+    // Defensa en profundidad: el botón se deshabilita sin permiso, pero
+    // reverificamos aquí (ver CLAUDE.md §26).
+    if (!this.#hasPerm('S_RegUser')) {
+      showToast('No cuenta con permisos para crear usuarios.', 'info');
+      return;
+    }
     this.createBackdropTarget.classList.remove('hidden');
     this.createPanelTarget.classList.remove('translate-x-full');
     document.body.style.overflow = 'hidden';
@@ -1622,6 +1654,62 @@ export default class extends TabulatorController {
 
   #hasPerm(name) {
     return this.#permissions.includes(name);
+  }
+
+  // Habilita el botón "Nuevo Usuario" (nace deshabilitado/gris con tooltip de
+  // "sin permisos" en su <span> envolvente). Ver CLAUDE.md §26.
+  #enableCreateButton() {
+    const btn = this.createBtnTarget;
+    btn.disabled = false;
+    btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'pointer-events-none');
+    btn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700');
+    if (this.hasCreateBtnWrapTarget) this.createBtnWrapTarget.removeAttribute('data-tooltip');
+  }
+
+  // Tooltip flotante scoped a un elemento del toolbar (fuera de la tabla, que el
+  // setupTooltip base no cubre). Reposiciona dentro del viewport. Ver CLAUDE.md §25/§26.
+  #attachTooltip(el) {
+    let tip = document.getElementById('cl-tabulator-tooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'cl-tabulator-tooltip';
+      tip.style.cssText = [
+        'position:fixed', 'z-index:9999', 'pointer-events:none',
+        'background:#1f2937', 'color:#fff', 'padding:4px 8px',
+        'border-radius:4px', 'font-size:12px', 'line-height:1.35',
+        'max-width:min(320px, calc(100vw - 16px))',
+        'white-space:normal', 'word-break:break-word', 'text-align:left',
+        'opacity:0', 'transition:opacity 0.15s',
+      ].join(';');
+      document.body.appendChild(tip);
+    }
+
+    const place = (e) => {
+      const margin = 8;
+      const { width: w, height: h } = tip.getBoundingClientRect();
+      let left = e.clientX + 12;
+      let top  = e.clientY - h - 10;
+      if (left + w + margin > window.innerWidth) left = e.clientX - w - 12;
+      if (left < margin) left = margin;
+      if (left + w + margin > window.innerWidth) left = window.innerWidth - w - margin;
+      if (top < margin) top = e.clientY + 18;
+      if (top + h + margin > window.innerHeight) top = window.innerHeight - h - margin;
+      tip.style.left = left + 'px';
+      tip.style.top  = top + 'px';
+    };
+
+    el.addEventListener('mouseenter', (e) => {
+      if (!el.dataset.tooltip) return;
+      tip.textContent = el.dataset.tooltip;
+      place(e);
+      tip.style.opacity = '1';
+    });
+    el.addEventListener('mousemove', (e) => {
+      if (tip.style.opacity === '1') place(e);
+    });
+    el.addEventListener('mouseleave', () => {
+      tip.style.opacity = '0';
+    });
   }
 
   #statusBadge(status, customLabel = null) {

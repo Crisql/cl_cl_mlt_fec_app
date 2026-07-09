@@ -189,6 +189,17 @@ export default class extends Controller {
     })
   }
 
+  /**
+   * ¿El nodo está bloqueado por una propiedad de la compañía seleccionada?
+   * (p.ej. `requiredCompanyFlag: 'UseFactProv'`). Solo bloquea si hay compañía
+   * seleccionada y la propiedad está desactivada — mismo criterio que auth_guard.
+   */
+  #isCompanyFlagBlocked(node) {
+    if (!node.requiredCompanyFlag) return false
+    const company = SStore.get('CurrentCompany')
+    return !!company?.companyId && !company[node.requiredCompanyFlag]
+  }
+
   #renderMenu(permSet) {
     if (!this.hasNavTarget) return
     const nodes = this.#buildVisibleNodes(permSet)
@@ -254,13 +265,26 @@ export default class extends Controller {
       node.nodes.forEach(child => {
         const childBtn = document.createElement('button')
         childBtn.dataset.testid = `menu-item-${child.key}`
+        childBtn.textContent = child.label
+
+        // Nodo bloqueado por flag de compañía (p.ej. UseFactProv): se DESHABILITA
+        // (gris, no navegable) con tooltip explicativo — no se oculta.
+        if (this.#isCompanyFlagBlocked(child)) {
+          childBtn.className = [
+            'w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-600',
+            'cursor-not-allowed text-left'
+          ].join(' ')
+          childBtn.title = 'Opción no disponible: la compañía seleccionada no tiene habilitada la facturación de proveedor.'
+          subList.appendChild(childBtn)
+          return
+        }
+
         // data-route habilita el resaltado de la opción activa (#highlightActive)
         if (child.route) childBtn.dataset.route = child.route
         childBtn.className = [
           'w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-400',
           'hover:bg-gray-700 hover:text-white transition-colors text-left'
         ].join(' ')
-        childBtn.textContent = child.label
         childBtn.addEventListener('click', () => this.#navigate(child))
         subList.appendChild(childBtn)
       })

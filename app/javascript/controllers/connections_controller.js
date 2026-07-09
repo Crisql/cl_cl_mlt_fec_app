@@ -27,7 +27,7 @@ export default class extends TabulatorController {
     ...TabulatorController.targets,
     'inputServer',
     'inputApiUrl',
-    'btnCreate',
+    'btnCreate', 'btnCreateWrap',
     // Panel lateral
     'panel', 'panelBackdrop', 'panelTitle',
     'fServer', 'fServerError',
@@ -68,8 +68,12 @@ export default class extends TabulatorController {
     const perms = SStore.get('Permissions');
     this.#permissions = Array.isArray(perms) ? perms : [];
 
+    // Botón "Nueva Conexión": habilitado solo con permiso; si no, queda
+    // deshabilitado con tooltip explicativo (ver CLAUDE.md §26).
     if (this.#hasPerm('Configurations_Connections_Create')) {
-      this.btnCreateTarget.classList.remove('hidden');
+      this.#enableCreateButton();
+    } else if (this.hasBtnCreateWrapTarget) {
+      this.#attachTooltip(this.btnCreateWrapTarget);
     }
 
     super.connect();   // construye la tabla y dispara la carga remota de la página 1
@@ -119,17 +123,17 @@ export default class extends TabulatorController {
       { title: 'URL Crystal API', field: 'CrystalAPIUrl', widthGrow: 2, tooltip: true },
     ];
 
-    if (canEdit) {
-      columns.push({
-        title: 'Acciones', field: 'Id', width: 100, hozAlign: 'center', headerSort: false,
-        formatter: (cell) => this.#editButton(cell.getValue()),
-        cellClick: (e, cell) => {
-          if (e.target.closest('[data-action-type="edit"]')) {
-            this.#onEditClick(cell.getRow().getData());
-          }
-        },
-      });
-    }
+    // Columna Acciones siempre presente; el botón editar se deshabilita con
+    // tooltip cuando falta el permiso (ver CLAUDE.md §26).
+    columns.push({
+      title: 'Acciones', field: 'Id', width: 100, hozAlign: 'center', headerSort: false,
+      formatter: (cell) => this.#editButton(cell.getValue(), canEdit),
+      cellClick: (e, cell) => {
+        if (e.target.closest('[data-action-type="edit"]')) {
+          this.#onEditClick(cell.getRow().getData());
+        }
+      },
+    });
 
     return columns;
   }
@@ -430,18 +434,85 @@ export default class extends TabulatorController {
 
   // ── Render helpers ───────────────────────────────────────────────────────────
 
-  #editButton(id) {
+  // Botón editar: habilitado (azul) o deshabilitado (gris + tooltip envuelto en
+  // <span>, porque un <button disabled> no emite eventos de mouse). Ver §26.
+  #editButton(id, canEdit) {
+    if (canEdit) {
+      return `
+        <button type="button" data-action-type="edit" data-testid="btn-edit-${id}" data-tooltip="Editar"
+                class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
+          <span class="material-icons text-base">edit</span>
+        </button>`;
+    }
     return `
-      <button type="button" data-action-type="edit" data-testid="btn-edit-${id}" data-tooltip="Editar"
-              class="p-1.5 text-blue-600 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-        <span class="material-icons text-base">edit</span>
-      </button>`;
+      <span data-tooltip="No cuenta con permisos para editar conexiones">
+        <button type="button" data-testid="btn-edit-${id}" disabled
+                class="p-1.5 text-gray-300 rounded cursor-not-allowed pointer-events-none">
+          <span class="material-icons text-base">edit</span>
+        </button>
+      </span>`;
   }
 
   // ── Utilidades ─────────────────────────────────────────────────────────────
 
   #hasPerm(name) {
     return this.#permissions.includes(name);
+  }
+
+  // Habilita el botón "Nueva Conexión" (nace deshabilitado/gris con tooltip de
+  // "sin permisos" en su <span> envolvente). Ver CLAUDE.md §26.
+  #enableCreateButton() {
+    const btn = this.btnCreateTarget;
+    btn.disabled = false;
+    btn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'pointer-events-none');
+    btn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700');
+    if (this.hasBtnCreateWrapTarget) this.btnCreateWrapTarget.removeAttribute('data-tooltip');
+  }
+
+  // Tooltip flotante scoped a un elemento del toolbar (fuera de la tabla, que el
+  // setupTooltip base no cubre). Reposiciona dentro del viewport. Ver CLAUDE.md §25/§26.
+  #attachTooltip(el) {
+    let tip = document.getElementById('cl-tabulator-tooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'cl-tabulator-tooltip';
+      tip.style.cssText = [
+        'position:fixed', 'z-index:9999', 'pointer-events:none',
+        'background:#1f2937', 'color:#fff', 'padding:4px 8px',
+        'border-radius:4px', 'font-size:12px', 'line-height:1.35',
+        'max-width:min(320px, calc(100vw - 16px))',
+        'white-space:normal', 'word-break:break-word', 'text-align:left',
+        'opacity:0', 'transition:opacity 0.15s',
+      ].join(';');
+      document.body.appendChild(tip);
+    }
+
+    const place = (e) => {
+      const margin = 8;
+      const { width: w, height: h } = tip.getBoundingClientRect();
+      let left = e.clientX + 12;
+      let top  = e.clientY - h - 10;
+      if (left + w + margin > window.innerWidth) left = e.clientX - w - 12;
+      if (left < margin) left = margin;
+      if (left + w + margin > window.innerWidth) left = window.innerWidth - w - margin;
+      if (top < margin) top = e.clientY + 18;
+      if (top + h + margin > window.innerHeight) top = window.innerHeight - h - margin;
+      tip.style.left = left + 'px';
+      tip.style.top  = top + 'px';
+    };
+
+    el.addEventListener('mouseenter', (e) => {
+      if (!el.dataset.tooltip) return;
+      tip.textContent = el.dataset.tooltip;
+      place(e);
+      tip.style.opacity = '1';
+    });
+    el.addEventListener('mousemove', (e) => {
+      if (tip.style.opacity === '1') place(e);
+    });
+    el.addEventListener('mouseleave', () => {
+      tip.style.opacity = '0';
+    });
   }
 
   async #apiFetch(url, options = {}) {

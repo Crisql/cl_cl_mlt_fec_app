@@ -28,6 +28,18 @@ const ROUTE_PATTERN_PERMISSIONS = [
   { pattern: /^\/configurations\/companies\/[^/]+\/edit\/?$/, permission: 'F_ModifyCompany' },
 ]
 
+// Rutas que además requieren que la compañía seleccionada (SStore.CurrentCompany)
+// tenga una PROPIEDAD/flag activa (independiente de permisos). Se valida al navegar
+// manualmente por URL. `flag` es el nombre de la propiedad en CurrentCompany.
+const ROUTE_COMPANY_FLAG_MAP = {
+  // UDFs solo aplica si la compañía usa factura de proveedor
+  '/configurations/udfs': 'UseFactProv',
+}
+const ROUTE_COMPANY_FLAG_PATTERNS = [
+  // Crear factura de proveedor desde un documento recepcionado
+  { pattern: /^\/documents\/receptions\/[^/]+\/create\/?$/, flag: 'UseFactProv' },
+]
+
 export default class extends Controller {
   static values = {
     loginPath:   { type: String, default: '/login' },
@@ -78,40 +90,62 @@ export default class extends Controller {
   async #checkRoutePermission() {
     const path = window.location.pathname
     // 1) match exacto (rutas estáticas de menu.js); 2) match por patrón (rutas dinámicas)
-    const required = ROUTE_PERMISSION_MAP[path]
+    const requiredPerm = ROUTE_PERMISSION_MAP[path]
       ?? ROUTE_PATTERN_PERMISSIONS.find(r => r.pattern.test(path))?.permission
 
-    if (!required) {
+    const requiredFlag = ROUTE_COMPANY_FLAG_MAP[path]
+      ?? ROUTE_COMPANY_FLAG_PATTERNS.find(r => r.pattern.test(path))?.flag
+
+    // Ruta sin restricciones → mostrar
+    if (!requiredPerm && !requiredFlag) {
       this.#revealContent()
       return
     }
 
-    let permissions = SStore.get('Permissions')
-
-    // Si no hay caché (primera carga o nueva pestaña), cargarlos del API.
-    // Mismo patrón que menu_controller — el segundo en correr encontrará el caché.
-    if (!permissions) {
+    // Flag de compañía (propiedad de CurrentCompany, p.ej. UseFactProv). Solo se
+    // bloquea si hay compañía seleccionada y la propiedad está desactivada — igual
+    // criterio que el permiso (sin compañía no se puede validar todavía).
+    if (requiredFlag) {
       const company = SStore.get('CurrentCompany')
-      if (!company?.companyId) {
-        this.#revealContent()
+      if (company?.companyId && !company[requiredFlag]) {
+        this.#redirectNotFound()
         return
       }
-      permissions = await this.#fetchPermissions(company.companyId)
     }
 
-    const permSet = new Set(Array.isArray(permissions) ? permissions : [])
-    const hasPerm = Array.isArray(required)
-      ? required.some(p => permSet.has(p))
-      : permSet.has(required)
+    if (requiredPerm) {
+      let permissions = SStore.get('Permissions')
 
-    if (hasPerm) {
-      this.#revealContent()
-    } else {
-      if (window.Turbo) {
-        window.Turbo.visit('/not-found')
-      } else {
-        window.location.href = '/not-found'
+      // Si no hay caché (primera carga o nueva pestaña), cargarlos del API.
+      // Mismo patrón que menu_controller — el segundo en correr encontrará el caché.
+      if (!permissions) {
+        const company = SStore.get('CurrentCompany')
+        if (!company?.companyId) {
+          this.#revealContent()
+          return
+        }
+        permissions = await this.#fetchPermissions(company.companyId)
       }
+
+      const permSet = new Set(Array.isArray(permissions) ? permissions : [])
+      const hasPerm = Array.isArray(requiredPerm)
+        ? requiredPerm.some(p => permSet.has(p))
+        : permSet.has(requiredPerm)
+
+      if (!hasPerm) {
+        this.#redirectNotFound()
+        return
+      }
+    }
+
+    this.#revealContent()
+  }
+
+  #redirectNotFound() {
+    if (window.Turbo) {
+      window.Turbo.visit('/not-found')
+    } else {
+      window.location.href = '/not-found'
     }
   }
 

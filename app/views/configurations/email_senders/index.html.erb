@@ -66,13 +66,19 @@
             <span class="material-icons text-base">filter_alt</span>
             Consultar
           </button>
-          <button type="button"
-                  data-action="click->email-senders#openCreatePanel"
-                  data-testid="btn-create-inbox"
-                  class="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-            <span class="material-icons text-base">add</span>
-            Nueva Bandeja
-          </button>
+          <span data-email-senders-target="btnCreateWrap"
+                data-tooltip="No cuenta con permisos para crear bandejas"
+                class="flex-1">
+            <button type="button"
+                    data-email-senders-target="btnCreate"
+                    data-action="click->email-senders#openCreatePanel"
+                    data-testid="btn-create-inbox"
+                    disabled
+                    class="w-full inline-flex items-center justify-center gap-1 px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed pointer-events-none transition-colors">
+              <span class="material-icons text-base">add</span>
+              Nueva Bandeja
+            </button>
+          </span>
         </div>
 
       </div>
